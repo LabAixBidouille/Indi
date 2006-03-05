@@ -1,0 +1,20 @@
+INDI Library Setup v0.2
+=================
+
+1) ./configure
+2) make
+3) su -c 'make install'
+   Enter root password when prompted.
+   
+Refer to README for instructions on running indiserver and device drivers.
+
+
+
+INDI CVS Setup
+============
+
+If you checkout INDI from the CVS, follow the instructions above. But before ./configure, type in:
+
+make -f Makefile.cvs
+
+That's it!

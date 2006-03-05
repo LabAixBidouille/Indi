@@ -1,0 +1,53 @@
+=============================================
+= INDI Drivers Knowledge Base
+=============================================
+
+Introduction
+============
+
+The goal of the INDI Drivers Knowledge Base is to establish a repository that addresses driver-specific issues and problems. 
+
+
+Telescopes
+==========
+
+	+ Meade 
+	+ Celestron
+	+ Meade-Compatible
+	+ DCS
+
+CCDs
+====
+
+	+ FLI (Finger Lakes Instruments)
+
+		- FLI driver requiers root privilages to operate properly.
+
+	+ SBIG (Santa Barbara ....)
+	+ Apogee
+
+
+Focusers
+========
+
+	+ Meade LX200GPS Microfocuser
+	+ Meade 1206 Primary Mirror Focuser
+	+ JMI NGF Series
+	+ JMI MOTOFOCUS
+	+ Robo Focus
+
+
+Filter Wheels
+=============
+
+	+ FLI Filter Wheel
+	+ SBIG CWF
+
+Video
+=====
+
+	+ Video 4 Linux I, II
+	+ Philips Webcam
+	+ Meade Lunar Planetary Imager (Experimental)
+
+		- Exposure: You need to have Kernel 2.6.16+ if you want to take long exposures (1 second or more) with the LPI.

@@ -1,0 +1,33 @@
+From v0.3 to v0.4:
+
+	# Devices:
+
+		+ SBIG CCD
+		+ SBIG CFW
+		+ RoboFocus
+		+ FLI Precision Focuser
+		
+	# Other
+		+ Fixed UTC correction bug in LX200 driver.
+		+ Fixed pallete selection in V4L 2 drivers.
+		+ Added variable focus speed for Meade Autostar and GPS.
+		+ Added CFITSIO, a mature and robust FITS library.
+
+From v0.2 to v0.3:
+
+	# Devices
+		+ Apogee CCD (Experimental)
+		+ SkyCommander
+		+ Temma Takahashi
+		+ FLI Filter Wheel
+		+ Meade Lunar Planetary Imager (Experimental)
+		+ Astrophysics AP
+
+	# Other
+		+ Support for Video 4 Linux 2
+		+ Multi-threaded INDI server
+		+ Binary transfer via BLOB
+		+ INDI scripting tools
+		+ Various bug fixing
+
+INDI Library v0.4 conforms to INDI wire protocol v1.6
