@@ -1,5 +1,5 @@
-INDI Library Setup v0.2
-=================
+INDI Library Setup v0.4
+=======================
 
 1) ./configure
 2) make
@@ -8,12 +8,13 @@ INDI Library Setup v0.2
    
 Refer to README for instructions on running indiserver and device drivers.
 
+Refer to README.drivers for driver-specific information.
 
 
-INDI CVS Setup
-============
+INDI SVN Setup
+==============
 
-If you checkout INDI from the CVS, follow the instructions above. But before ./configure, type in:
+If you checkout INDI from the SVN, follow the instructions above. But before ./configure, type in:
 
 make -f Makefile.cvs
 
