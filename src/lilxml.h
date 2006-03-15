@@ -223,7 +223,7 @@ extern XMLEle *readXMLFile (FILE *fp, LilXML *lp, char errmsg[]);
 extern void prXMLEle (FILE *fp, XMLEle *e, int level);
 
 /* install alternatives to malloc/realloc/free */
-extern void xmlMalloc (void *(*newmalloc)(size_t size),
+extern void indi_xmlMalloc (void *(*newmalloc)(size_t size),
     void *(*newrealloc)(void *ptr, size_t size), void (*newfree)(void *ptr));
 
 /*@}*/
@@ -262,7 +262,7 @@ extern void xmlMalloc (void *(*newmalloc)(size_t size),
  */
 
 /* For RCS Only -- Do Not Edit
- * @(#) $RCSfile$ $Date: 2005-10-31 14:56:22 +0300 (Mon, 31 Oct 2005) $ $Revision: 476056 $ $Name:  $
+ * @(#) $RCSfile$ $Date: 2006-03-10 00:23:16 +0300 (Fri, 10 Mar 2006) $ $Revision: 517081 $ $Name:  $
  */
 
 #endif	/* LILXML_H */

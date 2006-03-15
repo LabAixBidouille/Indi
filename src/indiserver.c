@@ -182,7 +182,7 @@ main (int ac, char *av[])
 	pthread_mutex_init(&malloc_m, NULL);
 
 	/* install our locked heap functions */
-	xmlMalloc (mymalloc, myrealloc, myfree);
+	indi_xmlMalloc (mymalloc, myrealloc, myfree);
 	setMemFuncsFQ (mymalloc, myrealloc, myfree);
 
 	/* seed client info array so we can always use realloc */
@@ -218,7 +218,7 @@ static void
 usage(void)
 {
 	fprintf (stderr, "Usage: %s [options] driver [driver ...]\n", me);
-	fprintf (stderr, "%s\n", "$Revision: 463359 $");
+	fprintf (stderr, "%s\n", "$Revision: 517081 $");
 	fprintf (stderr, "Purpose: INDI Server\n");
 	fprintf (stderr, "Options:\n");
 	fprintf (stderr, " -p p  : alternate IP port, default %d\n", INDIPORT);
