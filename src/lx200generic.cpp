@@ -349,7 +349,7 @@ LX200Generic::LX200Generic()
    IDLog("initilizaing from generic LX200 device...\n");
    IDLog("INDI Version: 2006-03-15\n");
  
-   enableSimulation(true);  
+   //enableSimulation(true);  
 }
 
 LX200Generic::~LX200Generic()
