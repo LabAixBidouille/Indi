@@ -280,9 +280,9 @@ popTimers()
 	gettimeofday (&now, NULL);
 	tgonow = EPDT (&now);
 	for (tp = &timef[ntimef-1]; tp >= timef && tp->tgo <= tgonow; tp--) {
+	    ntimef--;
 	    (*tp->fp) (tp->ud);
 	    printf ("\a\n");
-	    ntimef--;
 	}
 }
 
@@ -421,4 +421,4 @@ main (int ac, char *av[])
 #endif
 
 /* For RCS Only -- Do Not Edit */
-static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile$ $Date: 2005-10-05 12:03:00 +0300 (Wed, 05 Oct 2005) $ $Revision: 467420 $ $Name:  $"};
+static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile$ $Date: 2006-03-20 20:14:36 +0300 (Mon, 20 Mar 2006) $ $Revision: 520737 $ $Name:  $"};
