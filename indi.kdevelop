@@ -3,7 +3,7 @@
   <general>
     <author>Jasem Mutlaq</author>
     <email>mutlaqja@ikarustech.com</email>
-    <version>0.2</version>
+    <version>0.4</version>
     <projectmanagement>KDevAutoProject</projectmanagement>
     <primarylanguage>C++</primarylanguage>
     <keywords>
@@ -118,6 +118,11 @@
       <inlineGet>true</inlineGet>
       <inlineSet>true</inlineSet>
     </creategettersetter>
+    <qt>
+      <used>false</used>
+      <version>3</version>
+      <root>/usr/lib/qt3</root>
+    </qt>
   </kdevcppsupport>
   <kdevdoctreeview>
     <projectdoc>
