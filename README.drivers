@@ -28,7 +28,7 @@ CCDs
 	+ FLI (Finger Lakes Instruments)
 
 		- FLI driver require read and write access to your USB subsystem. There are two methods to accomplish this:
-		 1. Run fliccd driver as root or setuid your fliccd (chmod +x fliccd).
+		 1. Run fliccd driver as root or setuid your fliccd (chmod +s fliccd).
 		 2. Allow your user write privileges to the USB sub system by mounting /proc/bus/usb with the proper user and group permissions.
 
 	+ SBIG (Santa Barbara ....)
