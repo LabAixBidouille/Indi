@@ -547,7 +547,12 @@ int SbigCam::SBIGUnivDrvCommand(PAR_COMMAND command, void *params, void *results
 			// Handle is valid so install it in the driver.
 			sdhp.handle = GetDriverHandle();
 			res = ::SBIGUnivDrvCommand(CC_SET_DRIVER_HANDLE, &sdhp, 0);
-			if(res == CE_NO_ERROR){
+			if(res == CE_FAKE_DRIVER)
+			{
+			// The user is using the dummy driver. Tell him to download the real driver
+			IDMessage(DEVICE_NAME, "Error: SBIG Dummy Driver is being used now. You can only control your camera by downloading SBIG driver from INDI website @ indi.sf.net");
+			}
+			else if(res == CE_NO_ERROR){
 					res = ::SBIGUnivDrvCommand(command, params, results);
 			}
  	}
