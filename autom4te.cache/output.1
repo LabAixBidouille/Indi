@@ -19360,7 +19360,7 @@ _ACEOF
 fi
 rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
 
-# KStars INDI driver for the FLI CCD
+# INDI driver for the FLI CCD
 case "${host_os}" in
        *linux* ) OSDIR=linux ;;
        *bsd*   ) OSDIR=bsd   ;;
@@ -19539,8 +19539,8 @@ if test `eval echo '${'$as_ac_Header'}'` = yes; then
 _ACEOF
  have_libusb="yes"
 else
-   { echo "$as_me:$LINENO: WARNING: usb.h not found, use --enable-libusb=PATH. Otherwise, INDI will compile without Apogee USB support." >&5
-echo "$as_me: WARNING: usb.h not found, use --enable-libusb=PATH. Otherwise, INDI will compile without Apogee USB support." >&2;} 
+   { echo "$as_me:$LINENO: WARNING: usb.h not found, use --enable-libusb=PATH. Otherwise, INDI will compile without Apogee & SBIG USB support." >&5
+echo "$as_me: WARNING: usb.h not found, use --enable-libusb=PATH. Otherwise, INDI will compile without Apogee & SBIG USB support." >&2;} 
 fi
 
 done
@@ -19615,8 +19615,8 @@ echo "${ECHO_T}$ac_cv_lib_usb_usb_init" >&6
 if test $ac_cv_lib_usb_usb_init = yes; then
   LIBUSB="$LIBUSB -lusb" have_libusb="yes"
 else
-   { echo "$as_me:$LINENO: WARNING: libusb not found. INDI will compile without Apogee USB support." >&5
-echo "$as_me: WARNING: libusb not found. INDI will compile without Apogee USB support." >&2;} 
+   { echo "$as_me:$LINENO: WARNING: libusb not found. INDI will compile without Apogee & SBIG USB support." >&5
+echo "$as_me: WARNING: libusb not found. INDI will compile without Apogee & SBIG USB support." >&2;} 
 fi
 
 	LIBS="$ac_save_LIBS"
@@ -19729,19 +19729,35 @@ if test `eval echo '${'$as_ac_File'}'` = yes; then
 echo "$as_me: WARNING: " >&2;}
 			   { echo "$as_me:$LINENO: WARNING: " >&5
 echo "$as_me: WARNING: " >&2;}
-			  { echo "$as_me:$LINENO: WARNING: We cannot locate videodev2.h in /usr/include/linux" >&5
+			   { echo "$as_me:$LINENO: WARNING: We cannot locate videodev2.h in /usr/include/linux" >&5
 echo "$as_me: WARNING: We cannot locate videodev2.h in /usr/include/linux" >&2;}
-			  { echo "$as_me:$LINENO: WARNING: " >&5
-echo "$as_me: WARNING: " >&2;}
-			  { echo "$as_me:$LINENO: WARNING: This file is responsible for V4L2 in KStars" >&5
-echo "$as_me: WARNING: This file is responsible for V4L2 in KStars" >&2;}
+			   { echo "$as_me:$LINENO: WARNING: This file is responsible for V4L2 in INDI" >&5
+echo "$as_me: WARNING: This file is responsible for V4L2 in INDI" >&2;}
 			   { echo "$as_me:$LINENO: WARNING: This file is correct in /lib/modules/$KERNEL_VERSION/build/include" >&5
 echo "$as_me: WARNING: This file is correct in /lib/modules/$KERNEL_VERSION/build/include" >&2;}
 			   { echo "$as_me:$LINENO: WARNING: It is recommended that you copy this file and videodev.h to /usr/include/linux" >&5
 echo "$as_me: WARNING: It is recommended that you copy this file and videodev.h to /usr/include/linux" >&2;}
+			   { echo "$as_me:$LINENO: WARNING: INDI will be compiled with legacy V4L 1 support." >&5
+echo "$as_me: WARNING: INDI will be compiled with legacy V4L 1 support." >&2;}
 			   { echo "$as_me:$LINENO: WARNING: " >&5
 echo "$as_me: WARNING: " >&2;}
-			   
+			   { echo "$as_me:$LINENO: WARNING: " >&5
+echo "$as_me: WARNING: " >&2;}
+else
+  { echo "$as_me:$LINENO: WARNING: " >&5
+echo "$as_me: WARNING: " >&2;}
+			   { echo "$as_me:$LINENO: WARNING: " >&5
+echo "$as_me: WARNING: " >&2;}
+			   { echo "$as_me:$LINENO: WARNING: We cannot locate videodev2.h in /usr/include/linux" >&5
+echo "$as_me: WARNING: We cannot locate videodev2.h in /usr/include/linux" >&2;}
+			   { echo "$as_me:$LINENO: WARNING: This file is responsible for V4L2 in INDI" >&5
+echo "$as_me: WARNING: This file is responsible for V4L2 in INDI" >&2;}
+			   { echo "$as_me:$LINENO: WARNING: INDI will be compiled with legacy V4L 1 support." >&5
+echo "$as_me: WARNING: INDI will be compiled with legacy V4L 1 support." >&2;}
+			   { echo "$as_me:$LINENO: WARNING: " >&5
+echo "$as_me: WARNING: " >&2;}
+			   { echo "$as_me:$LINENO: WARNING: " >&5
+echo "$as_me: WARNING: " >&2;}
 fi
 
 	  fi
@@ -19812,7 +19828,7 @@ else
 fi
 
 
-                                                  ac_config_files="$ac_config_files Makefile src/Makefile src/fli/Makefile src/webcam/Makefile src/apogee/Makefile"
+                                                            ac_config_files="$ac_config_files Makefile src/Makefile src/fli/Makefile src/webcam/Makefile src/apogee/Makefile src/cfitsio/Makefile"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -20409,6 +20425,7 @@ do
   "src/fli/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/fli/Makefile" ;;
   "src/webcam/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/webcam/Makefile" ;;
   "src/apogee/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/apogee/Makefile" ;;
+  "src/cfitsio/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/cfitsio/Makefile" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
   "config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5

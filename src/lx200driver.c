@@ -259,9 +259,11 @@ int getCommandSexa(double *value, const char * cmd)
  
   tempString[read_ret - 1] = '\0';
   
+  IDLog("getComandSexa: %s\n", tempString);
+
   if (f_scansexa(tempString, value))
   {
-   fprintf(stderr, "unable to process [%s]\n", tempString);
+   IDLog("unable to process [%s]\n", tempString);
    return -1;
   }
  
@@ -284,7 +286,7 @@ int getCommandString(char *data, const char* cmd)
     if (term)
       *term = '\0';
 
-    fprintf(stderr, "Requested data: %s\n", data);
+    IDLog("Requested data: %s\n", data);
 
     return 0;
 }
@@ -736,7 +738,7 @@ int setObjectRA(double ra)
 	snprintf(tempString, sizeof( tempString ), "#:Sr %02d:%02d.%01d#", h, m, frac_m);
 	
  IDLog("Set Object RA String %s\n", tempString);
-  return (setStandardProcedure(tempString));
+ return (setStandardProcedure(tempString));
 }
 
 
@@ -1129,11 +1131,16 @@ int Sync(char *matchedObject)
    return read_ret;
    
   matchedObject[read_ret-1] = '\0';
+
+  IDLog("Matched Object: %s\n", matchedObject);
   
   /* Sleep 10ms before flushing. This solves some issues with LX200 compatible devices. */
   usleep(10000);
-  
   tcflush(fd, TCIFLUSH);
+  //read_ret = portRead(matchedObject, -1, LX200_TIMEOUT);
+  //if (read_ret < 1)
+   //return read_ret;
+  //matchedObject[read_ret-1] = '\0';
 
   return 0;
 }
@@ -1218,6 +1225,8 @@ int checkLX200Format()
   char tempString[16];
   controller_format = LX200_LONG_FORMAT;
 
+  IDLog("Checking Sexa Format\n");
+
   if (portWrite("#:GR#") < 0)
    return -1;
 
@@ -1227,6 +1236,8 @@ int checkLX200Format()
    return read_ret;
    
   tempString[read_ret - 1] = '\0';
+
+  IDLog(":GR_1: %s\n", tempString);
 
   /* If it's short, change to long, our preferred format */
   if (tempString[5] == '.')
@@ -1248,10 +1259,16 @@ int checkLX200Format()
    
   tempString[read_ret - 1] = '\0';
 
+  IDLog(":GR_2: %s\n", tempString);
+
   /* Controller doesn't support #:U# */
   if (tempString[5] == '.')
  	controller_format = LX200_SHORT_FORMAT;
 
+  if (controller_format == LX200_LONG_FORMAT)
+	fprintf(stderr, "Long Format Detected\n");
+  else
+	fprintf(stderr, "Short Format Detected\n");
   return 0;
 }
 

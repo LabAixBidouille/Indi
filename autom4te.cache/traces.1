@@ -476,36 +476,36 @@ m4trace:configure.in:41: -2- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is
 You should run autoupdate.], [autoconf/general.m4:219: AC_HELP_STRING is expanded from...
 configure.in:41: the top level])
 m4trace:configure.in:59: -1- AC_SUBST([LIBUSB])
-m4trace:configure.in:61: -1- AC_CHECK_HEADERS([usb.h], [have_libusb="yes"], [ AC_MSG_WARN([usb.h not found, use --enable-libusb=PATH. Otherwise, INDI will compile without Apogee USB support.]) ])
+m4trace:configure.in:61: -1- AC_CHECK_HEADERS([usb.h], [have_libusb="yes"], [ AC_MSG_WARN([usb.h not found, use --enable-libusb=PATH. Otherwise, INDI will compile without Apogee & SBIG USB support.]) ])
 m4trace:configure.in:61: -1- AH_OUTPUT([HAVE_USB_H], [/* Define to 1 if you have the <usb.h> header file. */
 #undef HAVE_USB_H])
-m4trace:configure.in:66: -1- AC_CHECK_LIB([usb], [usb_init], [LIBUSB="$LIBUSB -lusb" have_libusb="yes"], [ AC_MSG_WARN([libusb not found. INDI will compile without Apogee USB support.]) ])
+m4trace:configure.in:66: -1- AC_CHECK_LIB([usb], [usb_init], [LIBUSB="$LIBUSB -lusb" have_libusb="yes"], [ AC_MSG_WARN([libusb not found. INDI will compile without Apogee & SBIG USB support.]) ])
 m4trace:configure.in:83: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [autoconf/general.m4:219: AC_HELP_STRING is expanded from...
 autoconf/general.m4:1303: AC_ARG_ENABLE is expanded from...
 configure.in:83: the top level])
-m4trace:configure.in:101: -1- _m4_warn([cross], [cannot check for file existence when cross compiling], [autoconf/general.m4:2315: AC_CHECK_FILE is expanded from...
-configure.in:101: the top level])
-m4trace:configure.in:112: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LINUX_VIDEODEV2_H])
-m4trace:configure.in:112: -1- AH_OUTPUT([HAVE_LINUX_VIDEODEV2_H], [/* Define to 1 if you have the <linux/videodev2.h> header file. */
+m4trace:configure.in:108: -1- _m4_warn([cross], [cannot check for file existence when cross compiling], [autoconf/general.m4:2315: AC_CHECK_FILE is expanded from...
+configure.in:108: the top level])
+m4trace:configure.in:119: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LINUX_VIDEODEV2_H])
+m4trace:configure.in:119: -1- AH_OUTPUT([HAVE_LINUX_VIDEODEV2_H], [/* Define to 1 if you have the <linux/videodev2.h> header file. */
 #undef HAVE_LINUX_VIDEODEV2_H])
-m4trace:configure.in:115: -1- AM_CONDITIONAL([BSD], [test x$OSDIR = xbsd])
-m4trace:configure.in:115: -1- AC_SUBST([BSD_TRUE])
-m4trace:configure.in:115: -1- AC_SUBST([BSD_FALSE])
-m4trace:configure.in:116: -1- AM_CONDITIONAL([LINUX], [test x$OSDIR = xlinux])
-m4trace:configure.in:116: -1- AC_SUBST([LINUX_TRUE])
-m4trace:configure.in:116: -1- AC_SUBST([LINUX_FALSE])
-m4trace:configure.in:117: -1- AM_CONDITIONAL([NULL], [test x$OSDIR = xnull])
-m4trace:configure.in:117: -1- AC_SUBST([NULL_TRUE])
-m4trace:configure.in:117: -1- AC_SUBST([NULL_FALSE])
-m4trace:configure.in:118: -1- AM_CONDITIONAL([HAVE_LIBUSB], [test x$have_libusb = xyes])
-m4trace:configure.in:118: -1- AC_SUBST([HAVE_LIBUSB_TRUE])
-m4trace:configure.in:118: -1- AC_SUBST([HAVE_LIBUSB_FALSE])
-m4trace:configure.in:119: -1- AM_CONDITIONAL([HAVE_V4L2], [test x$have_v4l2 = xtrue])
-m4trace:configure.in:119: -1- AC_SUBST([HAVE_V4L2_TRUE])
-m4trace:configure.in:119: -1- AC_SUBST([HAVE_V4L2_FALSE])
-m4trace:configure.in:121: -1- AC_CONFIG_FILES([Makefile src/Makefile src/fli/Makefile src/webcam/Makefile src/apogee/Makefile])
-m4trace:configure.in:121: -1- _m4_warn([obsolete], [AC_OUTPUT should be used without arguments.
+m4trace:configure.in:122: -1- AM_CONDITIONAL([BSD], [test x$OSDIR = xbsd])
+m4trace:configure.in:122: -1- AC_SUBST([BSD_TRUE])
+m4trace:configure.in:122: -1- AC_SUBST([BSD_FALSE])
+m4trace:configure.in:123: -1- AM_CONDITIONAL([LINUX], [test x$OSDIR = xlinux])
+m4trace:configure.in:123: -1- AC_SUBST([LINUX_TRUE])
+m4trace:configure.in:123: -1- AC_SUBST([LINUX_FALSE])
+m4trace:configure.in:124: -1- AM_CONDITIONAL([NULL], [test x$OSDIR = xnull])
+m4trace:configure.in:124: -1- AC_SUBST([NULL_TRUE])
+m4trace:configure.in:124: -1- AC_SUBST([NULL_FALSE])
+m4trace:configure.in:125: -1- AM_CONDITIONAL([HAVE_LIBUSB], [test x$have_libusb = xyes])
+m4trace:configure.in:125: -1- AC_SUBST([HAVE_LIBUSB_TRUE])
+m4trace:configure.in:125: -1- AC_SUBST([HAVE_LIBUSB_FALSE])
+m4trace:configure.in:126: -1- AM_CONDITIONAL([HAVE_V4L2], [test x$have_v4l2 = xtrue])
+m4trace:configure.in:126: -1- AC_SUBST([HAVE_V4L2_TRUE])
+m4trace:configure.in:126: -1- AC_SUBST([HAVE_V4L2_FALSE])
+m4trace:configure.in:128: -1- AC_CONFIG_FILES([Makefile src/Makefile src/fli/Makefile src/webcam/Makefile src/apogee/Makefile src/cfitsio/Makefile])
+m4trace:configure.in:128: -1- _m4_warn([obsolete], [AC_OUTPUT should be used without arguments.
 You should run autoupdate.], [])
-m4trace:configure.in:121: -1- AC_SUBST([LIB@&t@OBJS], [$ac_libobjs])
-m4trace:configure.in:121: -1- AC_SUBST([LTLIBOBJS], [$ac_ltlibobjs])
+m4trace:configure.in:128: -1- AC_SUBST([LIB@&t@OBJS], [$ac_libobjs])
+m4trace:configure.in:128: -1- AC_SUBST([LTLIBOBJS], [$ac_ltlibobjs])
