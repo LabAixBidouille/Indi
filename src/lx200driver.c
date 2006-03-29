@@ -167,7 +167,7 @@ int selectSubCatalog(int catalog, int subCatalog);
 
 int Connect(const char *device)
 {
- fprintf(stderr, "Connecting to device %s\n", device);
+ IDLog("Connecting to device %s\n", device);
  
  if (openPort(device) < 0)
   return -1;
@@ -177,8 +177,8 @@ int Connect(const char *device)
 
 void Disconnect()
 {
-fprintf(stderr, "Disconnected.\n");
-close(fd);
+	IDLog("Disconnected.\n");
+	close(fd);
 }
 
 int testTelescope()
@@ -186,7 +186,7 @@ int testTelescope()
   int i=0;
   char ack[1] = { (char) 0x06 };
   char MountAlign[64];
-  fprintf(stderr, "Testing telescope's connection using ACK...\n");
+  IDLog("Testing telescope's connection using ACK...\n");
 
   for (i=0; i < 2; i++)
   {
@@ -267,6 +267,7 @@ int getCommandSexa(double *value, const char * cmd)
    return -1;
   }
  
+   tcflush(fd, TCIFLUSH);
    return 0;
 }
 
@@ -278,7 +279,8 @@ int getCommandString(char *data, const char* cmd)
       return -1;
 
     read_ret = portRead(data, -1, LX200_TIMEOUT);
-    
+    tcflush(fd, TCIFLUSH);
+
     if (read_ret < 1)
      return read_ret;
 
@@ -322,6 +324,7 @@ int getTimeFormat(int *format)
     return -1;
 
   read_ret = portRead(tempString, -1, LX200_TIMEOUT);
+  tcflush(fd, TCIFLUSH);
   
   if (read_ret < 1)
    return read_ret;
@@ -428,6 +431,8 @@ int getSiteName(char *siteName, int siteNum)
    }
 
    read_ret = portRead(siteName, -1, LX200_TIMEOUT);
+   tcflush(fd, TCIFLUSH);
+
    if (read_ret < 1)
      return read_ret;
 
@@ -441,7 +446,7 @@ int getSiteName(char *siteName, int siteNum)
     if (term)
       strcpy(siteName, "unused site");
 
-   fprintf(stderr, "Requested site name: %s\n", siteName);
+   IDLog("Requested site name: %s\n", siteName);
 
     return 0;
 }
@@ -454,6 +459,7 @@ int getSiteLatitude(int *dd, int *mm)
     return -1;
 
   read_ret = portRead(tempString, -1, LX200_TIMEOUT);
+  tcflush(fd, TCIFLUSH);
   
    if (read_ret < 1) 
    return read_ret;
@@ -477,6 +483,7 @@ int getSiteLongitude(int *ddd, int *mm)
    return -1;
 
   read_ret = portRead(tempString, -1, LX200_TIMEOUT);
+  tcflush(fd, TCIFLUSH);
   
   if (read_ret < 1)
     return read_ret;
@@ -501,6 +508,7 @@ int getTrackFreq(double *value)
       return -1;
 
     read_ret = portRead(tempString, -1, LX200_TIMEOUT);
+    tcflush(fd, TCIFLUSH);
     
     if (read_ret < 1)
      return read_ret;
@@ -527,6 +535,7 @@ int getNumberOfBars(int *value)
      return -1;
 
    read_ret = portRead(tempString, -1, LX200_TIMEOUT);
+   tcflush(fd, TCIFLUSH);
    
    if (read_ret < 0)
     return read_ret;
@@ -544,6 +553,7 @@ int getHomeSearchStatus(int *status)
    return -1;
 
   read_ret = portRead(tempString, 1, LX200_TIMEOUT);
+  tcflush(fd, TCIFLUSH);
   
   if (read_ret < 1)
    return read_ret;
@@ -570,6 +580,7 @@ int getOTATemp(double *value)
    return -1;
 
   read_ret = portRead(tempString, -1, LX200_TIMEOUT);
+  tcflush(fd, TCIFLUSH);
   
   if (read_ret < 1)
    return read_ret;
@@ -594,12 +605,13 @@ int updateSkyCommanderCoord(double *ra, double *dec)
   write(fd, CR, 1);
 
   read_ret = portRead(coords, 16, LX200_TIMEOUT);
+  tcflush(fd, TCIFLUSH);
 
   read_ret = sscanf(coords, " %g %g", &RA, &DEC);
 
   if (read_ret < 2)
   {
-   fprintf(stderr, "Error in Sky commander number format [%s], exiting.\n", coords);
+   IDLog("Error in Sky commander number format [%s], exiting.\n", coords);
    return -1;
   }
 
@@ -616,12 +628,13 @@ int updateIntelliscopeCoord (double *ra, double *dec)
   char CR[1] = { (char) 0x51 };	/* "Q" */
   float RA = 0.0, DEC = 0.0;
 
-  IDLog ("Sending a Q\n");
+  //IDLog ("Sending a Q\n");
   write (fd, CR, 1);
   /* We start at 14 bytes in case its a Sky Wizard, 
      but read one more later it if it's a intelliscope */
   read_ret = portRead (coords, 14, LX200_TIMEOUT);
-  IDLog ("portRead() = [%s]\n", coords);
+  tcflush(fd, TCIFLUSH);
+  //IDLog ("portRead() = [%s]\n", coords);
 
   /* Remove the Q in the response from the Intelliscope  but not the Sky Wizard */
   if (coords[0] == 'Q') {
@@ -659,6 +672,7 @@ int setStandardProcedure(char * data)
   return -1;
  
  read_ret = portRead(boolRet, 1, LX200_TIMEOUT);
+ tcflush(fd, TCIFLUSH);
  
  if (read_ret < 1)
    return read_ret;
@@ -677,7 +691,6 @@ int setStandardProcedure(char * data)
 
 int setCommandInt(int data, const char *cmd)
 {
-
   char tempString[16];
 
   snprintf(tempString, sizeof( tempString ), "%s%d#", cmd, data);
@@ -786,7 +799,7 @@ int setCommandXYZ(int x, int y, int z, const char *cmd)
 
 int setAlignmentMode(unsigned int alignMode)
 {
-  fprintf(stderr , "Set alignment mode %d\n", alignMode);
+  //fprintf(stderr , "Set alignment mode %d\n", alignMode);
 
   switch (alignMode)
    {
@@ -804,6 +817,7 @@ int setAlignmentMode(unsigned int alignMode)
        break;
    }
    
+   tcflush(fd, TCIFLUSH);
    return 0;
 }
 
@@ -820,6 +834,7 @@ int setCalenderDate(int dd, int mm, int yy)
     return -1;
 
    read_ret = portRead(boolRet, 1, LX200_TIMEOUT);
+   tcflush(fd, TCIFLUSH);
    
    if (read_ret < 1)
     return read_ret;
@@ -840,10 +855,9 @@ int setUTCOffset(double hours)
 {
    char tempString[16];
 
-   /*TODO add fractions*/
    snprintf(tempString, sizeof( tempString ), "#:SG %+03d#", (int) hours);
 
-   fprintf(stderr, "UTC string is %s\n", tempString);
+   IDLog("UTC string is %s\n", tempString);
 
    return (setStandardProcedure(tempString));
 
@@ -950,6 +964,7 @@ int setSlewMode(int slewMode)
      break;
    }
    
+   tcflush(fd, TCIFLUSH);
    return 0;
 
 }
@@ -969,6 +984,7 @@ int setFocuserMotion(int motionType)
      break;
   }
 
+  tcflush(fd, TCIFLUSH);
   return 0;
 }
 
@@ -989,6 +1005,8 @@ int setFocuserSpeedMode (int speedMode)
       return -1;
      break;
  }
+
+ tcflush(fd, TCIFLUSH);
  return 0;
 }
 
@@ -1009,6 +1027,7 @@ int setGPSFocuserSpeed (int speed)
   if (portWrite(speed_str) < 0)
        return -1;
 
+  tcflush(fd, TCIFLUSH);
   return 0;
 }
 
@@ -1045,6 +1064,8 @@ int Slew()
      return 0;
    
    read_ret = portRead(errorMsg, -1, LX200_TIMEOUT);
+   tcflush(fd, TCIFLUSH);
+   IDLog(":MS Error %s\n", errorMsg);
    
    if (read_ret < 1)
     return read_ret;
@@ -1076,6 +1097,7 @@ int MoveTo(int direction)
     break;
   }
   
+  tcflush(fd, TCIFLUSH);
   return 0;
 }
 
@@ -1109,6 +1131,7 @@ switch (direction)
     break;
   }
   
+  tcflush(fd, TCIFLUSH);
   return 0;
 
 }
@@ -1118,6 +1141,7 @@ int abortSlew()
  if (portWrite("#:Q#") < 0)
   return -1;
 
+ tcflush(fd, TCIFLUSH);
  return 0;
 }
 
@@ -1137,10 +1161,6 @@ int Sync(char *matchedObject)
   /* Sleep 10ms before flushing. This solves some issues with LX200 compatible devices. */
   usleep(10000);
   tcflush(fd, TCIFLUSH);
-  //read_ret = portRead(matchedObject, -1, LX200_TIMEOUT);
-  //if (read_ret < 1)
-   //return read_ret;
-  //matchedObject[read_ret-1] = '\0';
 
   return 0;
 }
@@ -1171,6 +1191,7 @@ int selectSite(int siteNum)
     break;
   }
   
+  tcflush(fd, TCIFLUSH);
   return 0;
 
 }
@@ -1197,6 +1218,7 @@ int selectCatalogObject(int catalog, int NNNN)
   if (portWrite(tempString) < 0)
    return -1;
 
+  tcflush(fd, TCIFLUSH);
   return 0;
 }
 
@@ -1248,6 +1270,9 @@ int checkLX200Format()
   else
       return 0;
 
+   // Clear any response characters from non-meade controllers (e.g. EQ6)
+   tcflush(fd, TCIFLUSH);
+
   /* Does #:U# has any effect?? */
   if (portWrite("#:GR#") < 0)
    return -1;
@@ -1266,9 +1291,9 @@ int checkLX200Format()
  	controller_format = LX200_SHORT_FORMAT;
 
   if (controller_format == LX200_LONG_FORMAT)
-	fprintf(stderr, "Long Format Detected\n");
+	IDLog("Long Format Detected\n");
   else
-	fprintf(stderr, "Short Format Detected\n");
+	IDLog("Short Format Detected\n");
   return 0;
 }
 
@@ -1297,6 +1322,7 @@ int  selectTrackingMode(int trackMode)
     break;
    }
    
+   tcflush(fd, TCIFLUSH);
    return 0;
 
 }
@@ -1338,6 +1364,7 @@ int selectAPTrackingMode(int trackMode)
     break;
    }
    
+   tcflush(fd, TCIFLUSH);
    return 0;
 
 }
