@@ -259,7 +259,7 @@ int getCommandSexa(double *value, const char * cmd)
  
   tempString[read_ret - 1] = '\0';
   
-  //IDLog("getComandSexa: %s\n", tempString);
+  /*IDLog("getComandSexa: %s\n", tempString);*/
 
   if (f_scansexa(tempString, value))
   {
@@ -628,13 +628,13 @@ int updateIntelliscopeCoord (double *ra, double *dec)
   char CR[1] = { (char) 0x51 };	/* "Q" */
   float RA = 0.0, DEC = 0.0;
 
-  //IDLog ("Sending a Q\n");
+  /*IDLog ("Sending a Q\n");*/
   write (fd, CR, 1);
   /* We start at 14 bytes in case its a Sky Wizard, 
      but read one more later it if it's a intelliscope */
   read_ret = portRead (coords, 14, LX200_TIMEOUT);
   tcflush(fd, TCIFLUSH);
-  //IDLog ("portRead() = [%s]\n", coords);
+  /*IDLog ("portRead() = [%s]\n", coords);*/
 
   /* Remove the Q in the response from the Intelliscope  but not the Sky Wizard */
   if (coords[0] == 'Q') {
@@ -643,10 +643,10 @@ int updateIntelliscopeCoord (double *ra, double *dec)
     read_ret = portRead (coords, 1, LX200_TIMEOUT);
   }
   read_ret = sscanf (coords, " %g %g", &RA, &DEC);
-  //IDLog ("sscanf() RA = [%f]\n", RA * 0.0390625);
-  //IDLog ("sscanf() DEC = [%f]\n", DEC * 0.0390625);
+  /*IDLog ("sscanf() RA = [%f]\n", RA * 0.0390625);*/
+  /*IDLog ("sscanf() DEC = [%f]\n", DEC * 0.0390625);*/
 
-  //IDLog ("Intelliscope output [%s]", coords);
+  /*IDLog ("Intelliscope output [%s]", coords);*/
   if (read_ret < 2) {
     IDLog ("Error in Intelliscope number format [%s], exiting.\n", coords);
     return -1;
@@ -750,7 +750,7 @@ int setObjectRA(double ra)
  else
 	snprintf(tempString, sizeof( tempString ), "#:Sr %02d:%02d.%01d#", h, m, frac_m);
 	
- //IDLog("Set Object RA String %s\n", tempString);
+ /*IDLog("Set Object RA String %s\n", tempString);*/
  return (setStandardProcedure(tempString));
 }
 
@@ -782,7 +782,7 @@ int setObjectDEC(double dec)
     break;
   }
 
-  //IDLog("Set Object DEC String %s\n", tempString);
+  /*IDLog("Set Object DEC String %s\n", tempString);*/
   
   return (setStandardProcedure(tempString));
 
@@ -799,7 +799,7 @@ int setCommandXYZ(int x, int y, int z, const char *cmd)
 
 int setAlignmentMode(unsigned int alignMode)
 {
-  //fprintf(stderr , "Set alignment mode %d\n", alignMode);
+  /*fprintf(stderr , "Set alignment mode %d\n", alignMode);*/
 
   switch (alignMode)
    {
@@ -857,7 +857,7 @@ int setUTCOffset(double hours)
 
    snprintf(tempString, sizeof( tempString ), "#:SG %+03d#", (int) hours);
 
-   //IDLog("UTC string is %s\n", tempString);
+   /*IDLog("UTC string is %s\n", tempString);*/
 
    return (setStandardProcedure(tempString));
 
@@ -1065,7 +1065,7 @@ int Slew()
    
    read_ret = portRead(errorMsg, -1, LX200_TIMEOUT);
    tcflush(fd, TCIFLUSH);
-   //IDLog(":MS Error %s\n", errorMsg);
+   /*IDLog(":MS Error %s\n", errorMsg);*/
    
    if (read_ret < 1)
     return read_ret;
@@ -1156,7 +1156,7 @@ int Sync(char *matchedObject)
    
   matchedObject[read_ret-1] = '\0';
 
-  //IDLog("Matched Object: %s\n", matchedObject);
+  /*IDLog("Matched Object: %s\n", matchedObject);*/
   
   /* Sleep 10ms before flushing. This solves some issues with LX200 compatible devices. */
   usleep(10000);
