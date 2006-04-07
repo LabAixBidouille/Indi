@@ -63,7 +63,7 @@ apogee_ppi_SOURCES = apogee_ppi.cpp base64.c eventloop.c indidrivermain.c
 apogee_ppi_LDADD = libindicom.a liblilxml.a apogee/libapogee_PPI.la -lz
 
 sbigccd_SOURCES = sbigcam.cpp base64.c eventloop.c indidrivermain.c
-sbigccd_LDADD = libindicom.a liblilxml.a -lsbigudrv -lz
+sbigccd_LDADD = libindicom.a liblilxml.a libsbigudrv.la -lz
 
 pkgdata_DATA = apogee_caminfo.xml
 
