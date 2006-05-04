@@ -7,7 +7,7 @@ libsbigudrv_la_SOURCES = sbig_dummy.cpp
 bin_add   =  sbigccd apogee_ppi v4ldriver v4lphilips meade_lpi fliccd fliwheel flipdf
 endif
 
-bin_PROGRAMS = indiserver lx200basic lx200generic celestrongps apmount temma skycommander intelliscope robofocus $(bin_add)
+bin_PROGRAMS = indiserver lx200basic lx200generic celestrongps apmount temma skycommander intelliscope robofocus orionatlas $(bin_add)
 
 liblilxml_a_SOURCES = lilxml.c
 libindicom_a_SOURCES = indicom.c base64.c
@@ -58,6 +58,9 @@ skycommander_LDADD = liblilxml.a libindicom.a -lm
 
 intelliscope_SOURCES =  indidrivermain.c base64.c eventloop.c lx200driver.c intelliscope.c
 intelliscope_LDADD = liblilxml.a libindicom.a -lm
+
+orionatlas_SOURCES =  indidrivermain.c base64.c eventloop.c orionatlas.cpp
+orionatlas_LDADD = liblilxml.a libindicom.a -lm
 
 apogee_ppi_SOURCES = apogee_ppi.cpp base64.c eventloop.c indidrivermain.c
 apogee_ppi_LDADD = libindicom.a liblilxml.a apogee/libapogee_PPI.la -lz

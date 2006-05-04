@@ -46,6 +46,7 @@
 #include "cfitsio/fitsio.h"
 #include "eventloop.h"
 
+/* N.B. INDI is INDEPENDENT from KStars */
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif

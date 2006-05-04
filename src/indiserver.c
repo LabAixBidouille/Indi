@@ -186,7 +186,7 @@ main (int ac, char *av[])
 	setMemFuncsFQ (mymalloc, myrealloc, myfree);
 
 	/* seed client info array so we can always use realloc */
-	clinfo = (ClInfo *) mymalloc (1);
+	clinfo = (ClInfo *) mymalloc (sizeof(ClInfo));
 	nclinfo = 0;
 
 	/* create driver info array all at once so size never has to change */
@@ -218,7 +218,7 @@ static void
 usage(void)
 {
 	fprintf (stderr, "Usage: %s [options] driver [driver ...]\n", me);
-	fprintf (stderr, "%s\n", "$Revision: 517081 $");
+	fprintf (stderr, "%s\n", "$Revision: 537122 $");
 	fprintf (stderr, "Purpose: INDI Server\n");
 	fprintf (stderr, "Options:\n");
 	fprintf (stderr, " -p p  : alternate IP port, default %d\n", INDIPORT);
@@ -455,10 +455,14 @@ indiListen ()
 	    exit(1);
 	}
 	
-	/* bind to given port for any IP address locally */
+	/* bind to given port for any IP address per configure option */
 	memset (&serv_socket, 0, sizeof(serv_socket));
 	serv_socket.sin_family = AF_INET;
+	#ifdef SSH_TUNNEL
 	serv_socket.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+	#else
+	serv_socket.sin_addr.s_addr = htonl (INADDR_ANY);
+	#endif
 	serv_socket.sin_port = htons ((unsigned short)port);
 	if (setsockopt(sfd,SOL_SOCKET,SO_REUSEADDR,&reuse,sizeof(reuse)) < 0){
 	    fprintf (stderr, "%s: setsockopt: %s", me, strerror(errno));
@@ -574,7 +578,7 @@ newClient()
 	cp->s = s;
 	cp->lp = newLilXML();
 	cp->msgq = newFQ(1);
-	cp->devs = mymalloc (1);
+	cp->devs = mymalloc (sizeof(IDev));
 
 	/* N.B. beware implied use of malloc */
 	pthread_mutex_lock (&malloc_m);

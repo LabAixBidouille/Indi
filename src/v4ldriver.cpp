@@ -596,13 +596,13 @@ void V4L_Driver::uploadFile(const char * filename)
    }
    
    totalBytes = stat_p.st_size;
-   fitsData = new unsigned char[totalBytes];
 
    fitsFile = fopen(filename, "r");
    
    if (fitsFile == NULL)
     return;
    
+   fitsData = new unsigned char[totalBytes];
    /* #1 Read file from disk */ 
    for (unsigned int i=0; i < totalBytes; i+= nr)
    {
@@ -614,6 +614,7 @@ void V4L_Driver::uploadFile(const char * filename)
         return;
      }
    }
+   fclose(fitsFile);
    
    if (CompressS[0].s == ISS_ON)
    {   
@@ -648,7 +649,7 @@ void V4L_Driver::uploadFile(const char * filename)
    imageBP.s = IPS_OK;
    IDSetBLOB (&imageBP, NULL);
    
-   delete (fitsData);
+   delete [] fitsData;
 } 
 
 void V4L_Driver::connectCamera()

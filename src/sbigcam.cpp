@@ -2155,7 +2155,7 @@ int SbigCam::ReleaseBuffer(unsigned short height, unsigned short **buffer)
  	for(int y = 0; y < height; y++){
 			if(buffer[y]) delete [] buffer[y];
  	}
- 	delete buffer;
+ 	delete [] buffer;
  	buffer = 0;
 	return(CE_NO_ERROR);
 }
@@ -2468,6 +2468,7 @@ int SbigCam::UploadFits(string fits_name)
 	if(compressed_data == 0){
 		IDMessage(	DEVICE_NAME, "Error: UploadFits - low memory. "
 							"Unable to initialize FITS buffers.");
+		free (fits_data);
 		return(CE_OS_ERROR);
 	}	
 	#endif   
@@ -2484,6 +2485,7 @@ int SbigCam::UploadFits(string fits_name)
 						return(CE_OS_ERROR);
 				}
 	}
+	fclose(fits_file);
 
  	#ifdef USE_BLOB_COMPRESS  
 	unsigned long compressed_bytes = sizeof(char) * total_bytes + 
