@@ -783,8 +783,10 @@ static int iraftofits (
 		    for (k = 0; k < 80; k++)
 			fitsline[k] = ' ';
 		    }
-		if (irafchar > 32 && irafchar < 127)
-		    fitsline[j] = irafchar;
+		else {
+			if (irafchar > 32 && irafchar < 127)
+		    		fitsline[j] = irafchar;
+		}
 		j++;
 		}
 	    }
@@ -1857,8 +1859,9 @@ char *value;	/* character string containing the value for variable
 	    q2 = line;
 
 	/*  extract comment and remove trailing spaces */
-
-	c1 = strchr (q2,'/');
+	c1 = NULL;
+	if (q2)
+		c1 = strchr (q2,'/');
 	if (c1 != NULL) {
 	    lcom = 80 - (c1 - line);
 	    strncpy (newcom, c1+1, lcom);

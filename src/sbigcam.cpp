@@ -89,7 +89,7 @@ void ISNewBLOB(	const char */*dev*/, const char */*name*/, int */*sizes[]*/,
 								char	** /*blobs[]*/,	char **/*formats[]*/, char **/*names[]*/, 
 								int 	/*num*/)
 {
- 	// We use this if we're receving binary data from the client. 
+ 	// We use this if we're receiving binary data from the client. 
 	// Most likely we won't for this driver.
 }
 #endif
@@ -1796,7 +1796,7 @@ void SbigCam::ISNewNumber(const char *name, double values[], char *names[], int 
 			m_icfw_slot_n[0].value = cfwr.cfwPosition;
 			m_icfw_slot_np.s = IPS_OK;
 		}else{				
-			// CFW error occured, so report all the available infos to the client:
+			// CFW error occurred, so report all the available infos to the client:
 			CfwShowResults("CFWGoto:", cfwr);
 			m_icfw_slot_np.s = IPS_ALERT;
 			sprintf(str, "Please Connect/Disconnect CFW, than try again...");
@@ -2584,7 +2584,10 @@ int SbigCam::UploadFits(string fits_name)
 	#endif   
 
 	FILE *fits_file = fopen(fits_name.c_str(), "r");
-	if(fits_file == 0) return(CE_OS_ERROR);
+	if(fits_file == 0) {
+		free (fits_data);
+		return(CE_OS_ERROR);
+	}
    
 	// Read FITS file from disk:
 	unsigned int	i = 0, nr = 0;
@@ -2592,6 +2595,7 @@ int SbigCam::UploadFits(string fits_name)
 				nr = fread(fits_data + i, 1, total_bytes - i, fits_file);
 				if(nr <= 0){
 						IDMessage(DEVICE_NAME, "Error: UploadFits - reading temporary FITS file.");
+						free(compressed_data);
 						return(CE_OS_ERROR);
 				}
 	}

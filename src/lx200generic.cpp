@@ -18,7 +18,9 @@
 
 #endif
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -343,11 +345,12 @@ LX200Generic::LX200Generic()
    currentDEC     = 0;
    currentSet     = 0;
    UTCOffset      = 0;
+   fd             = -1;
    lastMove[0] = lastMove[1] = lastMove[2] = lastMove[3] = 0;
 
    // Children call parent routines, this is the default
    IDLog("initilizaing from generic LX200 device...\n");
-   IDLog("INDI Version: 2006-03-15\n");
+   IDLog("INDI Version: 2006-05-07\n");
  
    //enableSimulation(true);  
 }
@@ -442,7 +445,7 @@ void LX200Generic::ISNewText (const char *dev, const char *name, char *texts[], 
 	  if (checkPower(&SiteName))
 	   return;
 
-	  if ( ( err = setSiteName(texts[0], currentSiteNum) < 0) )
+	  if ( ( err = setSiteName(fd, texts[0], currentSiteNum) < 0) )
 	  {
 	     handleError(&SiteName, err, "Setting site name");
 	     return;
@@ -478,10 +481,10 @@ void LX200Generic::ISNewText (const char *dev, const char *name, char *texts[], 
 		
 		IDLog("local time is %02d:%02d:%02d\nUTCOffset: %g\n", ltp->tm_hour, ltp->tm_min, ltp->tm_sec, UTCOffset);
 		
-		getSDTime(&STime[0].value);
+		getSDTime(fd, &STime[0].value);
 		IDSetNumber(&SDTime, NULL);
 		
-		if ( ( err = setUTCOffset(UTCOffset) < 0) )
+		if ( ( err = setUTCOffset(fd, UTCOffset) < 0) )
 	  	{
 	        Time.s = IPS_IDLE;
 	        IDSetText( &Time , "Setting UTC Offset failed.");
@@ -489,7 +492,7 @@ void LX200Generic::ISNewText (const char *dev, const char *name, char *texts[], 
 		return;
 	  	}
 		
-		if ( ( err = setLocalTime(ltp->tm_hour, ltp->tm_min, ltp->tm_sec) < 0) )
+		if ( ( err = setLocalTime(fd, ltp->tm_hour, ltp->tm_min, ltp->tm_sec) < 0) )
 	  	{
 	          handleError(&Time, err, "Setting local time");
                   free (ltp);
@@ -528,7 +531,7 @@ void LX200Generic::ISNewText (const char *dev, const char *name, char *texts[], 
 		
 		if (!strcmp(dev, "LX200 GPS"))
 		{
-			if ( ( err = setCalenderDate(utm.tm_mday, utm.tm_mon, utm.tm_year) < 0) )
+			if ( ( err = setCalenderDate(fd, utm.tm_mday, utm.tm_mon, utm.tm_year) < 0) )
 	  		{
 		  		handleError(&Time, err, "Setting UTC date.");
 		  		return;
@@ -536,7 +539,7 @@ void LX200Generic::ISNewText (const char *dev, const char *name, char *texts[], 
 		}
 		else
 		{
-			if ( ( err = setCalenderDate(ltp->tm_mday, ltp->tm_mon, ltp->tm_year) < 0) )
+			if ( ( err = setCalenderDate(fd, ltp->tm_mday, ltp->tm_mon, ltp->tm_year) < 0) )
 	  		{
 		  		handleError(&Time, err, "Setting local date.");
 		  		return;
@@ -614,11 +617,13 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 	   fs_sexa(RAStr, newRA, 2, 3600);
 	   fs_sexa(DecStr, newDEC, 2, 3600);
 	  
+           #ifdef INDI_DEBUG
 	   IDLog("We received JNOW RA %g - DEC %g\n", newRA, newDEC);
 	   IDLog("We received JNOW RA %s - DEC %s\n", RAStr, DecStr);
+	   #endif
 
 	  if (!simulation)
-	   if ( (err = setObjectRA(newRA)) < 0 || ( err = setObjectDEC(newDEC)) < 0)
+	   if ( (err = setObjectRA(fd, newRA)) < 0 || ( err = setObjectDEC(fd, newDEC)) < 0)
 	   {
 	     handleError(&eqNum, err, "Setting RA/DEC");
 	     return;
@@ -672,7 +677,7 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 	  getSexComponents(values[0], &h, &m, &s);
 	  IDLog("Siderial Time is %02d:%02d:%02d\n", h, m, s);
 	  
-	  if ( ( err = setSDTime(h, m, s) < 0) )
+	  if ( ( err = setSDTime(fd, h, m, s) < 0) )
 	  {
 	    handleError(&SDTime, err, "Setting siderial time"); 
             return;
@@ -718,13 +723,13 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 		fs_sexa (l, newLat, 3, 3600);
 		fs_sexa (L, newLong, 4, 3600);
 		
-		if ( ( err = setSiteLongitude(360.0 - newLong) < 0) )
+		if ( ( err = setSiteLongitude(fd, 360.0 - newLong) < 0) )
 	        {
 		   handleError(&geoNum, err, "Setting site coordinates");
 		   return;
 	         }
 		
-		setSiteLatitude(newLat);
+		setSiteLatitude(fd, newLat);
 		geoNum.np[0].value = newLat;
 		geoNum.np[1].value = newLong;
 		snprintf (msg, sizeof(msg), "Site location updated to Lat %.32s - Long %.32s", l, L);
@@ -745,7 +750,7 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 
 	  IDLog("Trying to set track freq of: %f\n", values[0]);
 
-	  if ( ( err = setTrackFreq(values[0])) < 0) 
+	  if ( ( err = setTrackFreq(fd, values[0])) < 0) 
 	  {
              handleError(&TrackingFreq, err, "Setting tracking frequency");
 	     return;
@@ -761,7 +766,7 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 	      TrackModeS[1].s = ISS_OFF;
 	      TrackModeS[2].s = ISS_ON;
 	      TrackModeSw.s   = IPS_OK;
-	      selectTrackingMode(trackingMode);
+	      selectTrackingMode(fd, trackingMode);
 	      IDSetSwitch(&TrackModeSw, NULL);
 	 }
 	 
@@ -839,7 +844,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	   ParkSP.s = IPS_IDLE;
 	   
 
-	   if ( (err = getSDTime(&STime[0].value)) < 0)
+	   if ( (err = getSDTime(fd, &STime[0].value)) < 0)
 	   {
   	  	handleError(&ParkSP, err, "Get siderial time");
 	  	return;
@@ -849,16 +854,16 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	   {
 	     targetRA  = STime[0].value;
 	     targetDEC = 0;
-	     setObjectRA(targetRA);
-	     setObjectDEC(targetDEC);
+	     setObjectRA(fd, targetRA);
+	     setObjectDEC(fd, targetDEC);
 	   }
 	   
 	   else if (AlignmentS[1].s == ISS_ON)
 	   {
 	     targetRA  = calculateRA(STime[0].value);
 	     targetDEC = calculateDec(geo[0].value, STime[0].value);
-	     setObjectRA(targetRA);
-	     setObjectDEC(targetDEC);
+	     setObjectRA(fd, targetRA);
+	     setObjectDEC(fd, targetDEC);
 	     IDLog("Parking the scope in AltAz (0,0) which corresponds to (RA,DEC) of (%g,%g)\n", targetRA, targetDEC);
 	     IDLog("Current Sidereal time is: %g\n", STime[0].value);
 	     IDSetNumber(&SDTime, NULL);
@@ -886,7 +891,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  }
 	  
 	  IUResetSwitches(&abortSlewSw);
-	  abortSlew();
+	  abortSlew(fd);
 
 	    if (eqNum.s == IPS_BUSY)
 	    {
@@ -930,7 +935,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  IUUpdateSwitches(&AlignmentSw, states, names, n);
 	  index = getOnSwitch(&AlignmentSw);
 
-	  if ( ( err = setAlignmentMode(index) < 0) )
+	  if ( ( err = setAlignmentMode(fd, index) < 0) )
 	  {
 	     handleError(&AlignmentSw, err, "Setting alignment");
              return;
@@ -952,13 +957,13 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  IUUpdateSwitches(&SitesSw, states, names, n);
 	  currentSiteNum = getOnSwitch(&SitesSw) + 1;
 	  
-	  if ( ( err = selectSite(currentSiteNum) < 0) )
+	  if ( ( err = selectSite(fd, currentSiteNum) < 0) )
 	  {
    	      handleError(&SitesSw, err, "Selecting sites");
 	      return;
 	  }
 
-	  if ( ( err = getSiteLatitude(&dd, &mm) < 0))
+	  if ( ( err = getSiteLatitude(fd, &dd, &mm) < 0))
 	  {
 	      handleError(&SitesSw, err, "Selecting sites");
 	      return;
@@ -967,7 +972,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  if (dd > 0) geoNum.np[0].value = dd + mm / 60.0;
 	  else geoNum.np[0].value = dd - mm / 60.0;
 	  
-	  if ( ( err = getSiteLongitude(&dd, &mm) < 0))
+	  if ( ( err = getSiteLongitude(fd, &dd, &mm) < 0))
 	  {
 	        handleError(&SitesSw, err, "Selecting sites");
 		return;
@@ -976,7 +981,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  if (dd > 0) geoNum.np[1].value = 360.0 - (dd + mm / 60.0);
 	  else geoNum.np[1].value = (dd - mm / 60.0) * -1.0;
 	  
-	  getSiteName( SiteName.tp[0].text, currentSiteNum);
+	  getSiteName(fd, SiteName.tp[0].text, currentSiteNum);
 
 	  IDLog("Selecting site %d\n", currentSiteNum);
 	  
@@ -1007,14 +1012,12 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  IUUpdateSwitches(&FocusMotionSw, states, names, n);
 	  index = getOnSwitch(&FocusMotionSw);
 	  
-	  
-	  if ( ( err = setFocuserMotion(index) < 0) )
+	  if ( ( err = setFocuserMotion(fd, index) < 0) )
 	  {
 	     handleError(&FocusMotionSw, err, "Setting focuser speed");
              return;
 	  }
-	  
-	  
+
 	  FocusMotionSw.s = IPS_BUSY;
 	  
 	  // with a timer 
@@ -1035,7 +1038,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  IUUpdateSwitches(&SlewModeSw, states, names, n);
 	  index = getOnSwitch(&SlewModeSw);
 	   
-	  if ( ( err = setSlewMode(index) < 0) )
+	  if ( ( err = setSlewMode(fd, index) < 0) )
 	  {
               handleError(&SlewModeSw, err, "Setting slew mode");
               return;
@@ -1058,7 +1061,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	 
 	 if (!swp)
 	 {
-	    abortSlew();
+	    abortSlew(fd);
 	    IUResetSwitches(&MovementSw);
 	    MovementSw.s = IPS_IDLE;
 	    IDSetSwitch(&MovementSw, NULL);
@@ -1076,7 +1079,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	   // North/South movement is illegal
 	   if (lastMove[LX200_NORTH] && lastMove[LX200_SOUTH])	
 	   {
-	     abortSlew();
+	     abortSlew(fd);
 	      for (int i=0; i < 4; i++)
 	        lastMove[i] = 0;
 	      	
@@ -1089,7 +1092,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	   // East/West movement is illegal
 	   if (lastMove[LX200_EAST] && lastMove[LX200_WEST])	
 	   {
-	      abortSlew();
+	      abortSlew(fd);
 	      for (int i=0; i < 4; i++)
 	            lastMove[i] = 0;
 	       
@@ -1099,20 +1102,22 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	      return;
 	   }
 	      
+          #ifdef INDI_DEBUG
           IDLog("We have switch %d \n ", index);
 	  IDLog("NORTH: %d -- WEST: %d -- EAST: %d -- SOUTH %d\n", lastMove[0], lastMove[1], lastMove[2], lastMove[3]);
+	  #endif
 
 	  if (lastMove[index] == 1)
 	  {
-	        IDLog("issuing a move command\n");
-	    	if ( ( err = MoveTo(index) < 0) )
+	        //IDLog("issuing a move command\n");
+	    	if ( ( err = MoveTo(fd, index) < 0) )
 	  	{
 	        	 handleError(&MovementSw, err, "Setting motion direction");
  		 	return;
 	  	}
 	  }
 	  else
-	     HaltMovement(index);
+	     HaltMovement(fd, index);
 
           if (!lastMove[0] && !lastMove[1] && !lastMove[2] && !lastMove[3])
 	     MovementSw.s = IPS_IDLE;
@@ -1148,13 +1153,13 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  IUUpdateSwitches(&TrackModeSw, states, names, n);
 	  trackingMode = getOnSwitch(&TrackModeSw);
 	  
-	  if ( ( err = selectTrackingMode(trackingMode) < 0) )
+	  if ( ( err = selectTrackingMode(fd, trackingMode) < 0) )
 	  {
 	         handleError(&TrackModeSw, err, "Setting tracking mode.");
 		 return;
 	  }
 	  
-          getTrackFreq(&TrackFreq[0].value);
+          getTrackFreq(fd, &TrackFreq[0].value);
 	  TrackModeSw.s = IPS_OK;
 	  IDSetNumber(&TrackingFreq, NULL);
 	  IDSetSwitch(&TrackModeSw, NULL);
@@ -1182,7 +1187,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	    IDSetNumber(&FocusTimerNP, NULL);
 	  }
 	    
-	  setFocuserSpeedMode(index);
+	  setFocuserSpeedMode(fd, index);
 	  FocusModeSP.s = IPS_OK;
 	  IDSetSwitch(&FocusModeSP, NULL);
 	  return;
@@ -1197,7 +1202,7 @@ void LX200Generic::handleError(ISwitchVectorProperty *svp, int err, const char *
   svp->s = IPS_ALERT;
   
   /* First check to see if the telescope is connected */
-    if (testTelescope())
+    if (check_lx200_connection(fd))
     {
       /* The telescope is off locally */
       PowerS[0].s = ISS_OFF;
@@ -1206,7 +1211,7 @@ void LX200Generic::handleError(ISwitchVectorProperty *svp, int err, const char *
       IDSetSwitch(&PowerSP, "Telescope is not responding to commands, will retry in 10 seconds.");
       
       IDSetSwitch(svp, NULL);
-      IEAddTimer(10000, retryConnection, NULL);
+      IEAddTimer(10000, retryConnection, &fd);
       return;
     }
     
@@ -1229,7 +1234,7 @@ void LX200Generic::handleError(INumberVectorProperty *nvp, int err, const char *
   nvp->s = IPS_ALERT;
   
   /* First check to see if the telescope is connected */
-    if (testTelescope())
+    if (check_lx200_connection(fd))
     {
       /* The telescope is off locally */
       PowerS[0].s = ISS_OFF;
@@ -1238,7 +1243,7 @@ void LX200Generic::handleError(INumberVectorProperty *nvp, int err, const char *
       IDSetSwitch(&PowerSP, "Telescope is not responding to commands, will retry in 10 seconds.");
       
       IDSetNumber(nvp, NULL);
-      IEAddTimer(10000, retryConnection, NULL);
+      IEAddTimer(10000, retryConnection, &fd);
       return;
     }
     
@@ -1261,7 +1266,7 @@ void LX200Generic::handleError(ITextVectorProperty *tvp, int err, const char *ms
   tvp->s = IPS_ALERT;
   
   /* First check to see if the telescope is connected */
-    if (testTelescope())
+    if (check_lx200_connection(fd))
     {
       /* The telescope is off locally */
       PowerS[0].s = ISS_OFF;
@@ -1270,7 +1275,7 @@ void LX200Generic::handleError(ITextVectorProperty *tvp, int err, const char *ms
       IDSetSwitch(&PowerSP, "Telescope is not responding to commands, will retry in 10 seconds.");
       
       IDSetText(tvp, NULL);
-      IEAddTimer(10000, retryConnection, NULL);
+      IEAddTimer(10000, retryConnection, &fd);
       return;
     }
     
@@ -1305,9 +1310,9 @@ bool LX200Generic::isTelescopeOn(void)
 
 static void retryConnection(void * p)
 {
-  p=p;
+  int fd = *( (int *) p);
   
-  if (testTelescope())
+  if (check_lx200_connection(fd))
   {
     PowerSP.s = IPS_IDLE;
     IDSetSwitch(&PowerSP, "The connection to the telescope is lost.");
@@ -1349,8 +1354,8 @@ void LX200Generic::ISPoll()
         break;
 
         case IPS_BUSY:
-	    getLX200RA(&currentRA);
-	    getLX200DEC(&currentDEC);
+	    getLX200RA(fd, &currentRA);
+	    getLX200DEC(fd, &currentDEC);
 	    dx = targetRA - currentRA;
 	    dy = targetDEC - currentDEC;
 
@@ -1391,7 +1396,7 @@ void LX200Generic::ISPoll()
 		  	break;
 		  
 		  case LX200_PARK:
-		        if (setSlewMode(LX200_SLEW_GUIDE) < 0)
+		        if (setSlewMode(fd, LX200_SLEW_GUIDE) < 0)
 			{ 
 			  handleError(&eqNum, err, "Setting slew mode");
 			  return;
@@ -1401,7 +1406,7 @@ void LX200Generic::ISPoll()
 			SlewModeS[LX200_SLEW_GUIDE].s = ISS_ON;
 			IDSetSwitch(&SlewModeSw, NULL);
 			
-			MoveTo(LX200_EAST);
+			MoveTo(fd, LX200_EAST);
 			IUResetSwitches(&MovementSw);
 			MovementS[LX200_EAST].s = ISS_ON;
 			MovementSw.s = IPS_BUSY;
@@ -1425,7 +1430,7 @@ void LX200Generic::ISPoll()
 
 	case IPS_OK:
 	  
-	if ( (err = getLX200RA(&currentRA)) < 0 || (err = getLX200DEC(&currentDEC)) < 0)
+	if ( (err = getLX200RA(fd, &currentRA)) < 0 || (err = getLX200DEC(fd, &currentDEC)) < 0)
 	{
 	  handleError(&eqNum, err, "Getting RA/DEC");
 	  return;
@@ -1452,8 +1457,8 @@ void LX200Generic::ISPoll()
 	  case IPS_IDLE:
 	   break;
 	 case IPS_BUSY:
-	   getLX200RA(&currentRA);
-	   getLX200DEC(&currentDEC);
+	   getLX200RA(fd, &currentRA);
+	   getLX200DEC(fd, &currentDEC);
 	   eqNum.np[0].value = currentRA;
 	   eqNum.np[1].value = currentDEC;
 
@@ -1476,7 +1481,7 @@ void LX200Generic::ISPoll()
 	    if (FocusTimerN[0].value == 0)
 	    {
 	      
-	      if ( ( err = setFocuserSpeedMode(0) < 0) )
+	      if ( ( err = setFocuserSpeedMode(fd, 0) < 0) )
               {
 	        handleError(&FocusModeSP, err, "setting focuser mode");
                 IDLog("Error setting focuser mode\n");
@@ -1608,20 +1613,20 @@ void LX200Generic::getBasicData()
 
   getAlignment();
   
-  checkLX200Format();
+  checkLX200Format(fd);
   
-  if ( (err = getTimeFormat(&timeFormat)) < 0)
+  if ( (err = getTimeFormat(fd, &timeFormat)) < 0)
      IDMessage(thisDevice, "Failed to retrieve time format from device.");
   else
   {
     timeFormat = (timeFormat == 24) ? LX200_24 : LX200_AM;
     // We always do 24 hours
     if (timeFormat != LX200_24)
-      toggleTimeFormat();
+      toggleTimeFormat(fd);
   }
 
-  getLX200RA(&targetRA);
-  getLX200DEC(&targetDEC);
+  getLX200RA(fd, &targetRA);
+  getLX200DEC(fd, &targetDEC);
 
   eqNum.np[0].value = targetRA;
   eqNum.np[1].value = targetDEC;
@@ -1630,16 +1635,15 @@ void LX200Generic::getBasicData()
   
   SiteNameT[0].text = new char[64];
   
-  if ( (err = getSiteName(SiteNameT[0].text, currentSiteNum)) < 0)
+  if ( (err = getSiteName(fd, SiteNameT[0].text, currentSiteNum)) < 0)
     IDMessage(thisDevice, "Failed to get site name from device");
   else
     IDSetText   (&SiteName, NULL);
   
-  if ( (err = getTrackFreq(&TrackFreq[0].value)) < 0)
+  if ( (err = getTrackFreq(fd, &TrackFreq[0].value)) < 0)
      IDMessage(thisDevice, "Failed to get tracking frequency from device.");
   else
      IDSetNumber (&TrackingFreq, NULL);
-     
      
   updateLocation();
   updateTime();
@@ -1665,14 +1669,14 @@ int LX200Generic::handleCoordSet()
 	  if (eqNum.s == IPS_BUSY)
 	  {
 	     IDLog("Aboring Slew\n");
-	     abortSlew();
+	     abortSlew(fd);
 
 	     // sleep for 100 mseconds
 	     usleep(100000);
 	  }
 
 	if (!simulation)
-	  if ((err = Slew()))
+	  if ((err = Slew(fd)))
 	  {
 	    slewError(err);
 	    return (-1);
@@ -1691,7 +1695,7 @@ int LX200Generic::handleCoordSet()
           if (eqNum.s == IPS_BUSY)
 	  {
 	     IDLog("Aboring Slew\n");
-	     abortSlew();
+	     abortSlew(fd);
 
 	     // sleep for 200 mseconds
 	     usleep(200000);
@@ -1708,7 +1712,7 @@ int LX200Generic::handleCoordSet()
 	        IDLog("targetDEC is %g, currentDEC is %g\n*************************\n", targetDEC, currentDEC);*/
 
 	      if (!simulation)
-          	if ((err = Slew()))
+          	if ((err = Slew(fd)))
 	  	{
 	    		slewError(err);
 	    		return (-1);
@@ -1741,7 +1745,7 @@ int LX200Generic::handleCoordSet()
 	  eqNum.s = IPS_IDLE;
 	   
 	if (!simulation)
-	  if ( ( err = Sync(syncString) < 0) )
+	  if ( ( err = Sync(fd, syncString) < 0) )
 	  {
 	        IDSetNumber( &eqNum , "Synchronization failed.");
 		return (-1);
@@ -1757,13 +1761,13 @@ int LX200Generic::handleCoordSet()
    case LX200_PARK:
           if (eqNum.s == IPS_BUSY)
 	  {
-	     abortSlew();
+	     abortSlew(fd);
 
 	     // sleep for 200 mseconds
 	     usleep(200000);
 	  }
 
-	  if ((err = Slew()))
+	  if ((err = Slew(fd)))
 	  {
 	    	slewError(err);
 	    	return (-1);
@@ -1867,14 +1871,15 @@ void LX200Generic::powerTelescope()
 	  return;
 	}
 	
-         if (Connect(Port.tp[0].text))
+         //if (Connect(Port.tp[0].text))
+	 if (tty_connect(Port.tp[0].text, NULL, &fd) != TTY_NO_ERROR)
 	 {
 	   PowerS[0].s = ISS_OFF;
 	   PowerS[1].s = ISS_ON;
 	   IDSetSwitch (&PowerSP, "Error connecting to port %s\n", Port.tp[0].text);
 	   return;
 	 }
-	 if (testTelescope())
+	 if (check_lx200_connection(fd))
 	 {   
 	   PowerS[0].s = ISS_OFF;
 	   PowerS[1].s = ISS_ON;
@@ -1894,7 +1899,7 @@ void LX200Generic::powerTelescope()
          PowerSP.s = IPS_IDLE;
          IDSetSwitch (&PowerSP, "Telescope is offline.");
 	 IDLog("Telescope is offline.");
-	 Disconnect();
+	 tty_disconnect(fd);
 	 break;
 
     }
@@ -1923,7 +1928,7 @@ void LX200Generic::getAlignment()
    if (PowerSP.s != IPS_OK)
     return;
 
-   signed char align = ACK();
+   signed char align = ACK(fd);
    if (align < 0)
    {
      IDSetSwitch (&AlignmentSw, "Failed to get telescope alignment.");
@@ -1987,15 +1992,15 @@ void LX200Generic::updateTime()
     return;
   }
   
-  getLocalTime24(&ctime);
+  getLocalTime24(fd, &ctime);
   getSexComponents(ctime, &h, &m, &s);
   
   UTC_h = h;
   
-  if ( (result = getSDTime(&STime[0].value)) < 0)
+  if ( (result = getSDTime(fd, &STime[0].value)) < 0)
     IDMessage(thisDevice, "Failed to retrieve siderial time from device.");
   
-  getCalenderDate(cdate);
+  getCalenderDate(fd, cdate);
   
   result = sscanf(cdate, "%d/%d/%d", &year, &month, &day);
   if (result != 3) return;
@@ -2136,10 +2141,11 @@ void LX200Generic::updateTime()
   /* Format it into ISO 8601 */
   sprintf(UTC[0].text, "%d-%02d-%02dT%02d:%02d:%02d", UTC_year, UTC_month, UTC_day, UTC_h, m, s);
   
+  #ifdef INDI_DEBUG
   IDLog("Local telescope time: %02d:%02d:%02d\n", h, m , s);
   IDLog("Telescope SD Time is: %g\n", STime[0].value);
   IDLog("UTC date and time: %s\n", UTC[0].text);
-  
+  #endif
 
   // Let's send everything to the client
   IDSetText(&Time, NULL);
@@ -2152,7 +2158,7 @@ void LX200Generic::updateLocation()
 
  int dd = 0, mm = 0, err = 0;
  
- if ( (err = getSiteLatitude(&dd, &mm)) < 0)
+ if ( (err = getSiteLatitude(fd, &dd, &mm)) < 0)
     IDMessage(thisDevice, "Failed to get site latitude from device.");
   else
   {
@@ -2165,7 +2171,7 @@ void LX200Generic::updateLocation()
       IDLog("INDI Latitude: %g\n", geoNum.np[0].value);
   }
   
-  if ( (err = getSiteLongitude(&dd, &mm)) < 0)
+  if ( (err = getSiteLongitude(fd, &dd, &mm)) < 0)
     IDMessage(thisDevice, "Failed to get site longitude from device.");
   else
   {
@@ -2179,5 +2185,4 @@ void LX200Generic::updateLocation()
   IDSetNumber (&geoNum, NULL);
 
 }
-
 

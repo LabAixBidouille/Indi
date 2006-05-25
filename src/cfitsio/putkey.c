@@ -832,6 +832,9 @@ int ffpkyt( fitsfile *fptr,      /* I - FITS file pointer        */
     ffd2f(fraction, 16, fstring, status);  /* convert to 16 decimal string */
 
     cptr = strchr(fstring, '.');    /* find the decimal point */
+    if (!cptr) 
+	return BAD_F2C;
+ 
     strcat(valstring, cptr);    /* append the fraction to the integer */
 
     ffmkky(keyname, valstring, comm, card, status);  /* construct the keyword*/
@@ -2421,8 +2424,10 @@ int ffphtb(fitsfile *fptr,  /* I - FITS file pointer                        */
           ffpkys(fptr, name, ttype[ii], comm, status);
         }
 
-        if (tbcol[ii] < 1 || tbcol[ii] > rowlen)
+        if (!tbcol || tbcol[ii] < 1 || tbcol[ii] > rowlen) {
            *status = BAD_TBCOL;
+           break;
+        }
 
         sprintf(comm, "beginning column of field %3d", ii + 1);
         ffkeyn("TBCOL", ii + 1, name, status);
@@ -2562,10 +2567,9 @@ int ffphbn(fitsfile *fptr,  /* I - FITS file pointer                        */
             /* the keyword comment.  */
 
             cptr = strchr(tfmt,'A');
-            cptr++;
 
             if (cptr)
-               iread = sscanf(cptr,"%ld", &width);
+               iread = sscanf(cptr + 1,"%ld", &width);
 
             if (iread == 1 && (width > repeat)) 
             {

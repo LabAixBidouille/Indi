@@ -24,7 +24,9 @@
 */
 
 /* needed for sincos() in math.h */
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <stdlib.h>
 #include <math.h>
@@ -638,7 +640,7 @@ timestamp()
 	return (ts);
 }
 
-int tty_time_out(int fd, int timeout)
+int tty_timeout(int fd, int timeout)
 {
   struct timeval tv;
   fd_set readout;
@@ -691,19 +693,45 @@ int tty_write(int fd, const char * buf, int *nbytes_written)
   return TTY_NO_ERROR;
 }
 
-int tty_read(int fd, char *buf, int nbytes, char stop_char, int timeout, int *nbytes_read)
+int tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read)
 {
 
  int bytesRead = 0;
  int totalBytesRead = 0;
  int err = 0;
 
-  /* Loop until encountring the stop_char */
-  if (nbytes == -1)
+  if (nbytes <=0)
+	return TTY_PARAM_ERROR;
+
+  while (nbytes > 0)
   {
-     for (;;)
-     {
-         if ( (err = tty_time_out(fd, timeout)) )
+     if ( (err = tty_timeout(fd, timeout)) )
+      return err;
+
+     bytesRead = read(fd, buf, ((unsigned) nbytes));
+
+     if (bytesRead < 0 )
+      return TTY_READ_ERROR;
+
+     buf += bytesRead;
+     totalBytesRead++;
+     nbytes -= bytesRead;
+  }
+
+  *nbytes_read = totalBytesRead;
+  return TTY_NO_ERROR;
+}
+
+int tty_read_section(int fd, char *buf, char stop_char, int timeout, int *nbytes_read)
+{
+
+ int bytesRead = 0;
+ int totalBytesRead = 0;
+ int err = TTY_NO_ERROR;
+
+ for (;;)
+ {
+         if ( (err = tty_timeout(fd, timeout)) )
 	   return err;
 
          bytesRead = read(fd, buf, 1);
@@ -721,28 +749,11 @@ int tty_read(int fd, char *buf, int nbytes, char stop_char, int timeout, int *nb
         }
 
         buf += bytesRead;
-     }
-  }
-  
-  while (nbytes > 0)
-  {
-     if ( (err = tty_time_out(fd, timeout)) )
-      return err;
-
-     bytesRead = read(fd, buf, ((unsigned) nbytes));
-
-     if (bytesRead < 0 )
-      return TTY_READ_ERROR;
-
-     buf += bytesRead;
-     totalBytesRead++;
-     nbytes -= bytesRead;
   }
 
-  *nbytes_read = totalBytesRead;
-  return TTY_NO_ERROR;
+  return TTY_TIME_OUT;
 }
-
+  
 int tty_connect(const char *device, struct termios *ttyOptions, int *fd)
 {
  /*IDLog("Connecting to device %s\n", device);*/

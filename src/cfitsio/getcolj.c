@@ -241,9 +241,9 @@ int ffgsvj(fitsfile *fptr, /* I - FITS file pointer                         */
 */
 {
     long ii,i0, i1,i2,i3,i4,i5,i6,i7,i8,row,rstr,rstp,rinc;
-    long str[9],stp[9],incr[9],dir[9];
+    long str[10],stp[10],incr[10],dir[10];
     long nelem, nultyp, ninc, numcol;
-    LONGLONG felem, dsize[10], blcll[9], trcll[9];
+    LONGLONG felem, dsize[10], blcll[10], trcll[10];
     int hdutype, anyf;
     char ldummy, msg[FLEN_ERRMSG];
     int nullcheck = 1;
@@ -310,7 +310,7 @@ int ffgsvj(fitsfile *fptr, /* I - FITS file pointer                         */
         *anynul = FALSE;
 
     i0 = 0;
-    for (ii = 0; ii < 9; ii++)
+    for (ii = 0; ii <= 9; ii++)
     {
         str[ii] = 1;
         stp[ii] = 1;
@@ -755,7 +755,7 @@ int ffgclj( fitsfile *fptr,   /* I - FITS file pointer                       */
     /*  Now read the pixels from the FITS column. If the column does not   */
     /*  have the same datatype as the output array, then we have to read   */
     /*  the raw values into a temporary buffer (of limited size).  In      */
-    /*  the case of a vector colum read only 1 vector of values at a time  */
+    /*  the case of a vector column read only 1 vector of values at a time */
     /*  then skip to the next row if more values need to be read.          */
     /*  After reading the raw values, then call the fffXXYY routine to (1) */
     /*  test for undefined values, (2) convert the datatype if necessary,  */
@@ -2630,7 +2630,7 @@ int ffgcljj( fitsfile *fptr,   /* I - FITS file pointer                       */
     /*  Now read the pixels from the FITS column. If the column does not   */
     /*  have the same datatype as the output array, then we have to read   */
     /*  the raw values into a temporary buffer (of limited size).  In      */
-    /*  the case of a vector colum read only 1 vector of values at a time  */
+    /*  the case of a vector column read only 1 vector of values at a time */
     /*  then skip to the next row if more values need to be read.          */
     /*  After reading the raw values, then call the fffXXYY routine to (1) */
     /*  test for undefined values, (2) convert the datatype if necessary,  */
