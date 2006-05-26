@@ -180,8 +180,11 @@ void LX200Autostar::ISNewNumber (const char *dev, const char *name, double value
 	  FocusMotionSw.s = IPS_BUSY;
 	  
 	  // with a timer 
-	  if (FocusTimerNP.np[0].value > 0)  
+	if (FocusTimerNP.np[0].value > 0)  
+	{
 	     FocusTimerNP.s  = IPS_BUSY;
+	     IDLog("Starting Focus Timer BUSY\n");
+	}
 	  
 	  IDSetSwitch(&FocusMotionSw, NULL);
 	  return;

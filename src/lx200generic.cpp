@@ -350,9 +350,9 @@ LX200Generic::LX200Generic()
 
    // Children call parent routines, this is the default
    IDLog("initilizaing from generic LX200 device...\n");
-   IDLog("INDI Version: 2006-05-07\n");
+   IDLog("INDI Version: 2006-05-26\n");
  
-   //enableSimulation(true);  
+   enableSimulation(true);  
 }
 
 LX200Generic::~LX200Generic()
@@ -1476,11 +1476,12 @@ void LX200Generic::ISPoll()
 	     break;
 	     
 	   case IPS_BUSY:
+	   IDLog("Focus Timer Value is %g\n", FocusTimerN[0].value);
 	    FocusTimerN[0].value--;
 	    
 	    if (FocusTimerN[0].value == 0)
 	    {
-	      
+	      IDLog("Focus Timer Expired\n");
 	      if ( ( err = setFocuserSpeedMode(fd, 0) < 0) )
               {
 	        handleError(&FocusModeSP, err, "setting focuser mode");

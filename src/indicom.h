@@ -49,6 +49,8 @@
 
 #define J2000 2451545.0
 #define ERRMSG_SIZE 1024
+#define INDI_DEBUG
+
 
 extern const char * Direction[];
 extern const char * SolarSystem[];

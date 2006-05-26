@@ -211,6 +211,8 @@ int check_lx200_connection(int in_fd)
   IDLog("Testing telescope's connection using ACK...\n");
   #endif
 
+  if (in_fd <= 0) return -1;
+
   for (i=0; i < 2; i++)
   {
     write(in_fd, ack, 1);
@@ -1042,12 +1044,18 @@ int setFocuserMotion(int fd, int motionType)
     case LX200_FOCUSIN:
     if ( (error_type = tty_write(fd, "#:F+#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
+	#ifdef INDI_DEBUG
+	IDLog("Focus IN Command\n");
+	#endif
     /*if (portWrite("#:F+#") < 0)
       return -1;*/
       break;
     case LX200_FOCUSOUT:
     if ( (error_type = tty_write(fd, "#:F-#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
+	#ifdef INDI_DEBUG
+	IDLog("Focus OUT Command\n");
+	#endif
      /*if (portWrite("#:F-#") < 0)
        return -1;*/
      break;
@@ -1067,18 +1075,27 @@ int setFocuserSpeedMode (int fd, int speedMode)
     case LX200_HALTFOCUS:
     if ( (error_type = tty_write(fd, "#:FQ#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
+	#ifdef INDI_DEBUG
+	IDLog("Halt Focus Command\n");
+	#endif
     /* if (portWrite("#:FQ#") < 0)
       return -1;*/
      break;
    case LX200_FOCUSSLOW:
     if ( (error_type = tty_write(fd, "#:FS#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
+	#ifdef INDI_DEBUG
+	IDLog("Focus Slow (FS) Command\n");
+	#endif
       /*if (portWrite("#:FS#") < 0)
        return -1;*/
       break;
     case LX200_FOCUSFAST:
      if ( (error_type = tty_write(fd, "#:FF#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
+	#ifdef INDI_DEBUG
+	IDLog("Focus Fast (FF) Command\n");
+	#endif
      /*if (portWrite("#:FF#") < 0)
       return -1;*/
      break;
@@ -1100,6 +1117,9 @@ int setGPSFocuserSpeed (int fd, int speed)
       return -1;*/
      if ( (error_type = tty_write(fd, "#:FQ#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
+	#ifdef INDI_DEBUG
+	IDLog("GPS Focus HALT Command (FQ) \n");
+	#endif
 
      return 0;
   }
@@ -1109,6 +1129,9 @@ int setGPSFocuserSpeed (int fd, int speed)
   if ( (error_type = tty_write(fd, speed_str, &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
 
+    #ifdef INDI_DEBUG
+    IDLog("GPS Focus Speed command %s \n", speed_str);
+    #endif
   /*if (portWrite(speed_str) < 0)
        return -1;*/
 
