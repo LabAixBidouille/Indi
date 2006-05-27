@@ -184,6 +184,7 @@ void LX200Autostar::ISNewNumber (const char *dev, const char *name, double value
 	{
 	     FocusTimerNP.s  = IPS_BUSY;
 	     IDLog("Starting Focus Timer BUSY\n");
+	     IEAddTimer(50, LX200Generic::updateFocusTimer, this);
 	}
 	  
 	  IDSetSwitch(&FocusMotionSw, NULL);

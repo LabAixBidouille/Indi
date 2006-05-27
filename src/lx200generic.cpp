@@ -111,7 +111,7 @@ static ISwitch MovementS[]       = {{"N", "North", ISS_OFF, 0, 0}, {"W", "West",
 ISwitch  FocusMotionS[]	 = { {"IN", "Focus in", ISS_OFF, 0, 0}, {"OUT", "Focus out", ISS_OFF, 0, 0}};
 ISwitchVectorProperty	FocusMotionSw = {mydev, "FOCUS_MOTION", "Motion", FOCUS_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, FocusMotionS, NARRAY(FocusMotionS), "", 0};
 
-INumber  FocusTimerN[]    = { {"TIMER", "Timer (s)", "%10.6m", 0., 120., 1., 0., 0, 0, 0 }};
+INumber  FocusTimerN[]    = { {"TIMER", "Timer (ms)", "%10.6m", 0., 10000., 1000., 50., 0, 0, 0 }};
 INumberVectorProperty FocusTimerNP = { mydev, "FOCUS_TIMER", "Focus Timer", FOCUS_GROUP, IP_RW, 0, IPS_IDLE, FocusTimerN, NARRAY(FocusTimerN), "", 0};
 
 /* equatorial position */
@@ -1022,7 +1022,10 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  
 	  // with a timer 
 	  if (FocusTimerN[0].value > 0)  
+	  {
 	     FocusTimerNP.s  = IPS_BUSY;
+	     IEAddTimer(50, LX200Generic::updateFocusTimer, this);
+	  }
 	  
 	  IDSetSwitch(&FocusMotionSw, NULL);
 	  return;
@@ -1327,6 +1330,58 @@ static void retryConnection(void * p)
 
 }
 
+void LX200Generic::updateFocusTimer(void *p)
+{
+   int err=0;
+
+    switch (FocusTimerNP.s)
+    {
+
+      case IPS_IDLE:
+	   break;
+	     
+      case IPS_BUSY:
+      IDLog("Focus Timer Value is %g\n", FocusTimerN[0].value);
+	    FocusTimerN[0].value-=50;
+	    
+	    if (FocusTimerN[0].value <= 0)
+	    {
+	      IDLog("Focus Timer Expired\n");
+	      if ( ( err = setFocuserSpeedMode(telescope->fd, 0) < 0) )
+              {
+	        telescope->handleError(&FocusModeSP, err, "setting focuser mode");
+                IDLog("Error setting focuser mode\n");
+                return;
+	      } 
+         
+	      
+	      FocusMotionSw.s = IPS_IDLE;
+	      FocusTimerNP.s  = IPS_OK;
+	      FocusModeSP.s   = IPS_OK;
+	      
+              IUResetSwitches(&FocusMotionSw);
+              IUResetSwitches(&FocusModeSP);
+	      FocusModeS[0].s = ISS_ON;
+	      
+	      IDSetSwitch(&FocusModeSP, NULL);
+	      IDSetSwitch(&FocusMotionSw, NULL);
+	    }
+	    
+         IDSetNumber(&FocusTimerNP, NULL);
+
+	  if (FocusTimerN[0].value > 0)
+		IEAddTimer(50, LX200Generic::updateFocusTimer, p);
+	    break;
+	    
+       case IPS_OK:
+	    break;
+	    
+	case IPS_ALERT:
+	    break;
+     }
+
+}
+
 void LX200Generic::ISPoll()
 {
         double dx, dy;
@@ -1469,49 +1524,6 @@ void LX200Generic::ISPoll()
 	 case IPS_ALERT:
 	   break;
 	 }
-	 
-	 switch (FocusTimerNP.s)
-	 {
-	   case IPS_IDLE:
-	     break;
-	     
-	   case IPS_BUSY:
-	   IDLog("Focus Timer Value is %g\n", FocusTimerN[0].value);
-	    FocusTimerN[0].value--;
-	    
-	    if (FocusTimerN[0].value == 0)
-	    {
-	      IDLog("Focus Timer Expired\n");
-	      if ( ( err = setFocuserSpeedMode(fd, 0) < 0) )
-              {
-	        handleError(&FocusModeSP, err, "setting focuser mode");
-                IDLog("Error setting focuser mode\n");
-                return;
-	      } 
-         
-	      
-	      FocusMotionSw.s = IPS_IDLE;
-	      FocusTimerNP.s  = IPS_OK;
-	      FocusModeSP.s   = IPS_OK;
-	      
-              IUResetSwitches(&FocusMotionSw);
-              IUResetSwitches(&FocusModeSP);
-	      FocusModeS[0].s = ISS_ON;
-	      
-	      IDSetSwitch(&FocusModeSP, NULL);
-	      IDSetSwitch(&FocusMotionSw, NULL);
-	    }
-	    
-	    IDSetNumber(&FocusTimerNP, NULL);
-	    break;
-	    
-	   case IPS_OK:
-	    break;
-	    
-	   case IPS_ALERT:
-	    break;
-	 }
-    
 
 }
 
