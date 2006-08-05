@@ -679,18 +679,19 @@ typedef struct {
 
 */
 #if TARGET == ENV_WIN
-  #ifdef __cplusplus
-  	extern "C" short __stdcall SBIGUnivDrvCommand(short command, void *Params, void *Results);
-  #else
-	extern short __stdcall SBIGUnivDrvCommand(short command, void *Params, void *Results);
-  #endif
+#ifdef __cplusplus
+   	extern "C" short __stdcall SBIGUnivDrvCommand(short command, void *Params, void *Results);
 #else
-  #ifdef __cplusplus
-  	extern "C" short SBIGUnivDrvCommand(short command, void *Params, void *Results);
-  #else
-    extern short SBIGUnivDrvCommand(short command, void *Params, void *Results);
-  #endif
+	extern short __stdcall SBIGUnivDrvCommand(short command, void *Params, void *Results);
 #endif
+#else
+#ifdef __cplusplus
+   	extern "C" short SBIGUnivDrvCommand(short command, void *Params, void *Results);
+#else
+     extern short SBIGUnivDrvCommand(short command, void *Params, void *Results);
+#endif
+#endif
+
 
 #endif /* ifndef _PARDRV_ */
 

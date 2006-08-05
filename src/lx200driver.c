@@ -1045,7 +1045,7 @@ int setFocuserMotion(int fd, int motionType)
     if ( (error_type = tty_write(fd, "#:F+#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
 	#ifdef INDI_DEBUG
-	IDLog("Focus IN Command\n");
+	/*IDLog("Focus IN Command\n");*/
 	#endif
     /*if (portWrite("#:F+#") < 0)
       return -1;*/
@@ -1054,7 +1054,7 @@ int setFocuserMotion(int fd, int motionType)
     if ( (error_type = tty_write(fd, "#:F-#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
 	#ifdef INDI_DEBUG
-	IDLog("Focus OUT Command\n");
+	/*IDLog("Focus OUT Command\n");*/
 	#endif
      /*if (portWrite("#:F-#") < 0)
        return -1;*/
@@ -1076,7 +1076,7 @@ int setFocuserSpeedMode (int fd, int speedMode)
     if ( (error_type = tty_write(fd, "#:FQ#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
 	#ifdef INDI_DEBUG
-	IDLog("Halt Focus Command\n");
+	/*IDLog("Halt Focus Command\n");*/
 	#endif
     /* if (portWrite("#:FQ#") < 0)
       return -1;*/
@@ -1085,7 +1085,7 @@ int setFocuserSpeedMode (int fd, int speedMode)
     if ( (error_type = tty_write(fd, "#:FS#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
 	#ifdef INDI_DEBUG
-	IDLog("Focus Slow (FS) Command\n");
+	/*IDLog("Focus Slow (FS) Command\n");*/
 	#endif
       /*if (portWrite("#:FS#") < 0)
        return -1;*/
@@ -1094,7 +1094,7 @@ int setFocuserSpeedMode (int fd, int speedMode)
      if ( (error_type = tty_write(fd, "#:FF#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
 	#ifdef INDI_DEBUG
-	IDLog("Focus Fast (FF) Command\n");
+	/*IDLog("Focus Fast (FF) Command\n");*/
 	#endif
      /*if (portWrite("#:FF#") < 0)
       return -1;*/
@@ -1118,7 +1118,7 @@ int setGPSFocuserSpeed (int fd, int speed)
      if ( (error_type = tty_write(fd, "#:FQ#", &nbytes_write)) != TTY_NO_ERROR)
     	return error_type;
 	#ifdef INDI_DEBUG
-	IDLog("GPS Focus HALT Command (FQ) \n");
+	/*IDLog("GPS Focus HALT Command (FQ) \n");*/
 	#endif
 
      return 0;
@@ -1130,7 +1130,7 @@ int setGPSFocuserSpeed (int fd, int speed)
     	return error_type;
 
     #ifdef INDI_DEBUG
-    IDLog("GPS Focus Speed command %s \n", speed_str);
+    /*IDLog("GPS Focus Speed command %s \n", speed_str);*/
     #endif
   /*if (portWrite(speed_str) < 0)
        return -1;*/
