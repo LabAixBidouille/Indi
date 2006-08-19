@@ -1,6 +1,8 @@
 #if 0
     INDI
-    Copyright (C) 2003 Elwood C. Downey
+    Copyright (C) 2003-2006 Elwood C. Downey
+
+			Modified by Jasem Mutlaq (2003-2006)
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -751,6 +753,35 @@ int IUUpdateNumbers(INumberVectorProperty *nvp, double values[], char *names[], 
   {
     np = IUFindNumber(nvp, names[i]);
     np->value = values[i];
+  }
+
+  return 0;
+
+}
+
+/* Update property text in accord with texts and names */
+int IUUpdateTexts(ITextVectorProperty *tvp, char * texts[], char *names[], int n)
+{
+  int i=0;
+  
+  IText *tp;
+  
+  for (i = 0; i < n; i++)
+  {
+    tp = IUFindText(tvp, names[i]);
+    if (!tp)
+    {
+    	tvp->s = IPS_IDLE;
+	IDSetText(tvp, "Error: %s is not a member of %s property.", names[i], tvp->name);
+	return -1;
+    }
+  }
+
+  /* First loop checks for error, second loop set all values atomically*/
+  for (i=0; i < n; i++)
+  {
+    tp = IUFindText(tvp, names[i]);
+    IUSaveText(tp, texts[i]);
   }
 
   return 0;
