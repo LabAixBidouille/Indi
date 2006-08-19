@@ -12,7 +12,7 @@ AC_PROG_CXX
 
 AM_PROG_LIBTOOL
 
-AM_INIT_AUTOMAKE(indi, 0.3)
+AM_INIT_AUTOMAKE(indi, 0.4)
 
 timezone_int=no
 AC_TRY_COMPILE(
@@ -115,6 +115,6 @@ AM_CONDITIONAL(BSD, test x$OSDIR = xbsd)
 AM_CONDITIONAL(LINUX, test x$OSDIR = xlinux)
 AM_CONDITIONAL(NULL, test x$OSDIR = xnull)
 AM_CONDITIONAL(HAVE_LIBUSB, test x$have_libusb = xyes)
-AM_CONDITIONAL(HAVE_V4L2, [test x$have_v4l2 = xtrue])
+AM_CONDITIONAL(HAVE_V4L2, test x$have_v4l2 = xtrue)
 
 AC_OUTPUT(Makefile src/Makefile src/fli/Makefile src/webcam/Makefile src/apogee/Makefile src/cfitsio/Makefile)

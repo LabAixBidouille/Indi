@@ -6,7 +6,7 @@ From v0.3 to v0.4:
 		+ SBIG CFW
 		+ RoboFocus
 		+ FLI Precision Focuser
-		+ Astrophysics Mount (old driver didn't work)
+		+ Orion Atlas / Sky Scan
 		
 	# Other
 		+ Added more API documentation and revised existing documentation for accuracy and consistency.
@@ -15,6 +15,10 @@ From v0.3 to v0.4:
 		+ Fixed bug in eventloop that can cause IE timers to crash.
 		+ Added variable focus speed for Meade Autostar and GPS.
 		+ Added CFITSIO, a mature and robust FITS library.
+		+ New RS232 API for common access routines.
+
+	# Known Issues
+		+ Astrophysics Mount driver (apmount) is not working. With no volunteers to test or develop this driver, the driver will remain broken.
 
 From v0.2 to v0.3:
 

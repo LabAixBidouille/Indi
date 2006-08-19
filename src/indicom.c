@@ -694,7 +694,6 @@ int tty_write(int fd, const char * buf, int *nbytes_written)
   return TTY_OK;
 }
 
-<<<<<<< .mine
 int tty_write_section(int fd, const char * buf, int nbytes, int *nbytes_written)
 {
 /*  unsigned int nbytes;*/
@@ -717,37 +716,14 @@ int tty_write_section(int fd, const char * buf, int nbytes, int *nbytes_written)
   return TTY_OK;
 }
 
-=======
-int tty_write_section(int fd, const char * buf, int nbytes, int *nbytes_written)
-{
-/*  unsigned int nbytes;*/
-  int totalBytesWritten;
-  int bytesWritten = 0;   
-   
-  while (nbytes > 0)
-  {
-    
-    bytesWritten = write(fd, buf, nbytes);
-
-    if (bytesWritten < 0)
-     return TTY_WRITE_ERROR;
-
-    buf += bytesWritten;
-    nbytes -= bytesWritten;
-  }
-
-  /* Returns the # of bytes written */
-  *nbytes_written = totalBytesWritten;
-  return TTY_NO_ERROR;
-}
-
->>>>>>> .r32
 int tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read)
 {
 
  int bytesRead = 0;
  int totalBytesRead = 0;
  int err = 0;
+
+  int i=0;
 
   if (nbytes <=0)
 	return TTY_PARAM_ERROR;
@@ -759,7 +735,9 @@ int tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read)
 
      bytesRead = read(fd, buf, ((unsigned) nbytes));
 
-     fprintf(stderr, "## Bytes read %s\n", bytesRead);
+     fprintf(stderr, "## Bytes read %d\n", bytesRead);
+     for (i=0; i < totalBytesRead; i++)
+	fprintf(stderr, "Char: %c\n", buf[i]);
 
      if (bytesRead < 0 )
       return TTY_READ_ERROR;
