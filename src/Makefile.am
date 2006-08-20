@@ -7,7 +7,7 @@ libsbigudrv_la_SOURCES = sbig_dummy.cpp
 bin_add   =  sbigccd apogee_ppi v4ldriver v4lphilips meade_lpi fliccd fliwheel flipdf
 endif
 
-bin_PROGRAMS = indiserver lx200basic lx200generic celestrongps temma skycommander intelliscope robofocus orionatlas $(bin_add)
+bin_PROGRAMS = indiserver lx200basic lx200generic celestrongps temma skycommander intelliscope robofocus orionatlas trutechwheel $(bin_add)
 
 liblilxml_a_SOURCES = lilxml.c
 libindicom_a_SOURCES = indicom.c base64.c
@@ -37,6 +37,9 @@ fliwheel_LDADD = fli/libfli.la libindicom.a liblilxml.a -lm
 
 flipdf_SOURCES = eventloop.c base64.c fli_pdf.c indidrivermain.c
 flipdf_LDADD = fli/libfli.la libindicom.a liblilxml.a -lm
+
+trutechwheel_SOURCES = eventloop.c base64.c trutech_wheel.c indidrivermain.c
+trutechwheel_LDADD = libindicom.a liblilxml.a -lm
 
 v4ldriver_SOURCES = eventloop.c base64.c indidrivermain.c v4ldriver.cpp indi_v4l.cpp
 v4ldriver_LDADD = libindicom.a liblilxml.a webcam/libwebcam.la cfitsio/libcfitsio.la -lm -lz
