@@ -1,9 +1,11 @@
 AM_CPPFLAGS = @CPPFLAGS@ -DTOP_DATADIR=\"$(pkgdatadir)\"
 
 if LINUX
+if !HAVE_LIBSBIGUDRV
 lib_LTLIBRARIES = libsbigudrv.la
 libsbigudrv_la_LIBADD = -lm
 libsbigudrv_la_SOURCES = sbig_dummy.cpp
+endif
 bin_add   =  sbigccd apogee_ppi v4ldriver v4lphilips meade_lpi fliccd fliwheel flipdf
 endif
 
@@ -30,7 +32,7 @@ robofocus_SOURCES = indidrivermain.c base64.c eventloop.c lx200driver.c robofocu
 robofocus_LDADD = liblilxml.a libindicom.a -lm
 
 fliccd_SOURCES =  eventloop.c base64.c fli_ccd.c indidrivermain.c
-fliccd_LDADD = fli/libfli.la libindicom.a liblilxml.a cfitsio/libcfitsio.la -lm -lz $(LIBSOCKET)
+fliccd_LDADD = fli/libfli.la libindicom.a liblilxml.a @LIBCFITSIO@ -lm -lz $(LIBSOCKET)
 
 fliwheel_SOURCES =  eventloop.c base64.c fli_wheel.c indidrivermain.c
 fliwheel_LDADD = fli/libfli.la libindicom.a liblilxml.a -lm
@@ -42,13 +44,13 @@ trutechwheel_SOURCES = eventloop.c base64.c trutech_wheel.c indidrivermain.c
 trutechwheel_LDADD = libindicom.a liblilxml.a -lm
 
 v4ldriver_SOURCES = eventloop.c base64.c indidrivermain.c v4ldriver.cpp indi_v4l.cpp
-v4ldriver_LDADD = libindicom.a liblilxml.a webcam/libwebcam.la cfitsio/libcfitsio.la -lm -lz
+v4ldriver_LDADD = libindicom.a liblilxml.a webcam/libwebcam.la @LIBCFITSIO@ -lm -lz
 
 v4lphilips_SOURCES = eventloop.c base64.c indidrivermain.c v4ldriver.cpp v4lphilips.cpp indi_philips.cpp
-v4lphilips_LDADD = libindicom.a liblilxml.a webcam/libwebcam.la cfitsio/libcfitsio.la -lm -lz
+v4lphilips_LDADD = libindicom.a liblilxml.a webcam/libwebcam.la @LIBCFITSIO@ -lm -lz
 
 meade_lpi_SOURCES = eventloop.c base64.c indidrivermain.c v4ldriver.cpp indi_lpi.cpp
-meade_lpi_LDADD = libindicom.a liblilxml.a webcam/libwebcam.la cfitsio/libcfitsio.la -lz
+meade_lpi_LDADD = libindicom.a liblilxml.a webcam/libwebcam.la @LIBCFITSIO@ -lz
 
 temma_SOURCES =  indidrivermain.c base64.c eventloop.c temmadriver.c
 temma_LDADD = liblilxml.a libindicom.a -lm
@@ -66,7 +68,7 @@ apogee_ppi_SOURCES = apogee_ppi.cpp base64.c eventloop.c indidrivermain.c
 apogee_ppi_LDADD = libindicom.a liblilxml.a apogee/libapogee_PPI.la -lz
 
 sbigccd_SOURCES = sbigcam.cpp base64.c eventloop.c indidrivermain.c
-sbigccd_LDADD = libindicom.a liblilxml.a cfitsio/libcfitsio.la libsbigudrv.la -lz
+sbigccd_LDADD = libindicom.a liblilxml.a @LIBCFITSIO@ @LIBSBIGUDRV@ -lz
 
 pkgdata_DATA = apogee_caminfo.xml
 
@@ -85,5 +87,5 @@ uninstall-local:
 	rm $(DESTDIR)$(bindir)/lx200autostar $(DESTDIR)$(bindir)/lx200_16 $(DESTDIR)$(bindir)/lx200gps
 
 if LINUX
-SUBDIRS = fli webcam apogee cfitsio
+SUBDIRS = fli webcam apogee @EXTRA_SUBDIR@
 endif

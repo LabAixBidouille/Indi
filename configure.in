@@ -9,6 +9,7 @@ AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 AC_LANG_CPLUSPLUS
 AC_PROG_CXX
+AC_PROG_CC
 
 AM_PROG_LIBTOOL
 
@@ -68,6 +69,24 @@ if test "${use_libusb}" != false ; then
 
 fi
 
+AC_LANG_PUSH(C)
+LDFLAGS="$LDFLAGS -lm -lz"
+AC_SUBST(LIBCFITSIO)
+AC_SUBST(EXTRA_SUBDIR)
+AC_CHECK_LIB(cfitsio, ffppx,
+             [ LIBS="-lcfitsio $LIBS"],
+             [ EXTRA_SUBDIR="cfitsio"
+               LIBCFITSIO="cfitsio/libcfitsio.la"])
+LDFLAGS="-lusb $LDFLAGS"
+AC_SUBST(LIBSBIGUDRV)
+AC_CHECK_LIB(sbigudrv, SBIGUnivDrvCommand,
+             [ have_libsbigudrv=true
+               LIBSBIGUDRV="-lsbigudrv"],
+             [ have_libsbigudrv=false
+               EXTRA_SUBDIR=""
+               LIBSBIGUDRV="libsbigudrv.la"])
+AC_LANG_POP(C)
+
 dnl check if v4l2 is available
 have_v4l2=false
 case "$target" in
@@ -116,5 +135,6 @@ AM_CONDITIONAL(LINUX, test x$OSDIR = xlinux)
 AM_CONDITIONAL(NULL, test x$OSDIR = xnull)
 AM_CONDITIONAL(HAVE_LIBUSB, test x$have_libusb = xyes)
 AM_CONDITIONAL(HAVE_V4L2, test x$have_v4l2 = xtrue)
+AM_CONDITIONAL(HAVE_LIBSBIGUDRV, test x$have_libsbigudrv = xtrue)
 
 AC_OUTPUT(Makefile src/Makefile src/fli/Makefile src/webcam/Makefile src/apogee/Makefile src/cfitsio/Makefile)
