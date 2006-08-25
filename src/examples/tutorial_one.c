@@ -36,40 +36,12 @@
 
 /* Definitions */
 
-#define mydev			"Simple Device"					/* Device name */
-
+#define mydev			"Simple Device"				/* Device name */
 #define MAIN_GROUP	"Main Control"					/* Group name */
 
 /* Function protptypes */
 void ISInit(void);
 void connectDevice(void);
-
-
-static ISwitch sw[] = {
-    {"Define",  "",  ISS_OFF, 0, 0}, {"Delete", "", ISS_OFF, 0, 0}};
-    
-static ISwitchVectorProperty swSP = { mydev, "DefStuff", "Connection",  MAIN_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE,  sw, NARRAY(sw), "", 0 };
-
-/* Equatorial position. EQUATORIAL_COORD is one of INDI's reserved Standard  Properties */
-static INumber eq[] = {
-                                /* 1st member is Right ascension */
-    				{"RA"				/* 1st Number name */
-				,"RA  H:M:S"			/* Number label */
-				, "%10.6m"			/* Format. Refer to the indiapi.h for details on number formats */
-				,0.					/* Minimum value */
-				, 24.					/* Maximum value */
-				, 0.					/* Steps */
-				, 0.					/* Initial value */
-				, 0					/* Pointer to parent, we don't use it, so set it to 0 */
-				, 0					/* Auxiluary member, set it to 0 */
-				, 0},					/* Autxiluar member, set it to 0 */
-				
-				/* 2nd member is Declination */
-    				{"DEC", "Dec D:M:S", "%10.6m", -90., 90., 0., 0., 0, 0, 0}
-};
-
-static INumberVectorProperty eqNum = {  mydev, "EQUATORIAL_COORD", "Equatorial J2000",  MAIN_GROUP , IP_RW, 0, IPS_IDLE,  eq, NARRAY(eq), "", 0};
-
 
 /*INDI controls */
 
@@ -137,8 +109,8 @@ void ISGetProperties (const char *dev)
     return;
     
   /* #3 Tell the client to create a new Switch property PowerSP */
-  //IDDefSwitch(&PowerSP, NULL);
-  IDDefSwitch(&swSP, NULL);
+  IDDefSwitch(&PowerSP, NULL);
+  
   
 }
   
@@ -178,24 +150,6 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	  return;
      }
 
-     if (!strcmp(name, swSP.name))
-     {
-        IUResetSwitches(&swSP);
-	IUUpdateSwitches(&swSP, states, names, n);
-
-	if (sw[0].s == ISS_ON)
-	   //IDDefNumber(&eqNum, "Defining Number");
-	     IDDefSwitch(&PowerSP, "Defining Switch");
-	else
-	   //IDDelete(mydev, eqNum.name, "Deleting NUmber");
-		IDDelete(mydev, PowerSP.name, "Deleting Switch");
-
-	swSP.s = IPS_OK;
-
-        IDSetSwitch(&swSP, "Doing the stuff!");
-     }
-
-    
 }
 
 /* void ISNewText(...)
@@ -255,6 +209,10 @@ void connectDevice(void)
       /* Change the state of the PowerSP (CONNECTION) property to OK */
       PowerSP.s = IPS_OK;
       
+      /* Set switch status (CONNECT On, Disconnect Off)*/
+      PowerS[0].s = ISS_ON;
+      PowerS[1].s = ISS_OFF;
+   
       /* Tell the client to update the states of the PowerSP property, and send a message to inform successful connection */
       IDSetSwitch(&PowerSP, "Connection to %s is successful.", mydev);
       break;
@@ -267,6 +225,10 @@ void connectDevice(void)
       /* The device is disconnected, change the state to IDLE */
       PowerSP.s = IPS_IDLE;
       
+       /* Set switch status (CONNECT Off, Disconnect On)*/
+      PowerS[0].s = ISS_OFF;
+      PowerS[1].s = ISS_ON;
+
       /* Tell the client to update the states of the PowerSP property, and send a message to inform successful disconnection */
       IDSetSwitch(&PowerSP, "%s has been disconneced.", mydev);
       
