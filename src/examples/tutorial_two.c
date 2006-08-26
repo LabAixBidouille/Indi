@@ -56,13 +56,13 @@ static double targetDEC;
   Note that the switch will appear to the user as On and Off (versus Connect and Disconnect in tutorial one)
   Nevertheless, the members _names_ are still CONNECT and DISCONNECT and therefore this is a perfectly legal standard property decleration
    */
-static ISwitch power[] = {
+static ISwitch connectS[] = {
     {"CONNECT",  "On",  ISS_OFF, 0, 0}, {"DISCONNECT", "Off", ISS_ON, 0, 0}};
-    
-static ISwitchVectorProperty powSw = { mydev, "CONNECTION", "Connection",  MAIN_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE,  power, NARRAY(power), "", 0 };
+
+static ISwitchVectorProperty connectSP = { mydev, "CONNECTION", "Connection",  MAIN_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE,  connectS, NARRAY(connectS), "", 0 };
 
 /* Equatorial position. EQUATORIAL_COORD is one of INDI's reserved Standard  Properties */
-static INumber eq[] = {
+static INumber eqN[] = {
                                 /* 1st member is Right ascension */
     				{"RA"				/* 1st Number name */
 				,"RA  H:M:S"			/* Number label */
@@ -79,10 +79,13 @@ static INumber eq[] = {
     				{"DEC", "Dec D:M:S", "%10.6m", -90., 90., 0., 0., 0, 0, 0}
 };
 
-static INumberVectorProperty eqNum = {  mydev, "EQUATORIAL_COORD", "Equatorial J2000",  MAIN_GROUP , IP_RW, 0, IPS_IDLE,  eq, NARRAY(eq), "", 0};
+static INumberVectorProperty eqNP = {  mydev, "EQUATORIAL_EOD_COORD", "Equatorial JNow",  MAIN_GROUP , IP_RW, 0, IPS_IDLE,  eqN, NARRAY(eqN), "", 0};
 
-#define 	currentRA			eq[0].value					/* scope's current simulated RA, rads. Handy macro to right ascension from eq[] */
-#define     currentDec		eq[1].value					/* scope's current simulated Dec, rads. Handy macro to declination from eq[] */
+/* Property naming convention. All property names are lower case with a postfix to indicate their type. connectS is a switch, 
+ * connectSP is a switch vector. eqN is a number, eqNP is a number property, and so on. While this is not strictly required, it makes the code easier to read. */
+
+#define 	currentRA			eqN[0].value					/* scope's current simulated RA, rads. Handy macro to right ascension from eqN[] */
+#define     currentDec		eqN[1].value					/* scope's current simulated Dec, rads. Handy macro to declination from eqN[] */
 
 
 /* Initlization routine */
@@ -107,8 +110,8 @@ void ISGetProperties (const char *dev)
 	if (dev && strcmp (mydev, dev))
 	    return;
 
-	IDDefSwitch (&powSw, NULL);
-	IDDefNumber (&eqNum, NULL);
+	IDDefSwitch (&connectSP, NULL);
+	IDDefNumber (&eqNP, NULL);
 	
 }
 
@@ -127,32 +130,32 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 	if (strcmp (dev, mydev))
 	    return;
 
-	if (!strcmp (name, eqNum.name)) {
+	if (!strcmp (name, eqNP.name)) {
 	    /* new equatorial target coords */
 	    double newra = 0, newdec = 0;
 	    int i, nset;
 	    
-	    /* Check power, if it is off, then return */
-	    if (power[0].s != ISS_ON)
+	    /* Check connectSP, if it is idle, then return */
+	    if (connectSP.s == IPS_IDLE)
 	    {
-		eqNum.s = IPS_IDLE;
-		IDSetNumber(&eqNum, "Power is off");
+		eqNP.s = IPS_IDLE;
+		IDSetNumber(&eqNP, "Telescope is offline.");
 		return;
 	    }
 	    
 	    for (nset = i = 0; i < n; i++) 
 	    {
-	        /* Find numbers with the passed names in the eqNum property */
-		INumber *eqp = IUFindNumber (&eqNum, names[i]);
+	        /* Find numbers with the passed names in the eqNP property */
+		INumber *eqp = IUFindNumber (&eqNP, names[i]);
 		
-		/* If the number found is Right ascension (eq[0]) then process it */
-		if (eqp == &eq[0])
+		/* If the number found is Right ascension (eqN[0]) then process it */
+		if (eqp == &eqN[0])
 		{
 		    newra = (values[i]);
 		    nset += newra >= 0 && newra <= 24;
 		}
-		/* Otherwise, if the number found is Declination (eq[1]) then process it */ 
-		else if (eqp == &eq[1]) {
+		/* Otherwise, if the number found is Declination (eqN[1]) then process it */ 
+		else if (eqp == &eqN[1]) {
 		    newdec = (values[i]);
 		    nset += newdec >= -90 && newdec <= 90;
 		}
@@ -164,7 +167,7 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 		char r[32], d[32];
 		
 		/* Set the mount state to BUSY */
-		eqNum.s = IPS_BUSY;
+		eqNP.s = IPS_BUSY;
 		
 		/* Set the new target coordinates */
 		targetRA = newra;
@@ -174,15 +177,15 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 		fs_sexa (r, targetRA, 2, 3600);
 		fs_sexa (d, targetDEC, 3, 3600);
 		
-		IDSetNumber(&eqNum, "Moving to RA Dec %s %s", r, d);
+		IDSetNumber(&eqNP, "Moving to RA Dec %s %s", r, d);
 	    }
 	    /* We didn't process the two number correctly, report an error */
 	    else 
 	    {
 	        /* Set property state to idle */
-		eqNum.s = IPS_IDLE;
+		eqNP.s = IPS_IDLE;
 		
-		IDSetNumber(&eqNum, "RA or Dec absent or bogus.");
+		IDSetNumber(&eqNP, "RA or Dec absent or bogus.");
 	    }
 	    
 	    return;
@@ -201,17 +204,17 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	    return;
 
 	
-	if (!strcmp(name, powSw.name))
+	if (!strcmp(name, connectSP.name))
 	{
 		/* We update switches. This is different from the way we used to update switches in tutorial 1. This is 
 	 	* to illustrate that there are several ways to update the switches. Here, we try to find the switch with names[0],
 	 	* and if found, we update its state to states[0] and call connectTelescope(). We must call IUResetSwitches to erase any previous history */
 	 
-		sp = IUFindSwitch (&powSw, names[0]);
+		sp = IUFindSwitch (&connectSP, names[0]);
 	
 		if (sp)
 		{
-	    		IUResetSwitches(&powSw);
+	    		IUResetSwitches(&connectSP);
 	    		sp->s = states[0];
 	    		connectTelescope();
 		}
@@ -227,6 +230,13 @@ void mountSim (void *p)
 	double dt, da, dx;
 	int nlocked;
 
+	/* If telescope is not on, do not simulate */
+	if (connectSP.s == IPS_IDLE)
+	{
+		IEAddTimer (POLLMS, mountSim, NULL);
+		return;
+	}
+
 	/* update elapsed time since last poll, don't presume exactly POLLMS */
 	gettimeofday (&tv, NULL);
 	
@@ -238,14 +248,14 @@ void mountSim (void *p)
 	da = SLEWRATE*dt;
 
 	/* Process per current state. We check the state of EQUATORIAL_COORDS and act acoordingly */
-	switch (eqNum.s)
+	switch (eqNP.s)
 	{
 	
 	/* #1 State is idle, update telesocpe at sidereal rate */
 	case IPS_IDLE:
 	    /* RA moves at sidereal, Dec stands still */
 	    currentRA += (SIDRATE*dt/15.);
-	    IDSetNumber(&eqNum, NULL);
+	    IDSetNumber(&eqNP, NULL);
 	    break;
 
 	case IPS_BUSY:
@@ -278,16 +288,16 @@ void mountSim (void *p)
 
 	    if (nlocked == 2)
 	    {
-		eqNum.s = IPS_OK;
-		IDSetNumber(&eqNum, "Now tracking");
+		eqNP.s = IPS_OK;
+		IDSetNumber(&eqNP, "Now tracking");
 	    } else
-		IDSetNumber(&eqNum, NULL);
+		IDSetNumber(&eqNP, NULL);
 
 	    break;
 
 	case IPS_OK:
 	    /* tracking */
-	   IDSetNumber(&eqNum, NULL);
+	   IDSetNumber(&eqNP, NULL);
 	    break;
 
 	case IPS_ALERT:
@@ -304,19 +314,14 @@ void ISNewBLOB (const char *dev, const char *name, int sizes[], char *blobs[], c
 
 static void connectTelescope ()
 {
-	if (power[0].s == ISS_ON)
+	if (connectS[0].s == ISS_ON)
 	{
-	    powSw.s   = IPS_OK;
-	    power[0].s = ISS_ON;
-	    power[1].s = ISS_OFF;
-	    
-	    IDSetSwitch (&powSw, "Telescope is connected.");
+	    connectSP.s   = IPS_OK;
+	    IDSetSwitch (&connectSP, "Telescope is connected.");
 	} 
 	else
 	{
-	    powSw.s   = IPS_IDLE;
-	    power[0].s = ISS_OFF;
-	    power[1].s = ISS_ON;
-	    IDSetSwitch (&powSw, "Telescope is disconnected.");
+	    connectSP.s   = IPS_IDLE;
+	    IDSetSwitch (&connectSP, "Telescope is disconnected.");
 	}
 }

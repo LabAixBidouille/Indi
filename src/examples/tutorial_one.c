@@ -139,13 +139,10 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
      {
           /* If the clients wants to update this property, let's perform the following */
 	  
-          /* A. We reset all switches (in this case CONNECT and DISCONNECT) to ISS_OFF */
-          IUResetSwitches(&PowerSP);
+	  /* A. We update the switches by sending their names and updated states IUUpdateSwitches function. If there is an error, we return */
+	  if (IUUpdateSwitches(&PowerSP, states, names, n) < 0) return;
 	  
-	  /* B. We update the switches by sending their names and updated states IUUpdateSwitches function */
-	  IUUpdateSwitches(&PowerSP, states, names, n);
-	  
-	  /* C. We try to establish a connection to our device */
+	  /* B. We try to establish a connection to our device */
    	  connectDevice();
 	  return;
      }
@@ -209,10 +206,6 @@ void connectDevice(void)
       /* Change the state of the PowerSP (CONNECTION) property to OK */
       PowerSP.s = IPS_OK;
       
-      /* Set switch status (CONNECT On, Disconnect Off)*/
-      PowerS[0].s = ISS_ON;
-      PowerS[1].s = ISS_OFF;
-   
       /* Tell the client to update the states of the PowerSP property, and send a message to inform successful connection */
       IDSetSwitch(&PowerSP, "Connection to %s is successful.", mydev);
       break;
@@ -225,10 +218,6 @@ void connectDevice(void)
       /* The device is disconnected, change the state to IDLE */
       PowerSP.s = IPS_IDLE;
       
-       /* Set switch status (CONNECT Off, Disconnect On)*/
-      PowerS[0].s = ISS_OFF;
-      PowerS[1].s = ISS_ON;
-
       /* Tell the client to update the states of the PowerSP property, and send a message to inform successful disconnection */
       IDSetSwitch(&PowerSP, "%s has been disconneced.", mydev);
       
