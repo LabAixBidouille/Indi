@@ -1,3 +1,18 @@
+From 0.4 to 0.5
+
+	# Devices:
+
+		+ True Technology Filter Wheel
+		+ SBIG STV?
+
+	# Other:
+	     + Fixed INDI Mac OSX Crash.
+	     + Updated TTY API and fixed a few bugs.
+	     + Dropping threaded INDI server in favor of the slightly better non-threaded version due to performance considerations.
+
+	# Known Issues
+		+ Astrophysics Mount driver (apmount) is not working. With no volunteers to test or develop this driver, the driver will remain broken.
+
 From v0.3 to v0.4:
 
 	# Devices:
@@ -8,7 +23,7 @@ From v0.3 to v0.4:
 		+ FLI Precision Focuser
 		+ Orion Atlas / Sky Scan
 		
-	# Other
+	# Other:
 		+ Added more API documentation and revised existing documentation for accuracy and consistency.
 		+ Fixed UTC correction bug in LX200 driver.
 		+ Fixed pallete selection in V4L 2 drivers.
@@ -17,12 +32,9 @@ From v0.3 to v0.4:
 		+ Added CFITSIO, a mature and robust FITS library.
 		+ New RS232 API for common access routines.
 
-	# Known Issues
-		+ Astrophysics Mount driver (apmount) is not working. With no volunteers to test or develop this driver, the driver will remain broken.
-
 From v0.2 to v0.3:
 
-	# Devices
+	# Devices:
 		+ Apogee CCD (Experimental)
 		+ SkyCommander
 		+ Temma Takahashi
@@ -30,11 +42,11 @@ From v0.2 to v0.3:
 		+ Meade Lunar Planetary Imager (Experimental)
 		+ Astrophysics AP
 
-	# Other
+	# Other:
 		+ Support for Video 4 Linux 2
 		+ Multi-threaded INDI server
 		+ Binary transfer via BLOB
 		+ INDI scripting tools
 		+ Various bug fixing
 
-INDI Library v0.4 conforms to INDI wire protocol v1.6
+INDI Library v0.5 conforms to INDI wire protocol v1.6

@@ -75,6 +75,9 @@ main (int ac, char *av[])
         setgid( getgid() );
         setuid( getuid() );
 
+	if (geteuid() != getuid())
+            exit(255);
+
 	/* save handy pointer to our base name */
 	for (me = av[0]; av[0][0]; av[0]++)
 	    if (av[0][0] == '/')
@@ -709,11 +712,6 @@ IUUpdateSwitches(ISwitchVectorProperty *svp, ISState *states, char *names[], int
  {
  	sp = IUFindOnSwitch(svp);
  	if (sp) strncpy(sn, sp->name, MAXINDINAME);
- 	else 
-	{
-		 IDLog("Warning: invalid switch state for property %s. Fix the driver.\n", svp->name);
-		 return -1;
-	}
  
 	IUResetSwitches(svp);
  }

@@ -24,6 +24,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #ifndef _PARDRV_
 #define _PARDRV_
 
+/* needed for KDE_EXPORT macros */
+#ifndef HAVE_CONFIG_H
+#include <kdemacros.h>
+#else
+#define KDE_EXPORT
+#endif
+
+
 /*
 
 	SBIG Specific Code
@@ -679,19 +687,18 @@ typedef struct {
 
 */
 #if TARGET == ENV_WIN
-#ifdef __cplusplus
-   	extern "C" short __stdcall SBIGUnivDrvCommand(short command, void *Params, void *Results);
+  #ifdef __cplusplus
+  	extern "C" KDE_EXPORT short __stdcall SBIGUnivDrvCommand(short command, void *Params, void *Results);
+  #else
+	extern KDE_EXPORT short __stdcall SBIGUnivDrvCommand(short command, void *Params, void *Results);
+  #endif
 #else
-	extern short __stdcall SBIGUnivDrvCommand(short command, void *Params, void *Results);
+  #ifdef __cplusplus
+  	extern "C" KDE_EXPORT short SBIGUnivDrvCommand(short command, void *Params, void *Results);
+  #else
+    extern KDE_EXPORT short SBIGUnivDrvCommand(short command, void *Params, void *Results);
+  #endif
 #endif
-#else
-#ifdef __cplusplus
-   	extern "C" short SBIGUnivDrvCommand(short command, void *Params, void *Results);
-#else
-     extern short SBIGUnivDrvCommand(short command, void *Params, void *Results);
-#endif
-#endif
-
 
 #endif /* ifndef _PARDRV_ */
 

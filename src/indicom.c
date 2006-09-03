@@ -669,7 +669,28 @@ int tty_timeout(int fd, int timeout)
   
 }
 
-int tty_write(int fd, const char * buf, int *nbytes_written)
+int tty_write(int fd, const char * buf, int nbytes, int *nbytes_written)
+{
+  int bytes_w = 0;   
+  *nbytes_written = 0;
+   
+  while (nbytes > 0)
+  {
+    
+    bytes_w = write(fd, buf, nbytes);
+
+    if (bytes_w < 0)
+     return TTY_WRITE_ERROR;
+
+    *nbytes_written += bytes_w;
+    buf += bytes_w;
+    nbytes -= bytes_w;
+  }
+
+  return TTY_OK;
+}
+
+int tty_write_string(int fd, const char * buf, int *nbytes_written)
 {
   unsigned int nbytes;
   int bytes_w = 0;
@@ -686,27 +707,6 @@ int tty_write(int fd, const char * buf, int *nbytes_written)
      return TTY_WRITE_ERROR;
 
    *nbytes_written += bytes_w;
-    buf += bytes_w;
-    nbytes -= bytes_w;
-  }
-
-  return TTY_OK;
-}
-
-int tty_write_section(int fd, const char * buf, int nbytes, int *nbytes_written)
-{
-  int bytes_w = 0;   
-  *nbytes_written = 0;
-   
-  while (nbytes > 0)
-  {
-    
-    bytes_w = write(fd, buf, nbytes);
-
-    if (bytes_w < 0)
-     return TTY_WRITE_ERROR;
-
-    *nbytes_written += bytes_w;
     buf += bytes_w;
     nbytes -= bytes_w;
   }
