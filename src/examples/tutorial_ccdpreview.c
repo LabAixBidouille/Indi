@@ -170,7 +170,6 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	/* Connection */
 	if (!strcmp (name, PowerSP.name))
 	{
-	  IUResetSwitches(&PowerSP);
 	  IUUpdateSwitches(&PowerSP, states, names, n);
    	  PowerSP.s = IPS_OK;
           IDSetSwitch(&PowerSP, NULL);
@@ -179,7 +178,6 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	
 	if (!strcmp (name, StreamSP.name))
 	{
-	  IUResetSwitches(&StreamSP);
 	  IUUpdateSwitches(&StreamSP, states, names, n);
    	  StreamSP.s = IPS_OK;
           IDSetSwitch(&StreamSP, NULL);
@@ -189,7 +187,6 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	/* Readout start/stop*/
 	if (!strcmp (name, ReadoutSP.name))
 	{
-	  IUResetSwitches(&ReadoutSP);
 	  IUUpdateSwitches(&ReadoutSP, states, names, n);
    	  if (ReadoutS[0].s==ISS_ON) {
 		readout_start();  
