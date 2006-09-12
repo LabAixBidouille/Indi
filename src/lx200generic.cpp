@@ -44,36 +44,6 @@
 #include "lx200gps.h"
 #include "lx200classic.h"
 
-/*
-** Return the timezone offset in hours (as a double, so fractional
-** hours are possible, for instance in Newfoundland). Also sets
-** indi_daylight on non-Linux systems to record whether DST is in effect.
-*/
-
-
-#if !(TIMEZONE_IS_INT)
-static int indi_daylight = 0;
-#endif
-
-static inline double timezoneOffset()
-{
-/* 
-** In Linux, there's a timezone variable that holds the timezone offset;
-** Otherwise, we need to make a little detour. The directions of the offset
-** are different: CET is -3600 in Linux and +3600 elsewhere.
-*/
-#if TIMEZONE_IS_INT
-  return timezone / (60 * 60);
-#else
-  time_t now;
-  struct tm *tm;
-  now = time(NULL);
-  tm = localtime(&now);
-  indi_daylight = tm->tm_isdst;
-  return -(tm->tm_gmtoff) / (60 * 60);
-#endif
-}
-
 LX200Generic *telescope = NULL;
 int MaxReticleFlashRate = 3;
 
@@ -114,8 +84,6 @@ static ISwitch TrackModeS[]      = {{ "Default", "", ISS_ON, 0, 0} , { "Lunar", 
 static ISwitch abortSlewS[]      = {{"ABORT", "Abort", ISS_OFF, 0, 0 }};
 static ISwitch ParkS[]		 = { {"PARK", "Park", ISS_OFF, 0, 0} };
 
-static ISwitch MovementS[]       = {{"N", "North", ISS_OFF, 0, 0}, {"W", "West", ISS_OFF, 0, 0}, {"E", "East", ISS_OFF, 0, 0}, {"S", "South", ISS_OFF, 0, 0}};
-
 ISwitch  FocusMotionS[]	 = { {"IN", "Focus in", ISS_OFF, 0, 0}, {"OUT", "Focus out", ISS_OFF, 0, 0}};
 ISwitchVectorProperty	FocusMotionSw = {mydev, "FOCUS_MOTION", "Motion", FOCUS_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, FocusMotionS, NARRAY(FocusMotionS), "", 0};
 
@@ -155,7 +123,15 @@ static INumber TrackFreq[]  = {{ "trackFreq", "Freq", "%g", 56.4, 60.1, 0.1, 60.
 
 static INumberVectorProperty TrackingFreq= { mydev, "Tracking Frequency", "", MOVE_GROUP, IP_RW, 0, IPS_IDLE, TrackFreq, NARRAY(TrackFreq), "", 0};
 
-static ISwitchVectorProperty MovementSw      = { mydev, "MOVEMENT", "Move toward", MOVE_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, MovementS, NARRAY(MovementS), "", 0};
+/* Movement (Arrow keys on handset). North/South */
+static ISwitch MovementNSS[]       = {{"N", "North", ISS_OFF, 0, 0}, {"S", "South", ISS_OFF, 0, 0}};
+
+static ISwitchVectorProperty MovementNSSP      = { mydev, "MOVEMENT_NS", "North/South", MOVE_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, MovementNSS, NARRAY(MovementNSS), "", 0};
+
+/* Movement (Arrow keys on handset). West/East */
+static ISwitch MovementWES[]       = {{"W", "West", ISS_OFF, 0, 0}, {"E", "East", ISS_OFF, 0, 0}};
+
+static ISwitchVectorProperty MovementWESP      = { mydev, "MOVEMENT_WE", "West/East", MOVE_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, MovementWES, NARRAY(MovementWES), "", 0};
 
 static ISwitch  FocusModeS[]	 = { {"FOCUS_HALT", "Halt", ISS_ON, 0, 0},
 				     {"FOCUS_SLOW", "Slow", ISS_OFF, 0, 0},
@@ -165,6 +141,12 @@ static ISwitchVectorProperty FocusModeSP = {mydev, "FOCUS_MODE", "Mode", FOCUS_G
 /* Data & Time */
 static IText UTC[] = {{"UTC", "UTC", 0, 0, 0, 0}};
 ITextVectorProperty Time = { mydev, "TIME", "UTC Time", DATETIME_GROUP, IP_RW, 0, IPS_IDLE, UTC, NARRAY(UTC), "", 0};
+
+/* DST Corrected UTC Offfset */
+static INumber UTCOffsetN[] = {{"OFFSET", "Offset", "%0.3g" , -12.,12.,0.5,0., 0, 0, 0}};
+INumberVectorProperty UTCOffsetNP = { mydev, "UTC_OFFSET", "UTC Offset", DATETIME_GROUP, IP_WO, 0, IPS_IDLE, UTCOffsetN , NARRAY(UTCOffsetN), "", 0};
+
+/* Sidereal Time */
 static INumber STime[] = {{"LST", "Sidereal time", "%10.6m" , 0.,24.,0.,0., 0, 0, 0}};
 INumberVectorProperty SDTime = { mydev, "SDTIME", "Sidereal Time", DATETIME_GROUP, IP_RW, 0, IPS_IDLE, STime, NARRAY(STime), "", 0};
 
@@ -211,7 +193,8 @@ void changeLX200GenericDeviceName(const char * newName)
   strcpy(SlewModeSw.device , newName );
   strcpy(TrackModeSw.device , newName );
   strcpy(TrackingFreq.device , newName );
-  strcpy(MovementSw.device , newName );
+  strcpy(MovementNSSP.device , newName );
+  strcpy(MovementWESP.device , newName );
   strcpy(trackingPrecisionNP.device, newName);
   strcpy(slewPrecisionNP.device, newName);
 
@@ -222,6 +205,7 @@ void changeLX200GenericDeviceName(const char * newName)
 
   // DATETIME_GROUP
   strcpy(Time.device , newName );
+  strcpy(UTCOffsetNP.device , newName );
   strcpy(SDTime.device , newName );
 
   // SITE_GROUP
@@ -329,19 +313,6 @@ void ISNewBLOB (const char */*dev*/, const char */*name*/, int */*sizes[]*/, cha
 
 LX200Generic::LX200Generic()
 {
-   struct tm *utp = (tm *) malloc (sizeof (struct tm));
-   last_local_time = (tm *) malloc (sizeof (struct tm));
-
-   time_t t;
-   time (&t);
-   gmtime_r (&t, utp);
-   utp->tm_mon  += 1;
-   utp->tm_year += 1900;
-   JD = UTtoJD(utp);
- 
-   IDLog("Julian Day is %g\n", JD);
-   free(utp);
-   
    currentSiteNum = 1;
    trackingMode   = LX200_TRACK_DEFAULT;
    lastSet        = -1;
@@ -352,20 +323,17 @@ LX200Generic::LX200Generic()
    currentRA      = 0;
    currentDEC     = 0;
    currentSet     = 0;
-   UTCOffset      = 0;
    fd             = -1;
-   lastMove[0] = lastMove[1] = lastMove[2] = lastMove[3] = 0;
 
    // Children call parent routines, this is the default
    IDLog("initilizaing from generic LX200 device...\n");
-   IDLog("INDI Version: 2006-05-26\n");
+   IDLog("Driver Version: 2006-09-12\n");
  
    //enableSimulation(true);  
 }
 
 LX200Generic::~LX200Generic()
 {
-  free (last_local_time);
 }
 
 void LX200Generic::setCurrentDeviceName(const char * devName)
@@ -394,7 +362,8 @@ void LX200Generic::ISGetProperties(const char *dev)
   IDDefNumber (&TrackingFreq, NULL);
   IDDefSwitch (&SlewModeSw, NULL);
   IDDefSwitch (&TrackModeSw, NULL);
-  IDDefSwitch (&MovementSw, NULL);
+  IDDefSwitch (&MovementNSSP, NULL);
+  IDDefSwitch (&MovementWESP, NULL);
   IDDefNumber (&trackingPrecisionNP, NULL);
   IDDefNumber (&slewPrecisionNP, NULL);
 
@@ -405,6 +374,7 @@ void LX200Generic::ISGetProperties(const char *dev)
 
   // DATETIME_GROUP
   IDDefText   (&Time, NULL);
+  IDDefNumber(&UTCOffsetNP, NULL);
   IDDefNumber (&SDTime, NULL);
 
   // SITE_GROUP
@@ -421,11 +391,6 @@ void LX200Generic::ISGetProperties(const char *dev)
 void LX200Generic::ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n)
 {
 	int err;
-	struct tm *ltp = NULL;
-	struct tm utm;
-	time_t ltime;
-	time (&ltime);
-	
 	IText *tp;
 
 	// ignore if not ours //
@@ -470,91 +435,82 @@ void LX200Generic::ISNewText (const char *dev, const char *name, char *texts[], 
        {
 	  if (checkPower(&Time))
 	   return;
-	  
+
+	 struct tm utm;
+	 struct tm ltm;
+	 time_t time_epoch;
+
 	  if (extractISOTime(texts[0], &utm) < 0)
 	  {
 	    Time.s = IPS_IDLE;
 	    IDSetText(&Time , "Time invalid");
 	    return;
 	  }
-                ltp = (tm *) malloc (sizeof(struct tm));
-                localtime_r (&ltime, ltp);
 
-		ltp->tm_mon  += 1;
-		ltp->tm_year += 1900;
+	// update JD
+         JD = UTtoJD(&utm);
+	IDLog("New JD is %f\n", (float) JD);
 
-		tzset();
+	// Make it calender representation
+	 utm.tm_mon  += 1;
+	 utm.tm_year += 1900;
+
+        // Get epoch since given UTC (we're assuming it's LOCAL for now, then we'll subtract UTC to get local)
+	// Since mktime only returns epoch given a local calender time
+	 time_epoch = mktime(&utm);
+
+	 // Subtract UTC to get local time. The offset is assumed to be DST corrected.
+	time_epoch -= (int) (UTCOffsetN[0].value * 60.0 * 60.0);
+
+	// Now let's get the local time
+	localtime_r(&time_epoch, &ltm);
 		
-		UTCOffset = timezoneOffset();
-		
-		IDLog("local time is %02d:%02d:%02d\nUTCOffset: %g\n", ltp->tm_hour, ltp->tm_min, ltp->tm_sec, UTCOffset);
-		
-		getSDTime(fd, &STime[0].value);
-		IDSetNumber(&SDTime, NULL);
-		
-		if ( ( err = setUTCOffset(fd, UTCOffset) < 0) )
-	  	{
+	ltm.tm_mon +=1;
+        ltm.tm_year += 1900;
+
+	// Set UTC Offset
+	if ( ( err = setUTCOffset(fd, UTCOffsetN[0].value) < 0) )
+	{
 	        Time.s = IPS_IDLE;
 	        IDSetText( &Time , "Setting UTC Offset failed.");
-                free (ltp);
 		return;
-	  	}
+	}
 		
-		if ( ( err = setLocalTime(fd, ltp->tm_hour, ltp->tm_min, ltp->tm_sec) < 0) )
-	  	{
+	// Set Local Time
+	if ( ( err = setLocalTime(fd, ltm.tm_hour, ltm.tm_min, ltm.tm_sec) < 0) )
+	{
 	          handleError(&Time, err, "Setting local time");
-                  free (ltp);
         	  return;
-	  	}
+	}
 
-		tp = IUFindText(&Time, names[0]);
-		if (!tp)
-		{
-		 free(ltp);
-		 return;
-		}
-		//tp->text = new char[strlen(texts[0])+1];
-	        //strcpy(tp->text, texts[0]);
-  		IUSaveText(tp, texts[0]);
-		Time.s = IPS_OK;
-
-		// update JD
-                JD = UTtoJD(&utm);
-
-                utm.tm_mon  += 1;
-		utm.tm_year += 1900;
-
-		IDLog("New JD is %f\n", (float) JD);
-
-		if ((last_local_time->tm_mday == ltp->tm_mday ) && (last_local_time->tm_mon == ltp->tm_mon) &&
-		    (last_local_time->tm_year == ltp->tm_year))
-		{
-		  IDSetText(&Time , "Time updated to %s", texts[0]);
-                  free (ltp);
-		  return;
-		}
-
-		free (last_local_time);
-		last_local_time = ltp;
-		
-		if (!strcmp(dev, "LX200 GPS"))
-		{
+	// GPS needs UTC date?
+	if (!strcmp(dev, "LX200 GPS"))
+	{
 			if ( ( err = setCalenderDate(fd, utm.tm_mday, utm.tm_mon, utm.tm_year) < 0) )
 	  		{
 		  		handleError(&Time, err, "Setting UTC date.");
 		  		return;
 			}
-		}
-		else
-		{
-			if ( ( err = setCalenderDate(fd, ltp->tm_mday, ltp->tm_mon, ltp->tm_year) < 0) )
+	}
+	else
+	{
+			if ( ( err = setCalenderDate(fd, ltm.tm_mday, ltm.tm_mon, ltm.tm_year) < 0) )
 	  		{
 		  		handleError(&Time, err, "Setting local date.");
 		  		return;
 			}
-		}
-		
- 		IDSetText(&Time , "Date changed, updating planetary data...");
+	}
+	
+	// Everything Ok, save time value	
+	if (IUUpdateTexts(&Time, texts, names, n) < 0)
+		return;
+
+	Time.s = IPS_OK;
+ 	IDSetText(&Time , "Time updated to %s, updating planetary data...", texts[0]);
+
+	// Also update telescope's sidereal time
+	getSDTime(fd, &STime[0].value);
+	IDSetNumber(&SDTime, NULL);
 	}
 }
 
@@ -568,6 +524,7 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 	if (strcmp (dev, thisDevice))
 	    return;
 
+        // Tracking Precision
         if (!strcmp (name, trackingPrecisionNP.name))
 	{
 		if (!IUUpdateNumbers(&trackingPrecisionNP, values, names, n))
@@ -582,6 +539,7 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 		return;
 	}
 
+	// Slew Precision
 	if (!strcmp(name, slewPrecisionNP.name))
 	{
 		IUUpdateNumbers(&slewPrecisionNP, values, names, n);
@@ -593,6 +551,21 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 		
 		slewPrecisionNP.s = IPS_ALERT;
 		IDSetNumber(&slewPrecisionNP, "unknown error while setting slew precision");
+		return;
+	}
+
+	// DST Correct UTC Offset
+	if (!strcmp (name, UTCOffsetNP.name))
+	{
+		if (!IUUpdateNumbers(&UTCOffsetNP, values, names, n))
+		{
+			UTCOffsetNP.s = IPS_OK;
+			IDSetNumber(&UTCOffsetNP, NULL);
+			return;
+		}
+		
+		UTCOffsetNP.s = IPS_ALERT;
+		IDSetNumber(&trackingPrecisionNP, "unknown error while setting UTC Offset");
 		return;
 	}
 
@@ -641,16 +614,13 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 	   targetRA  = newRA;
 	   targetDEC = newDEC;
 	   
-	   if (MovementSw.s == IPS_BUSY)
+	   if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
 	   {
-	   	for (int i=0; i < 4; i++)
-	   	{
-	     		lastMove[i] = 0;
-	     		MovementS[i].s = ISS_OFF;
-	   	}
-		
-		MovementSw.s = IPS_IDLE;
-		IDSetSwitch(&MovementSw, NULL);
+	   	IUResetSwitches(&MovementNSSP);
+		IUResetSwitches(&MovementWESP);
+		MovementNSSP.s = MovementWESP.s = IPS_IDLE;
+		IDSetSwitch(&MovementNSSP, NULL);
+		IDSetSwitch(&MovementWESP, NULL);
 	   }
 	   
 	   if (handleCoordSet())
@@ -807,8 +777,6 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 {
 	int index;
 	int dd, mm, err;
-	char combinedDir[64];
-	ISwitch *swp;
 
 	// suppress warning
 	names = names;
@@ -824,9 +792,8 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	// FIRST Switch ALWAYS for power
 	if (!strcmp (name, PowerSP.name))
 	{
-	 IUResetSwitches(&PowerSP);
-	 IUUpdateSwitches(&PowerSP, states, names, n);
-   	 powerTelescope();
+	 if (IUUpdateSwitches(&PowerSP, states, names, n) < 0) return;
+   	 connectTelescope();
 	 return;
 	}
 
@@ -836,8 +803,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
   	  if (checkPower(&OnCoordSetSw))
 	   return;
 
-	  IUResetSwitches(&OnCoordSetSw);
-	  IUUpdateSwitches(&OnCoordSetSw, states, names, n);
+	  if (IUUpdateSwitches(&OnCoordSetSw, states, names, n) < 0) return;
 	  currentSet = getOnSwitch(&OnCoordSetSw);
 	  OnCoordSetSw.s = IPS_OK;
 	  IDSetSwitch(&OnCoordSetSw, NULL);
@@ -908,25 +874,24 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 		IDSetSwitch(&abortSlewSw, "Slew aborted.");
 		IDSetNumber(&eqNum, NULL);
             }
-	    else if (MovementSw.s == IPS_BUSY)
+	    else if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
 	    {
-	        
-		for (int i=0; i < 4; i++)
-		  lastMove[i] = 0;
-		
-		MovementSw.s  = IPS_IDLE; 
+		MovementNSSP.s  = MovementWESP.s =  IPS_IDLE; 
+	
 		abortSlewSw.s = IPS_OK;		
 		eqNum.s       = IPS_IDLE;
-		IUResetSwitches(&MovementSw);
+		IUResetSwitches(&MovementNSSP);
+		IUResetSwitches(&MovementWESP);
 		IUResetSwitches(&abortSlewSw);
+
 		IDSetSwitch(&abortSlewSw, "Slew aborted.");
-		IDSetSwitch(&MovementSw, NULL);
+		IDSetSwitch(&MovementNSSP, NULL);
+		IDSetSwitch(&MovementWESP, NULL);
 		IDSetNumber(&eqNum, NULL);
 	    }
 	    else
 	    {
-	        IUResetSwitches(&MovementSw);
-	        abortSlewSw.s = IPS_OK;
+	        abortSlewSw.s = IPS_IDLE;
 	        IDSetSwitch(&abortSlewSw, NULL);
 	    }
 
@@ -939,8 +904,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  if (checkPower(&AlignmentSw))
 	   return;
 
-	  IUResetSwitches(&AlignmentSw);
-	  IUUpdateSwitches(&AlignmentSw, states, names, n);
+	  if (IUUpdateSwitches(&AlignmentSw, states, names, n) < 0) return;
 	  index = getOnSwitch(&AlignmentSw);
 
 	  if ( ( err = setAlignmentMode(fd, index) < 0) )
@@ -961,8 +925,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  if (checkPower(&SitesSw))
 	   return;
 
-	  IUResetSwitches(&SitesSw);
-	  IUUpdateSwitches(&SitesSw, states, names, n);
+	  if (IUUpdateSwitches(&SitesSw, states, names, n) < 0) return;
 	  currentSiteNum = getOnSwitch(&SitesSw) + 1;
 	  
 	  if ( ( err = selectSite(fd, currentSiteNum) < 0) )
@@ -1007,8 +970,6 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  if (checkPower(&FocusMotionSw))
 	   return;
 
-	  IUResetSwitches(&FocusMotionSw);
-	  
 	  // If mode is "halt"
 	  if (FocusModeS[0].s == ISS_ON)
 	  {
@@ -1017,7 +978,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	    return;
 	  }
 	  
-	  IUUpdateSwitches(&FocusMotionSw, states, names, n);
+	  if (IUUpdateSwitches(&FocusMotionSw, states, names, n) < 0) return;
 	  index = getOnSwitch(&FocusMotionSw);
 	  
 	  if ( ( err = setFocuserMotion(fd, index) < 0) )
@@ -1045,8 +1006,7 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  if (checkPower(&SlewModeSw))
 	   return;
 
-	  IUResetSwitches(&SlewModeSw);
-	  IUUpdateSwitches(&SlewModeSw, states, names, n);
+	  if (IUUpdateSwitches(&SlewModeSw, states, names, n) < 0) return;
 	  index = getOnSwitch(&SlewModeSw);
 	   
 	  if ( ( err = setSlewMode(fd, index) < 0) )
@@ -1060,97 +1020,99 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	  return;
 	}
 
-	// Movement
-	if (!strcmp (name, MovementSw.name))
+	// Movement (North/South)
+	if (!strcmp (name, MovementNSSP.name))
 	{
-	  if (checkPower(&MovementSw))
+	  if (checkPower(&MovementNSSP))
 	   return;
 
-	 index = -1;
-	 IUUpdateSwitches(&MovementSw, states, names, n);
-	 swp = IUFindSwitch(&MovementSw, names[0]);
-	 
-	 if (!swp)
-	 {
-	    abortSlew(fd);
-	    IUResetSwitches(&MovementSw);
-	    MovementSw.s = IPS_IDLE;
-	    IDSetSwitch(&MovementSw, NULL);
-	 }
-	 
-	 if (swp == &MovementS[0]) index = 0;
-	 else if (swp == &MovementS[1]) index = 1;
-	 else if (swp == &MovementS[2]) index = 2;
-	 else index = 3;
-	 
-	 lastMove[index] = lastMove[index] == 0 ? 1 : 0;
-	 if (lastMove[index] == 0)
-	   MovementS[index].s = ISS_OFF;
-	     
-	   // North/South movement is illegal
-	   if (lastMove[LX200_NORTH] && lastMove[LX200_SOUTH])	
-	   {
-	     abortSlew(fd);
-	      for (int i=0; i < 4; i++)
-	        lastMove[i] = 0;
-	      	
-	      IUResetSwitches(&MovementSw);
-	      MovementSw.s       = IPS_IDLE;
-	      IDSetSwitch(&MovementSw, "Slew aborted.");
-	      return;
-	   }
-	   
-	   // East/West movement is illegal
-	   if (lastMove[LX200_EAST] && lastMove[LX200_WEST])	
-	   {
-	      abortSlew(fd);
-	      for (int i=0; i < 4; i++)
-	            lastMove[i] = 0;
-	       
-	      IUResetSwitches(&MovementSw);
-     	      MovementSw.s       = IPS_IDLE;
-	      IDSetSwitch(&MovementSw, "Slew aborted.");
-	      return;
-	   }
-	      
-          #ifdef INDI_DEBUG
-          IDLog("We have switch %d \n ", index);
-	  IDLog("NORTH: %d -- WEST: %d -- EAST: %d -- SOUTH %d\n", lastMove[0], lastMove[1], lastMove[2], lastMove[3]);
-	  #endif
+	 int last_move=-1;
+         int current_move = -1;
 
-	  if (lastMove[index] == 1)
-	  {
-	        //IDLog("issuing a move command\n");
-	    	if ( ( err = MoveTo(fd, index) < 0) )
-	  	{
-	        	 handleError(&MovementSw, err, "Setting motion direction");
+	// -1 means all off previously
+	 last_move = getOnSwitch(&MovementNSSP);
+
+	 if (IUUpdateSwitches(&MovementNSSP, states, names, n) < 0)
+		return;
+
+	current_move = getOnSwitch(&MovementNSSP);
+
+	// Previosuly active switch clicked again, so let's stop.
+	if (current_move == last_move)
+	{
+		HaltMovement(fd, (current_move == 0) ? LX200_NORTH : LX200_SOUTH);
+		IUResetSwitches(&MovementNSSP);
+	    	MovementNSSP.s = IPS_IDLE;
+	    	IDSetSwitch(&MovementNSSP, NULL);
+		return;
+	}
+
+	#ifdef INDI_DEBUG
+        IDLog("Current Move: %d - Previous Move: %d\n", current_move, last_move);
+	#endif
+
+	// 0 (North) or 1 (South)
+	last_move      = current_move;
+
+	// Correction for LX200 Driver: North 0 - South 3
+	current_move = (current_move == 0) ? LX200_NORTH : LX200_SOUTH;
+
+        if ( ( err = MoveTo(fd, current_move) < 0) )
+	{
+	        	 handleError(&MovementNSSP, err, "Setting motion direction");
  		 	return;
-	  	}
-	  }
-	  else
-	     HaltMovement(fd, index);
+	}
+	
+	  MovementNSSP.s = IPS_BUSY;
+	  IDSetSwitch(&MovementNSSP, "Moving toward %s", (current_move == LX200_NORTH) ? "North" : "South");
+	  return;
+	}
 
-          if (!lastMove[0] && !lastMove[1] && !lastMove[2] && !lastMove[3])
-	     MovementSw.s = IPS_IDLE;
-	  
-	  if (lastMove[index] == 0)
-	     IDSetSwitch(&MovementSw, "Moving toward %s aborted.", Direction[index]);
-	  else
-	  {
-	     MovementSw.s = IPS_BUSY;
-	     if (lastMove[LX200_NORTH] && lastMove[LX200_WEST])
-	       strcpy(combinedDir, "North West");
-	     else if (lastMove[LX200_NORTH] && lastMove[LX200_EAST])
-	       strcpy(combinedDir, "North East");
-	     else if (lastMove[LX200_SOUTH] && lastMove[LX200_WEST])
-	       strcpy(combinedDir, "South West");
-	     else if (lastMove[LX200_SOUTH] && lastMove[LX200_EAST])
-	       strcpy(combinedDir, "South East");
-	     else 
-	       strcpy(combinedDir, Direction[index]);
-	     
-	     IDSetSwitch(&MovementSw, "Moving %s...", combinedDir);
-	  }
+	// Movement (West/East)
+	if (!strcmp (name, MovementWESP.name))
+	{
+	  if (checkPower(&MovementWESP))
+	   return;
+
+	 int last_move=-1;
+         int current_move = -1;
+
+	// -1 means all off previously
+	 last_move = getOnSwitch(&MovementWESP);
+
+	 if (IUUpdateSwitches(&MovementWESP, states, names, n) < 0)
+		return;
+
+	current_move = getOnSwitch(&MovementWESP);
+
+	// Previosuly active switch clicked again, so let's stop.
+	if (current_move == last_move)
+	{
+		HaltMovement(fd, (current_move ==0) ? LX200_WEST : LX200_EAST);
+		IUResetSwitches(&MovementWESP);
+	    	MovementWESP.s = IPS_IDLE;
+	    	IDSetSwitch(&MovementWESP, NULL);
+		return;
+	}
+
+	#ifdef INDI_DEBUG
+        IDLog("Current Move: %d - Previous Move: %d\n", current_move, last_move);
+	#endif
+
+	// 0 (West) or 1 (East)
+	last_move      = current_move;
+
+	// Correction for LX200 Driver: West 1 - East 2
+	current_move = (current_move == 0) ? LX200_WEST : LX200_EAST;
+
+        if ( ( err = MoveTo(fd, current_move) < 0) )
+	{
+	        	 handleError(&MovementWESP, err, "Setting motion direction");
+ 		 	return;
+	}
+	
+	  MovementWESP.s = IPS_BUSY;
+	  IDSetSwitch(&MovementWESP, "Moving toward %s", (current_move == LX200_WEST) ? "West" : "East");
 	  return;
 	}
 
@@ -1470,13 +1432,10 @@ void LX200Generic::ISPoll()
 			IDSetSwitch(&SlewModeSw, NULL);
 			
 			MoveTo(fd, LX200_EAST);
-			IUResetSwitches(&MovementSw);
-			MovementS[LX200_EAST].s = ISS_ON;
-			MovementSw.s = IPS_BUSY;
-			for (int i=0; i < 4; i++)
-			  lastMove[i] = 0;
-			lastMove[LX200_EAST] = 1;
-			IDSetSwitch(&MovementSw, NULL);
+			IUResetSwitches(&MovementWESP);
+			MovementWES[1].s = ISS_ON;
+			MovementWESP.s = IPS_BUSY;
+			IDSetSwitch(&MovementWESP, NULL);
 			
 			ParkSP.s = IPS_OK;
 		  	IDSetSwitch (&ParkSP, "Park is complete. Turn off the telescope now.");
@@ -1515,7 +1474,25 @@ void LX200Generic::ISPoll()
 	    break;
 	}
 
-	switch (MovementSw.s)
+	switch (MovementNSSP.s)
+	{
+	  case IPS_IDLE:
+	   break;
+	 case IPS_BUSY:
+	   getLX200RA(fd, &currentRA);
+	   getLX200DEC(fd, &currentDEC);
+	   eqNum.np[0].value = currentRA;
+	   eqNum.np[1].value = currentDEC;
+
+	   IDSetNumber (&eqNum, NULL);
+	     break;
+	 case IPS_OK:
+	   break;
+	 case IPS_ALERT:
+	   break;
+	 }
+
+	 switch (MovementWESP.s)
 	{
 	  case IPS_IDLE:
 	   break;
@@ -1878,7 +1855,7 @@ int LX200Generic::checkPower(ITextVectorProperty *tp)
 
 }
 
-void LX200Generic::powerTelescope()
+void LX200Generic::connectTelescope()
 {
      switch (PowerSP.sp[0].s)
      {
@@ -1897,7 +1874,7 @@ void LX200Generic::powerTelescope()
 	 {
 	   PowerS[0].s = ISS_OFF;
 	   PowerS[1].s = ISS_ON;
-	   IDSetSwitch (&PowerSP, "Error connecting to port %s\n", Port.tp[0].text);
+	   IDSetSwitch (&PowerSP, "Error connecting to port %s. Make sure you have BOTH write and read permission to your port.\n", Port.tp[0].text);
 	   return;
 	 }
 	 if (check_lx200_connection(fd))
@@ -1992,19 +1969,10 @@ void LX200Generic::updateTime()
   double ctime;
   int h, m, s;
   int day, month, year, result;
-  int UTC_h, UTC_month, UTC_year, UTC_day, daysInFeb;
-  bool leapYear;
+  struct tm ltm;
+  struct tm utm;
+  time_t time_epoch;
   
-  tzset();
-  
-  UTCOffset = timezoneOffset();
-  #if TIMEZONE_IS_INT
-	IDLog("Daylight: %s - TimeZone: %g\n", daylight ? "Yes" : "No", UTCOffset);
-  #else
-	IDLog("Daylight: %s - TimeZone: %g\n", indi_daylight ? "Yes" : "No", UTCOffset);
-  #endif
-  
-	
   if (simulation)
   {
     sprintf(UTC[0].text, "%d-%02d-%02dT%02d:%02d:%02d", 1979, 6, 25, 3, 30, 30);
@@ -2015,152 +1983,34 @@ void LX200Generic::updateTime()
   
   getLocalTime24(fd, &ctime);
   getSexComponents(ctime, &h, &m, &s);
-  
-  UTC_h = h;
-  
+
   if ( (result = getSDTime(fd, &STime[0].value)) < 0)
     IDMessage(thisDevice, "Failed to retrieve siderial time from device.");
   
   getCalenderDate(fd, cdate);
-  
   result = sscanf(cdate, "%d/%d/%d", &year, &month, &day);
   if (result != 3) return;
-  
-  if (year % 4 == 0)
-  {
-    if (year % 100 == 0)
-    {
-      if (year % 400 == 0)
-       leapYear = true;
-      else 
-       leapYear = false;
-    }
-    else
-       leapYear = true;
-  }
-  else
-       leapYear = false;
-  
-  daysInFeb = leapYear ? 29 : 28;
-  
-  UTC_year  = year; 
-  UTC_month = month;
-  UTC_day   = day;
-  
-  IDLog("day: %d - month %d - year: %d\n", day, month, year);
-  
-  // we'll have to convert telescope time to UTC manually starting from hour up
-  // seems like a stupid way to do it.. oh well
-  UTC_h = (int) UTCOffset + h;
-  // Correct UTC for indi_daylight time savings
-  #if TIMEZONE_IS_INT
-  if (daylight)
-	UTC_h-=1;
-  #else
-  if (indi_daylight)
-	UTC_h-=1;
-  #endif
 
-  if (UTC_h < 0)
-  {
-   UTC_h += 24;
-   UTC_day--;
-  }
-  else if (UTC_h > 24)
-  {
-   UTC_h -= 24;
-   UTC_day++;
-  }
-  
-  switch (UTC_month)
-  {
-    case 1:
-    case 8:
-     if (UTC_day < 1)
-     {
-     	UTC_day = 31;
-     	UTC_month--;
-     }
-     else if (UTC_day > 31)
-     {
-       UTC_day = 1;
-       UTC_month++;
-     }
-     break;
-     
-   case 2:
-   if (UTC_day < 1)
-     {
-     	UTC_day = 31;
-     	UTC_month--;
-     }
-     else if (UTC_day > daysInFeb)
-     {
-       UTC_day = 1;
-       UTC_month++;
-     }
-     break;
-     
-  case 3:
-     if (UTC_day < 1)
-     {
-     	UTC_day = daysInFeb;
-     	UTC_month--;
-     }
-     else if (UTC_day > 31)
-     {
-       UTC_day = 1;
-       UTC_month++;
-     }
-     break;
-   
-   case 4:
-   case 6:
-   case 9:
-   case 11:
-    if (UTC_day < 1)
-     {
-     	UTC_day = 31;
-     	UTC_month--;
-     }
-     else if (UTC_day > 30)
-     {
-       UTC_day = 1;
-       UTC_month++;
-     }
-     break;
-   
-   case 5:
-   case 7:
-   case 10:
-   case 12:
-    if (UTC_day < 1)
-     {
-     	UTC_day = 30;
-     	UTC_month--;
-     }
-     else if (UTC_day > 31)
-     {
-       UTC_day = 1;
-       UTC_month++;
-     }
-     break;
-   
-  }   
-       
-  if (UTC_month < 1)
-  {
-   UTC_month = 12;
-   UTC_year--;
-  }
-  else if (UTC_month > 12)
-  {
-    UTC_month = 1;
-    UTC_year++;
-  }
-  
+  // Let's fill in the local time
+  ltm.tm_sec = s;
+  ltm.tm_min = m;
+  ltm.tm_hour = h;
+  ltm.tm_mday = day;
+  ltm.tm_mon = month - 1;
+  ltm.tm_year = year - 1900;
+
+  // Get time epoch
+  time_epoch = mktime(&ltm);
+
+  // Convert to UTC
+  time_epoch += (int) (UTCOffsetN[0].value * 60.0 * 60.0);
+
+  // Get UTC (we're using localtime_r, but since we shifted time_epoch above by UTCOffset, we should be getting the real UTC time)
+  localtime_r(&time_epoch, &utm);
+
   /* Format it into ISO 8601 */
-  sprintf(UTC[0].text, "%d-%02d-%02dT%02d:%02d:%02d", UTC_year, UTC_month, UTC_day, UTC_h, m, s);
+  strftime(cdate, 32, "%d-%02d-%02dT%02d:%02d:%02d", &utm);
+  IUSaveText(&UTC[0], cdate);
   
   #ifdef INDI_DEBUG
   IDLog("Local telescope time: %02d:%02d:%02d\n", h, m , s);

@@ -47,7 +47,7 @@ class LX200Generic
  void handleError(INumberVectorProperty *nvp, int err, const char *msg);
  void handleError(ITextVectorProperty *tvp, int err, const char *msg);
  bool isTelescopeOn(void);
- void powerTelescope();
+ void connectTelescope();
  void slewError(int slewCode);
  void getAlignment();
  int handleCoordSet();
@@ -74,17 +74,13 @@ class LX200Generic
   double targetDEC;
   double lastRA;
   double lastDEC;
-  double UTCOffset;
   bool   fault;
   bool   simulation;
 
-  struct tm *last_local_time;
-  
   char thisDevice[64];
 
   int currentSet;
   int lastSet;
-  int lastMove[4];
 
 };
 
