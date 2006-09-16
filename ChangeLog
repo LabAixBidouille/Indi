@@ -6,8 +6,11 @@ From 0.4 to 0.5
 		+ SBIG STV?
 
 	# Other:
+	     + SBIG CCD driver was updated to fix problems with CFITSIO.
 	     + Fixed INDI Mac OSX Crash.
-	     + Updated TTY API and fixed a few bugs.
+	     + Updated TTY API to include error reporting, in addition to fixing a few bugs.
+	     + LX200 Drivers use client timestamp to update the telescope internal clock. The old behavior was to use to system's time.
+	     + Added a new INDI Standard Property: UTC_OFFSET.
 	     + Dropping threaded INDI server in favor of the slightly better non-threaded version due to performance considerations.
 
 	# Known Issues
