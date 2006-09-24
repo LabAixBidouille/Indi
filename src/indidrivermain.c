@@ -45,6 +45,7 @@
 #include "eventloop.h"
 #include "indidevapi.h"
 #include "indicom.h"
+#include "observer.h"
 
 static void usage(void);
 static void clientMsgCB(int fd, void *arg);
@@ -584,19 +585,6 @@ IDDelete (const char *dev, const char *name, const char *fmt, ...)
 	fflush (stdout);
 }
 
-/* log message locally.
- * this has nothing to do with XML or any Clients.
- */
-void
-IDLog (const char *fmt, ...)
-{
-	va_list ap;
-	fprintf (stderr, "%s ", timestamp());
-	va_start (ap, fmt);
-	vfprintf (stderr, fmt, ap);
-	va_end (ap);
-}
-
 /* "INDI" wrappers to the more generic eventloop facility. */
 
 int
@@ -965,6 +953,7 @@ clientMsgCB (int fd, void *arg)
 	    } else if (msg[0])
 		fprintf (stderr, "%s XML error: %s\n", me, msg);
 	}
+
 }
 
 /* crack the given INDI XML element and call driver's IS* entry points as they
@@ -1201,7 +1190,7 @@ dispatch (XMLEle *root, char msg[])
 		IDMessage (dev, "%s: newBLOBVector with no valid members",name);
 	    return (0);
 	}
-
+	
 	if (!strcmp (tagXMLEle(root), "getProperties")) {
 	    XMLAtt *ap;
 	    double v;
@@ -1223,6 +1212,8 @@ dispatch (XMLEle *root, char msg[])
 	    ISGetProperties (ap ? valuXMLAtt(ap) : NULL);
 	    return (0);
 	}
+	else if (!processObservers(root))
+		return (0);
 
 	sprintf (msg, "Unknown command: %s", tagXMLEle(root));
 	return(1);

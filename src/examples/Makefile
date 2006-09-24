@@ -10,7 +10,7 @@ LDFLAGS = $(CLDFLAGS) -L$(LIBROOT)
 LIBS = -llilxml -lindicom -lm
 
 # list each sample device
-DRVS = tutorial_one tutorial_two tutorial_three tutorial_ccdpreview
+DRVS = tutorial_one tutorial_two tutorial_three tutorial_ccdpreview tutorial_dome tutorial_rain
 
 # supporting files comprising the INDI driver framework implementation
 IDAI = ../indidrivermain.o ../eventloop.o
@@ -33,6 +33,12 @@ tutorial_three: $(IDAI) tutorial_three.o
 
 tutorial_ccdpreview: $(IDAI) tutorial_ccdpreview.o
 	$(CC) $(LDFLAGS) -o $@ $(IDAI) tutorial_ccdpreview.o $(LIBS) -lz
+
+tutorial_dome: $(IDAI) tutorial_dome.o
+	$(CC) $(LDFLAGS) -o $@ $(IDAI) tutorial_dome.o $(LIBS) -lz
+
+tutorial_rain: $(IDAI) tutorial_rain.o
+	$(CC) $(LDFLAGS) -o $@ $(IDAI) tutorial_rain.o $(LIBS) -lz
 
 # clean up
 clean:
