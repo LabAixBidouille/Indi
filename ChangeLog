@@ -6,6 +6,7 @@ From 0.4 to 0.5
 		+ SBIG STV?
 
 	# Other:
+	     + Added INDI Observer pattern to enable flexible inter-drive communication.
 	     + SBIG CCD driver was updated to fix problems with CFITSIO.
 	     + Fixed INDI Mac OSX Crash.
 	     + Updated TTY API to include error reporting, in addition to fixing a few bugs.
