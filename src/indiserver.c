@@ -236,7 +236,7 @@ static void
 usage(void)
 {
 	fprintf (stderr, "Usage: %s [options] driver [driver ...]\n", me);
-	fprintf (stderr, "%s\n", "$Revision: 587944 $");
+	fprintf (stderr, "%s\n", "$Revision: 588011 $");
 	fprintf (stderr, "Purpose: INDI Server\n");
 	fprintf (stderr, "Options:\n");
 	fprintf (stderr, " -p p  : alternate IP port, default %d\n", INDIPORT);

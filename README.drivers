@@ -7,6 +7,11 @@ Introduction
 
 The goal of the INDI Drivers Knowledge Base is to establish a repository that addresses driver-specific issues and problems. 
 
+You can find more up to date information on INDI drivers from the following sources:
+
+1. INDI Device Profiles: http://indi.sf.net/devices.html
+2. INDI Wiki: http://wiki.kde.org/tiki-index.php?page=indi
+
 
 Telescopes
 ==========
@@ -50,12 +55,14 @@ Filter Wheels
 
 	+ FLI Filter Wheel
 	+ SBIG CWF
+	+ TruTechnology Filter Wheel
 
 Video
 =====
 
 	+ Video 4 Linux I, II
 	+ Philips Webcam
+	+ SBIG STV
 	+ Meade Lunar Planetary Imager (Experimental)
 
 		- Exposure: You need to have Kernel 2.6.16+ if you want to take long exposures (1 second or more) with the LPI. To obtain long exposures under 2.6.16+, you need to modify a module paramter for the SN9Cxxx drivers. As root, perform the following:
