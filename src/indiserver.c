@@ -236,7 +236,7 @@ static void
 usage(void)
 {
 	fprintf (stderr, "Usage: %s [options] driver [driver ...]\n", me);
-	fprintf (stderr, "%s\n", "$Revision: 588011 $");
+	fprintf (stderr, "%s\n", "$Revision: 590101 $");
 	fprintf (stderr, "Purpose: INDI Server\n");
 	fprintf (stderr, "Options:\n");
 	fprintf (stderr, " -p p  : alternate IP port, default %d\n", INDIPORT);
@@ -832,16 +832,16 @@ q2Clients (ClInfo *notme, XMLEle *root, char *dev, Msg *mp)
 {
 	ClInfo *cp;
 
+	/* Ignore subscribtion requests, don't send them to clients */
+	if (!strcmp(tagXMLEle(root), "propertyVectorSubscribtion"))
+		return NULL;
+
 	if (!mp) {
 	    /* build a new message */
 	    mp = (Msg *) malloc (sizeof(Msg));
 	    mp->ep = root;
 	    mp->count = 0;
 	}
-
-	/* Ignore subscribtion requests, don't send them to clients */
-	if (!strcmp(tagXMLEle(root), "propertyVectorSubscribtion"))
-		return NULL;
 	
 	/* queue message to each interested client */
 	for (cp = clinfo; cp < &clinfo[nclinfo]; cp++) {
@@ -883,18 +883,11 @@ q2Observers  (DvrInfo *sender, XMLEle *root, char *dev, Msg *mp)
 {
 	ObserverInfo *ob;
 	XMLAtt* ap;
-	int prop_state;
+	int prop_state = 0;
 	char prop_dev[MAXINDIDEVICE];
 	char prop_name[MAXINDINAME];
 	
 	dev=dev;
-
-	if (!mp) {
-	    /* build a new message */
-	    mp = (Msg *) malloc (sizeof(Msg));
-	    mp->ep = root;
-	    mp->count = 0;
-	}
 
 	/* Subscribtion request */
 	if (!strcmp(tagXMLEle(root), "propertyVectorSubscribtion"))
@@ -945,6 +938,13 @@ q2Observers  (DvrInfo *sender, XMLEle *root, char *dev, Msg *mp)
 			return NULL;
 		}
 	}
+
+	if (!mp) {
+	    /* build a new message */
+	    mp = (Msg *) malloc (sizeof(Msg));
+	    mp->ep = root;
+	    mp->count = 0;
+	}
 			
 	/* Now let's see if a registered observer is interested in this property */
 	for (ob = observerinfo; ob < &observerinfo[nobserverinfo]; ob++)
@@ -959,8 +959,10 @@ q2Observers  (DvrInfo *sender, XMLEle *root, char *dev, Msg *mp)
 			if (strstr(tagXMLEle(root), "set") && ob->type == IDT_STATE)
 			{
 				/* If state didn't change, there is no need to update observer */
-				if (ob->last_state == (unsigned) prop_state)
+				if (ob->last_state == (unsigned) prop_state) {
+					free(mp);
 					return NULL;
+				}
 				
 				/* Otherwise, record last state transition */
 				ob->last_state = prop_state;
@@ -988,7 +990,7 @@ manageObservers (DvrInfo *dp, XMLEle *root)
 
 	char ob_dev[MAXINDIDEVICE];
     	char ob_name[MAXINDINAME];
-	int ob_type;
+	int ob_type = 0;
 	XMLAtt* ap;
 	ObserverInfo* ob;
 	
@@ -1092,6 +1094,14 @@ manageObservers (DvrInfo *dp, XMLEle *root)
 
 }
 
+/* free Msg mp and everything it contains */
+static void
+freeMsg (Msg *mp)
+{
+	delXMLEle (mp->ep);
+	free (mp);
+}
+
 static void alertObservers(DvrInfo *dp)
 {
 	ObserverInfo* ob;
@@ -1130,16 +1140,8 @@ static void alertObservers(DvrInfo *dp)
 					 ob->dp->name, nFQ(ob->dp->msgq), mp->count);
 		}
 	}
-	
-}
-
-
-/* free Msg mp and everything it contains */
-static void
-freeMsg (Msg *mp)
-{
-	delXMLEle (mp->ep);
-	free (mp);
+	if (!mp->count) /* not added anywhere */
+	    freeMsg(mp);
 }
 
 /* write the next message in the queue for the given client.

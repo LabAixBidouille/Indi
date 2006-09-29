@@ -1,18 +1,19 @@
 From 0.4 to 0.5
 
 	# Devices:
-
 		+ True Technology Filter Wheel
-		+ SBIG STV?
+		+ SBIG STV
 
-	# Other:
-	     + Added INDI Observer pattern to enable flexible inter-drive communication.
-	     + SBIG CCD driver was updated to fix problems with CFITSIO.
-	     + Fixed INDI Mac OSX Crash.
-	     + Updated TTY API to include error reporting, in addition to fixing a few bugs.
+	# Features:
+	     + Added INDI Observer pattern to enable flexible inter-driver communication.
 	     + LX200 Drivers use client timestamp to update the telescope internal clock. The old behavior was to use to system's time.
 	     + Added a new INDI Standard Property: UTC_OFFSET.
 	     + Dropping threaded INDI server in favor of the slightly better non-threaded version due to performance considerations.
+
+	# Bugs
+	     + SBIG CCD driver was updated to fix problems with CFITSIO.
+	     + Updated TTY API to include error reporting, in addition to fixing a few bugs.
+	     + Fixed INDI Mac OSX Crash.
 
 	# Known Issues
 		+ Astrophysics Mount driver (apmount) is not working. With no volunteers to test or develop this driver, the driver will remain broken.
