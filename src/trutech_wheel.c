@@ -223,8 +223,6 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 {
 	long err;
 	INumber *np;
-	long newFilter;
-
 	n = n;
 	
 	/* ignore if not ours */
@@ -235,26 +233,43 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 	
 	if (!strcmp(FilterPositionNP.name, name)) 
 	{
+
 		if (!isFilterConnected()) 
 		{
-			IDMessage(mydev, "Filter not connected.");
+			IDMessage(mydev, "Filter is not connected.");
 			FilterPositionNP.s = IPS_IDLE;
 			IDSetNumber(&FilterPositionNP, NULL);
 			return;
 		}
-		
-		targetFilter = values[0];
-		
-		if (targetFilter < 1 || targetFilter > MAX_FILTER_COUNT)
-		{
-			FilterPositionNP.s = IPS_ALERT;
-			IDSetNumber(&FilterPositionNP, "Error: valid range of filter is from %d to %d", FIRST_FILTER, LAST_FILTER);
-			return;
-		}
 
-		FilterPositionNP.s = IPS_BUSY;
-		IDSetNumber(&FilterPositionNP, "Setting current filter to slot %d", targetFilter);
-		IDLog("Setting current filter to slot %d\n", targetFilter);
+		np = IUFindNumber(&FilterPositionNP, names[0]);
+		if (np == &FilterPositionN[0])
+		{
+			
+			targetFilter = values[0];
+			int nbytes=0;
+			char type = 0x01;
+			char chksum = COMM_INIT + type + (char) targetFilter;
+			char filter_command[5] = { COMM_PRE, COMM_INIT, type, targetFilter, chksum };
+
+			if (targetFilter < 1 || targetFilter > MAX_FILTER_COUNT)
+			{
+				FilterPositionNP.s = IPS_ALERT;
+				IDSetNumber(&FilterPositionNP, "Error: valid range of filter is from %d to %d", FIRST_FILTER, LAST_FILTER);
+				return;
+			}
+
+			err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
+
+			FilterPositionNP.s = IPS_BUSY;
+			IDSetNumber(&FilterPositionNP, "Setting current filter to slot %d", targetFilter);
+			IDLog("Setting current filter to slot %d\n", targetFilter);
+		}
+		else
+		{
+			FilterPositionNP.s = IPS_IDLE;
+			IDSetNumber(&FilterPositionNP, NULL);
+		}
 		
 		return;
 	}
@@ -263,14 +278,39 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 void ISPoll(void *p)
 {
 
+	int err=0;
+  	char cmd_response[CMD_RESP];
+	char error_message[ERRMSG_SIZE];
+	int nbytes=0;
+	char type = 0x02;
+	char chksum = COMM_INIT + type + COMM_FILL;
+	char filter_command[5] = { COMM_PRE, COMM_INIT, type, COMM_FILL, chksum };
+
   switch (FilterPositionNP.s)
   {
     case IPS_IDLE:
     case IPS_OK:
        break;
-  
    
    case IPS_BUSY:
+			
+			err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
+
+			
+			/* Wait for Reply */
+			if ( (err = tty_read_section(fd, cmd_response, COMM_NL, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
+			{
+				tty_error_msg(err, error_message, ERRMSG_SIZE);
+			
+				HomeSP.s = IPS_ALERT;
+				IDSetSwitch(&FilterPositionNP, "Reading from filter failed. %s\n", error_message);
+				IDLog("Reading from filter failed. %s\n", error_message);
+				return;
+			}
+
+			cmd_response[nbytes] = 0;
+			IDLog("Filter response is %s\n", cmd_response);
+		
 	break;
 
    case IPS_ALERT:
