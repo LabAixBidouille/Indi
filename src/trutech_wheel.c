@@ -58,11 +58,12 @@ static char COMM_NL   = 0x0A;
 #define mydev           		"TurTech Wheel"
 #define MAIN_GROUP			"Main Control"
 #define currentFilter			FilterPositionN[0].value
-#define POLLMS				1000
+#define POLLMS				3000
 #define MAX_FILTER_COUNT		8
 #define ERRMSG_SIZE			1024
 
 #define CMD_SIZE			5
+#define CMD_JUNK			64
 #define CMD_RESP			15
 
 #define FILTER_TIMEOUT			15					/* 15 Seconds before timeout */
@@ -136,6 +137,7 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	int err;
 	char error_message[ERRMSG_SIZE];
 	char cmd_response[CMD_RESP];
+	char junk_response[CMD_JUNK];
 
 	/* ignore if not ours */
 	if (dev && strcmp (dev, mydev))
@@ -179,7 +181,9 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 		}
 
 		/* Wait for Reply */
-		if ( (err = tty_read_section(fd, cmd_response, COMM_NL, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
+		/* First read the junk */
+		IDLog("Reading JUNK \n");
+		if ( (err = tty_read_section(fd, junk_response, COMM_INIT, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
 		{
 			tty_error_msg(err, error_message, ERRMSG_SIZE);
 			
@@ -188,6 +192,19 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 			IDLog("Reading from filter failed. %s\n", error_message);
 			return;
 		}
+
+		IDLog("************* Reading Our Bytes ************ \n");
+		/* Now read 3 bytes */
+		if ( (err = tty_read(fd, cmd_response, 3, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
+		{
+			tty_error_msg(err, error_message, ERRMSG_SIZE);
+			
+			HomeSP.s = IPS_ALERT;
+			IDSetSwitch(&HomeSP, "Reading from filter failed. %s\n", error_message);
+			IDLog("Reading from filter failed. %s\n", error_message);
+			return;
+		}
+		IDLog("************* DONE READING ************ \n");
 
 		cmd_response[nbytes] = 0;
 		HomeSP.s = IPS_OK;
@@ -285,6 +302,7 @@ void ISPoll(void *p)
 	char type = 0x02;
 	char chksum = COMM_INIT + type + COMM_FILL;
 	char filter_command[5] = { COMM_PRE, COMM_INIT, type, COMM_FILL, chksum };
+	char junk_response[CMD_JUNK];
 
   switch (FilterPositionNP.s)
   {
@@ -294,22 +312,32 @@ void ISPoll(void *p)
    
    case IPS_BUSY:
 			
-			err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
+		err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
 
+		/* First read the junk */
+		IDLog("Reading JUNK \n");
+		if ( (err = tty_read_section(fd, junk_response, COMM_INIT, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
+		{
+			tty_error_msg(err, error_message, ERRMSG_SIZE);
 			
-			/* Wait for Reply */
-			if ( (err = tty_read_section(fd, cmd_response, COMM_NL, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
-			{
-				tty_error_msg(err, error_message, ERRMSG_SIZE);
-			
-				HomeSP.s = IPS_ALERT;
-				IDSetSwitch(&FilterPositionNP, "Reading from filter failed. %s\n", error_message);
-				IDLog("Reading from filter failed. %s\n", error_message);
-				return;
-			}
+			HomeSP.s = IPS_ALERT;
+			IDSetSwitch(&HomeSP, "Reading from filter failed. %s\n", error_message);
+			IDLog("Reading from filter failed. %s\n", error_message);
+			return;
+		}
 
-			cmd_response[nbytes] = 0;
-			IDLog("Filter response is %s\n", cmd_response);
+		IDLog("************* Reading Our Bytes ************ \n");
+		/* Now read 3 bytes */
+		if ( (err = tty_read(fd, cmd_response, 3, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
+		{
+			tty_error_msg(err, error_message, ERRMSG_SIZE);
+			
+			HomeSP.s = IPS_ALERT;
+			IDSetSwitch(&HomeSP, "Reading from filter failed. %s\n", error_message);
+			IDLog("Reading from filter failed. %s\n", error_message);
+			return;
+		}
+		IDLog("************* DONE READING ************ \n");
 		
 	break;
 
