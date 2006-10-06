@@ -54,7 +54,7 @@ static char COMM_PRE  = 0x01;
 static char COMM_INIT = 0xA5;
 static char COMM_FILL = 0x20;
 
-#define mydev           		"TurTech Wheel"
+#define mydev           		"TruTech Wheel"
 #define MAIN_GROUP			"Main Control"
 #define currentFilter			FilterPositionN[0].value
 #define POLLMS				3000
