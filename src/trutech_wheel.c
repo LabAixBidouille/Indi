@@ -165,7 +165,9 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 		if (checkPowerS(&HomeSP))
 			return;
 
+                IDLog("********* SENDING FILTER HOME COMMAND **********\n");
 		err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
+		IDLog("********* DONE SENDING HOME COMMAND **********\n");
 		
 		/* Send Home Command */
 		if (err != TTY_OK)
@@ -182,7 +184,7 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 
 		/* Wait for Reply */
 		/* First read the junk */
-		IDLog("Reading JUNK \n");
+		IDLog("********** Reading JUNK Response for HOME ********* \n");
 		if ( (err = tty_read_section(fd, junk_response, COMM_INIT, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
 		{
 			tty_error_msg(err, error_message, ERRMSG_SIZE);
@@ -192,8 +194,9 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 			IDLog("Reading from filter failed. %s\n", error_message);
 			return;
 		}
-
-		IDLog("************* Reading Our Bytes ************ \n");
+		IDLog("********************** DONE ******************** \n");
+		
+		IDLog("********** Reading 3 bytes response for HOME ********** \n");
 		/* Now read 3 bytes */
 		if ( (err = tty_read(fd, cmd_response, 3, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
 		{
@@ -204,11 +207,11 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 			IDLog("Reading from filter failed. %s\n", error_message);
 			return;
 		}
-		IDLog("************* DONE READING ************ \n");
-
+		IDLog("********************** DONE ******************** \n");
+		
 		cmd_response[nbytes] = 0;
 		HomeSP.s = IPS_OK;
-		IDLog("Filter response is %s\n", cmd_response);
+		/*IDLog("Filter response is %s\n", cmd_response); */
 		IDSetSwitch(&HomeSP, "Filter response is %s", cmd_response);
 		
 	}
@@ -276,11 +279,13 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 				return;
 			}
 
+			IDLog("********* SENDING FILTER SET COMMAND %d **********\n", targetFilter);
 			err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
+			IDLog("********************** DONE ******************** \n");
 
 			FilterPositionNP.s = IPS_BUSY;
 			IDSetNumber(&FilterPositionNP, "Setting current filter to slot %d", targetFilter);
-			IDLog("Setting current filter to slot %d\n", targetFilter);
+			/*IDLog("Setting current filter to slot %d\n", targetFilter);*/
 		}
 		else
 		{
@@ -304,6 +309,8 @@ void ISPoll(void *p)
 	char filter_command[5] = { COMM_PRE, COMM_INIT, type, COMM_FILL, chksum };
 	char junk_response[CMD_JUNK];
 
+	static int nruns=0;
+
   switch (FilterPositionNP.s)
   {
     case IPS_IDLE:
@@ -312,10 +319,20 @@ void ISPoll(void *p)
    
    case IPS_BUSY:
 			
+		nruns++;
+		if (nruns==3)
+		{
+			nruns=0;
+			FilterPositionNP.s = IPS_IDLE;
+			break;
+		}
+			
+		IDLog("********* SENDING FILTER QUERY COMMAND for Filter#%d **********\n", targetFilter);
 		err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
+		IDLog("********************** DONE ******************** \n");
 
 		/* First read the junk */
-		IDLog("Reading JUNK \n");
+		IDLog("********** Reading JUNK Response for Query Filter #%d ********* \n", targetFilter);
 		if ( (err = tty_read_section(fd, junk_response, COMM_INIT, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
 		{
 			tty_error_msg(err, error_message, ERRMSG_SIZE);
@@ -325,8 +342,9 @@ void ISPoll(void *p)
 			IDLog("Reading from filter failed. %s\n", error_message);
 			return;
 		}
+		IDLog("********************** DONE ******************** \n");
 
-		IDLog("************* Reading Our Bytes ************ \n");
+		IDLog("********** Reading 3 bytes response for Query Filter #%d ********** \n", targetFilter);
 		/* Now read 3 bytes */
 		if ( (err = tty_read(fd, cmd_response, 3, FILTER_TIMEOUT, &nbytes)) != TTY_OK)
 		{
@@ -337,7 +355,7 @@ void ISPoll(void *p)
 			IDLog("Reading from filter failed. %s\n", error_message);
 			return;
 		}
-		IDLog("************* DONE READING ************ \n");
+		IDLog("********************** DONE ******************** \n");
 		
 	break;
 
