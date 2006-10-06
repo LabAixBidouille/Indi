@@ -319,14 +319,6 @@ void ISPoll(void *p)
    
    case IPS_BUSY:
 			
-		nruns++;
-		if (nruns==3)
-		{
-			nruns=0;
-			FilterPositionNP.s = IPS_IDLE;
-			break;
-		}
-			
 		IDLog("********* SENDING FILTER QUERY COMMAND for Filter#%d **********\n", targetFilter);
 		err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
 		IDLog("********************** DONE ******************** \n");
