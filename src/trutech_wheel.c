@@ -92,10 +92,6 @@ static INumberVectorProperty FilterCountNP = { mydev, "Filter Count", "", MAIN_G
 static INumber FilterPositionN[]	  = { {"SLOT", "Active Filter", "%2.0f",  1 , DEFAULT_FILTER_COUNT, 1, 1, 0, 0, 0}};
 static INumberVectorProperty FilterPositionNP = { mydev, "FILTER_SLOT", "Filter", MAIN_GROUP, IP_RW, 0, IPS_IDLE, FilterPositionN, NARRAY(FilterPositionN), "", 0};
 
-/* Filter Size */
-static INumber FilterSizeN[]	  = { {"Size", "", "%2.0f", 0,  12, 1, 0, 0, 0, 0}};
-static INumberVectorProperty FilterSizeNP = { mydev, "Filter Size", "", MAIN_GROUP, IP_RO, 0, IPS_IDLE, FilterSizeN, NARRAY(FilterSizeN), "", 0};
-
 /* send client definitions of all properties */
 void ISInit()
 {
@@ -125,8 +121,6 @@ void ISGetProperties (const char *dev)
 	IDDefNumber(&FilterCountNP, NULL);
 	IDDefSwitch(&HomeSP, NULL);
 	IDDefNumber(&FilterPositionNP, NULL);
-	IDDefNumber(&FilterSizeNP, NULL);
-	
 }
   
 void ISNewBLOB (const char *dev, const char *name, int sizes[], char *blobs[], char *formats[], char *names[], int n)
@@ -180,8 +174,11 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 			return;
 		}
 
+		FilterPositionN[0].value = 1;
+		FilterPositionNP.s = IPS_OK;
 		HomeSP.s = IPS_OK;
 		IDSetSwitch(&HomeSP, "Filter set to HOME.");
+		IDSetNumber(&FilterPositionNP, NULL);
 		
 	}
 	
@@ -248,6 +245,7 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 				return;
 			}
 
+			IUUpdateNumbers(&FilterPositionNP, values, names, n);
 			err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
 
 			FilterPositionNP.s = IPS_OK;
