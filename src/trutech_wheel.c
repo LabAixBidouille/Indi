@@ -283,6 +283,8 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 			err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
 			IDLog("********************** DONE ******************** \n");
 
+			sleep(2);
+
 			tcflush(fd, TCIOFLUSH);
 
 			FilterPositionNP.s = IPS_BUSY;
