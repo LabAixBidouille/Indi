@@ -283,6 +283,8 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 			err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
 			IDLog("********************** DONE ******************** \n");
 
+			tcflush(fd, TCIOFLUSH);
+
 			FilterPositionNP.s = IPS_BUSY;
 			IDSetNumber(&FilterPositionNP, "Setting current filter to slot %d", targetFilter);
 			/*IDLog("Setting current filter to slot %d\n", targetFilter);*/
@@ -318,6 +320,14 @@ void ISPoll(void *p)
        break;
    
    case IPS_BUSY:
+			
+		nruns++;
+		if (nruns==3)
+		{
+			nruns=0;
+			FilterPositionNP.s = IPS_IDLE;
+			break;
+		}
 			
 		IDLog("********* SENDING FILTER QUERY COMMAND for Filter#%d **********\n", targetFilter);
 		err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
