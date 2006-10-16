@@ -1,22 +1,21 @@
-/** \file evalINDI.c
-    \brief evaluate an expression of INDI operands.
+/* evaluate an expression of INDI operands
+ */
 
- Overall design:
- compile expression, building operand table, if trouble exit 2
- open INDI connection, if trouble exit 2
- send getProperties as required to get operands flowing
- watch for messages until get initial values of each operand
- evaluate expression, repeat if -w each time an op arrives until true
- exit val==0
-
-   \author Elwood Downey
-*/
+/* Overall design:
+ * compile expression, building operand table, if trouble exit 2
+ * open INDI connection, if trouble exit 2
+ * send getProperties as required to get operands flowing
+ * watch for messages until get initial values of each operand
+ * evaluate expression, repeat if -w each time an op arrives until true
+ * exit val==0
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <signal.h>
+#include <errno.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -57,6 +56,7 @@ static int port = INDIPORT;             /* working port number */
 #define TIMEOUT         2               /* default timeout, secs */
 static int timeout = TIMEOUT;           /* working timeout, secs */
 static LilXML *lillp;			/* XML parser context */
+static int directfd = -1;		/* direct filedes to server, if >= 0 */
 static int verbose;			/* more tracing */
 static int eflag;			/* print each updated expression value*/
 static int fflag;			/* print final expression value */
@@ -77,6 +77,14 @@ main (int ac, char *av[])
 	    char *s = *av;
 	    while (*++s) {
 		switch (*s) {
+		case 'd':
+		    if (ac < 2) {
+			fprintf (stderr, "-d requires open fileno\n");
+			usage();
+		    }
+		    directfd = atoi(*++av);
+		    ac--;
+		    break;
 		case 'e':	/* print each updated expression value */
 		    eflag++;
 		    break;
@@ -84,6 +92,10 @@ main (int ac, char *av[])
 		    fflag++;
 		    break;
 		case 'h':
+		    if (directfd >= 0) {
+			fprintf (stderr, "Can not combine -d and -h\n");
+			usage();
+		    }
 		    if (ac < 2) {
 			fprintf (stderr, "-h requires host name\n");
 			usage();
@@ -98,6 +110,10 @@ main (int ac, char *av[])
 		    oflag++;
 		    break;
 		case 'p':
+		    if (directfd >= 0) {
+			fprintf (stderr, "Can not combine -d and -p\n");
+			usage();
+		    }
 		    if (ac < 2) {
 			fprintf (stderr, "-p requires tcp port number\n");
 			usage();
@@ -137,9 +153,19 @@ main (int ac, char *av[])
 	    usage();
 
         /* open connection */
-	fp = openINDIServer();
-	if (verbose)
-	    fprintf (stderr, "Connected to %s on port %d\n", host, port);
+	if (directfd >= 0) {
+	    fp = fdopen (directfd, "r+");
+	    if (!fp) {
+		fprintf (stderr, "Direct fd %d: %s\n",directfd,strerror(errno));
+		exit(1);
+	    }
+	    if (verbose)
+		fprintf (stderr, "Using direct fd %d\n", directfd);
+	} else {
+	    fp = openINDIServer();
+	    if (verbose)
+		fprintf (stderr, "Connected to %s on port %d\n", host, port);
+	}
 
 	/* build a parser context for cracking XML responses */
 	lillp = newLilXML();
@@ -162,23 +188,36 @@ usage()
 {
 	fprintf (stderr, "Usage: %s [options] [exp]\n", me);
 	fprintf (stderr, "Purpose: evaluate an expression of INDI operands\n");
-	fprintf (stderr, "Version: $Revision: 1.1 $\n");
+	fprintf (stderr, "Version: $Revision: 1.3 $\n");
 	fprintf (stderr, "Options:\n");
-	fprintf (stderr, " -e   : print each updated expression value\n");
-	fprintf (stderr, " -f   : print final expression value\n");
-        fprintf (stderr, " -h h : alternate host, default is %s\n", host_def);
-	fprintf (stderr, " -i   : read expression from stdin\n");
-	fprintf (stderr, " -o   : print operands as they change\n");
-	fprintf (stderr, " -p p : alternate port, default is %d\n", INDIPORT);
-	fprintf (stderr, " -t t : max secs to wait, 0 is forever, default is %d\n",TIMEOUT);
-	fprintf (stderr, " -v   : verbose (cummulative)\n");
-	fprintf (stderr, " -w   : wait for expression to evaluate as true\n");
-	fprintf (stderr, "[exp] is any arithmetic expression including common math functions.\n");
-	fprintf (stderr, "  operands are of the form \"dev.nam.ele\" or ele may be:\n");
-	fprintf (stderr, "   _STATE to evaluate state Idle,Ok,Busy,Alert as 0,1,2,3\n");
-	fprintf (stderr, "   _TS to evaluate timestamp as UNIX seconds from epoch\n");
-	fprintf (stderr, "  Switch vectors evalute to 0,1 from Off,On\n");
-	fprintf (stderr, "  Light vectors evaluate to 0-3 as per _STATE\n");
+	fprintf (stderr, "   -d f : use file descriptor f already open to server\n");
+
+	fprintf (stderr, "   -e   : print each updated expression value\n");
+	fprintf (stderr, "   -f   : print final expression value\n");
+        fprintf (stderr, "   -h h : alternate host, default is %s\n", host_def);
+	fprintf (stderr, "   -i   : read expression from stdin\n");
+	fprintf (stderr, "   -o   : print operands as they change\n");
+	fprintf (stderr, "   -p p : alternate port, default is %d\n", INDIPORT);
+	fprintf (stderr, "   -t t : max secs to wait, 0 is forever, default is %d\n",TIMEOUT);
+	fprintf (stderr, "   -v   : verbose (cummulative)\n");
+	fprintf (stderr, "   -w   : wait for expression to evaluate as true\n");
+	fprintf (stderr, "[exp] is an arith expression built from the following operators and functons:\n");
+	fprintf (stderr, "     ! + - * / && || > >= == != < <=\n");
+	fprintf (stderr, "     pi sin(rad) cos(rad) tan(rad) asin(x) acos(x) atan(x) atan2(y,x) abs(x)\n");
+	fprintf (stderr, "     degrad(deg) raddeg(rad) floor(x) log(x) log10(x) exp(x) sqrt(x) pow(x,exp)\n");
+	fprintf (stderr, "   operands are of the form \"device.name.element\" (including quotes), where\n");
+	fprintf (stderr, "   element may be:\n");
+	fprintf (stderr, "     _STATE evaluated to 0,1,2,3 from Idle,Ok,Busy,Alert.\n");
+	fprintf (stderr, "     _TS evaluated to UNIX seconds from epoch.\n");
+	fprintf (stderr, "   Switch vectors are evaluated to 0,1 from Off,On.\n");
+	fprintf (stderr, "   Light vectors are evaluated to 0-3 as per _STATE.\n");
+	fprintf (stderr, "Examples:\n");
+	fprintf (stderr, "   To print 0/1 whether Security.Doors.Front or .Rear are in Alert:\n");
+	fprintf (stderr, "     evalINDI -f '\"Security.Doors.Front\"==3 || \"Security.Doors.Rear\"==3'\n");
+	fprintf (stderr, "   To exit 0 if the Security property as a whole is in a state of Ok:\n");
+	fprintf (stderr, "     evalINDI '\"Security.Security._STATE\"==1'\n");
+	fprintf (stderr, "   To wait for RA and Dec to be near zero and watch their values as they change:\n");
+	fprintf (stderr, "     evalINDI -t 0 -wo 'abs(\"Mount.EqJ2K.RA\")<.01 && abs(\"Mount.EqJ2K.Dec\")<.01'\n");
 	fprintf (stderr, "Exit 0 if expression evaluates to non-0, 1 if 0, else 2\n");
 
 	exit (1);

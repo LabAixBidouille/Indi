@@ -1,18 +1,13 @@
-/** \file getINDIproperty.c
-    \brief get the value/status of an INDI property
-
- connect to an INDI server and show all desired device.property.element
- with possible wild card * in any category.
- exit status: 0 at least some found, 1 some not found, 2 real trouble.
- 
-  \author Elwood Downey
-*/
-
+/* connect to an INDI server and show all desired device.property.element
+ * with possible wild card * in any category.
+ * exit status: 0 at least some found, 1 some not found, 2 real trouble.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <errno.h>
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
@@ -87,6 +82,7 @@ static LilXML *lillp;			/* XML parser context */
 #define WILDCARD	'*'		/* show all in this category */
 static int onematch;			/* only one possible match */
 static int justvalue;			/* if just one match show only value */
+static int directfd = -1;		/* direct filedes to server, if >= 0 */
 
 int
 main (int ac, char *av[])
@@ -104,7 +100,19 @@ main (int ac, char *av[])
 		case '1':	/* just value */
 		    justvalue++;
 		    break;
+		case 'd':
+		    if (ac < 2) {
+			fprintf (stderr, "-d requires open fileno\n");
+			usage();
+		    }
+		    directfd = atoi(*++av);
+		    ac--;
+		    break;
 		case 'h':
+		    if (directfd >= 0) {
+			fprintf (stderr, "Can not combine -d and -h\n");
+			usage();
+		    }
 		    if (ac < 2) {
 			fprintf (stderr, "-h requires host name\n");
 			usage();
@@ -113,6 +121,10 @@ main (int ac, char *av[])
 		    ac--;
 		    break;
 		case 'p':
+		    if (directfd >= 0) {
+			fprintf (stderr, "Can not combine -d and -p\n");
+			usage();
+		    }
 		    if (ac < 2) {
 			fprintf (stderr, "-p requires tcp port number\n");
 			usage();
@@ -148,9 +160,19 @@ main (int ac, char *av[])
 	onematch = nsrchs == 1 && !srchs[0].wc;
 
 	/* open connection */
-	fp = openINDIServer();
-	if (verbose)
-	    fprintf (stderr, "Connected to %s on port %d\n", host, port);
+	if (directfd >= 0) {
+	    fp = fdopen (directfd, "r+");
+	    if (!fp) {
+		fprintf (stderr, "Direct fd %d: %s\n",directfd,strerror(errno));
+		exit(1);
+	    }
+	    if (verbose)
+		fprintf (stderr, "Using direct fd %d\n", directfd);
+	} else {
+	    fp = openINDIServer();
+	    if (verbose)
+		fprintf (stderr, "Connected to %s on port %d\n", host, port);
+	}
 
 	/* build a parser context for cracking XML responses */
 	lillp = newLilXML();
@@ -170,11 +192,11 @@ usage()
 	int i;
 
 	fprintf(stderr, "Purpose: retrieve readable properties from an INDI server\n");
-	fprintf(stderr, "%s\n", "$Revision: 1.2 $");
+	fprintf(stderr, "%s\n", "$Revision: 1.3 $");
 	fprintf(stderr, "Usage: %s [options] [device.property.element ...]\n",me);
 	fprintf(stderr, "  Any component may be \"*\" to match all (beware shell metacharacters).\n");
 	fprintf(stderr, "  Reports all properties if none specified.\n");
-	fprintf(stderr, "  In perl try: %s\n", "%props = split (/[=\\n]/, `getINDIproperty`);");
+	fprintf(stderr, "  In perl try: %s\n", "%props = split (/[=\\n]/, `getINDI`);");
 	fprintf(stderr, "  Set element to one of following to return property attribute:\n");
 	for (i = 0; i < NKWA; i++)
 	    fprintf (stderr, "    %10s to report %s\n", kwattr[i].keyword,
@@ -182,7 +204,8 @@ usage()
 	fprintf(stderr, "Output format: output is fully qualified name=value one per line\n");
 	fprintf(stderr, "  or just value if -1 and exactly one query without wildcards.\n");
 	fprintf(stderr, "Options:\n");
-	fprintf(stderr, "  -1    : print just value if single response\n");
+	fprintf(stderr, "  -1    : print just value if expecting exactly one response\n");
+	fprintf(stderr, "  -d f  : use file descriptor f already open to server\n");
 	fprintf(stderr, "  -h h  : alternate host, default is %s\n", host_def);
 	fprintf(stderr, "  -p p  : alternate port, default is %d\n", INDIPORT);
 	fprintf(stderr, "  -t t  : max time to wait, default is %d secs\n",TIMEOUT);
@@ -394,17 +417,18 @@ findDPE (XMLEle *root)
 			char *iprop = srchs[i].p;
 			if (iprop[0] == WILDCARD || !strcmp (nam,iprop)) {
 			    /* found device and name, check perm */
-			    if (!strchr (findXMLAttValu (root, "perm"), 'r')) {
+			    char *perm = findXMLAttValu (root, "perm");
+			    if (perm[0] && !strchr (perm, 'r')) {
 				if (verbose)
 				    fprintf (stderr, "%s.%s is write-only\n",
 								    dev, nam);
-				exit (1);
+			    } else {
+				/* check elements or attr keywords */
+				findEle (root,dev,nam,defs[j].defOne,&srchs[i]);
+				if (onematch)
+				    return;		/* only one can match */
+				alarm (timeout);	/* reset timeout */
 			    }
-			    /* check elements or attr keywords */
-			    findEle (root, dev, nam, defs[j].defOne, &srchs[i]);
-			    if (onematch)
-				return;		/* only one can match */
-			    alarm (timeout);	/* reset timeout */
 			}
 		    }
 		}
@@ -456,4 +480,5 @@ findEle (XMLEle *root, char *dev, char *nam, char *defone, SearchDef *sp)
 	}
 }
 
-
+/* For RCS Only -- Do Not Edit */
+static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile: getINDI.c,v $ $Date: 2006/09/12 19:55:51 $ $Revision: 1.3 $ $Name:  $"};

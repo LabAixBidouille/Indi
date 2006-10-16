@@ -16,6 +16,7 @@
 #include <math.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 
 static int next_token (void);
 static int chk_funcs (void);
@@ -665,4 +666,4 @@ int len;
 }
 
 /* For RCS Only -- Do Not Edit */
-static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile: compiler.c,v $ $Date: 2005/07/12 21:43:31 $ $Revision: 1.1 $ $Name:  $"};
+static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile: compiler.c,v $ $Date: 2005/11/21 21:33:32 $ $Revision: 1.1 $ $Name:  $"};

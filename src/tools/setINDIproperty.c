@@ -1,15 +1,11 @@
-/** \file setINDIproperty.c
-    \brief connect to an INDI server and set one or more device.property.element.
-    \author Elwood Downey
-*/
-
-/* 
+/* connect to an INDI server and set one or more device.property.element.
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <errno.h>
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
@@ -51,6 +47,7 @@ static char *me;			/* our name for usage message */
 static char *host = host_def;		/* working host name */
 static int port = INDIPORT;		/* working port number */
 static int verbose;			/* report extra info */
+static int directfd = -1;		/* direct filedes to server, if >= 0 */
 #define TIMEOUT         2               /* default timeout, secs */
 static int timeout = TIMEOUT;           /* working timeout, secs */
 static LilXML *lillp;			/* XML parser context */
@@ -86,7 +83,19 @@ main (int ac, char *av[])
 	    char *s = *av;
 	    while (*++s) {
 		switch (*s) {
+		case 'd':
+		    if (ac < 2) {
+			fprintf (stderr, "-d requires open fileno\n");
+			usage();
+		    }
+		    directfd = atoi(*++av);
+		    ac--;
+		    break;
 		case 'h':
+		    if (directfd >= 0) {
+			fprintf (stderr, "Can not combine -d and -h\n");
+			usage();
+		    }
 		    if (ac < 2) {
 			fprintf (stderr, "-h requires host name\n");
 			usage();
@@ -95,6 +104,10 @@ main (int ac, char *av[])
 		    ac--;
 		    break;
 		case 'p':
+		    if (directfd >= 0) {
+			fprintf (stderr, "Can not combine -d and -p\n");
+			usage();
+		    }
 		    if (ac < 2) {
 			fprintf (stderr, "-p requires tcp port number\n");
 			usage();
@@ -129,9 +142,20 @@ main (int ac, char *av[])
 	    crackSpec(*av++);
 
 	/* open connection */
-	openINDIServer(&rfp, &wfp);
-	if (verbose)
-	    fprintf (stderr, "Connected to %s on port %d\n", host, port);
+	if (directfd >= 0) {
+	    rfp = fdopen (directfd, "r");
+	    wfp = fdopen (directfd, "w");
+	    if (!rfp || !wfp) {
+		fprintf (stderr, "Direct fd %d: %s\n",directfd,strerror(errno));
+		exit(1);
+	    }
+	    if (verbose)
+		fprintf (stderr, "Using direct fd %d\n", directfd);
+	} else {
+	    openINDIServer(&rfp, &wfp);
+	    if (verbose)
+		fprintf (stderr, "Connected to %s on port %d\n", host, port);
+	}
 
 	/* build a parser context for cracking XML responses */
 	lillp = newLilXML();
@@ -156,6 +180,7 @@ usage()
 	fprintf(stderr, "Usage: %s [options] device.property.e1[;e2...]=v1[;v2...] ...\n",
 									    me);
 	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "  -d f  : use file descriptor f already open to server\n");
 	fprintf(stderr, "  -h h  : alternate host, default is %s\n", host_def);
 	fprintf(stderr, "  -p p  : alternate port, default is %d\n", INDIPORT);
 	fprintf(stderr, "  -t t  : max time to wait, default is %d secs\n",TIMEOUT);
@@ -418,4 +443,5 @@ scanEV (SetSpec *sp, char e[], char v[])
 	}
 }
 
-
+/* For RCS Only -- Do Not Edit */
+static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile: setINDI.c,v $ $Date: 2006/09/12 19:55:51 $ $Revision: 1.2 $ $Name:  $"};
