@@ -4,7 +4,7 @@ LIBROOT = ../
 # compiler and linker flags
 CC = gcc
 CLDFLAGS = -g
-GCCFLAGS = -ffast-math -Wall
+GCCFLAGS = -ffast-math -Wall -DHAVE_CONFIG_H
 CFLAGS = $(CLDFLAGS) $(GCCFLAGS) -I$(LIBROOT)
 LDFLAGS = $(CLDFLAGS) -L$(LIBROOT)
 LIBS = -llilxml -lindicom -lm
