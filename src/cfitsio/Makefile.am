@@ -10,5 +10,4 @@ libcfitsio_la_SOURCES = buffers.c cfileio.c checksum.c compress.c drvrfile.c drv
 		putcolj.c putcolk.c putcoluk.c putcoll.c putcols.c putcolsb.c \
 		putcolu.c putcolui.c putcoluj.c putkey.c region.c scalnull.c \
 		swapproc.c wcssub.c wcsutil.c imcompress.c quantize.c ricecomp.c \
-		pliocomp.c
-
+		pliocomp.c fits_hcompress.c fits_hdecompress.c
