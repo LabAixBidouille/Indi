@@ -1,3 +1,4 @@
+
 AM_CPPFLAGS = @CPPFLAGS@ -DTOP_DATADIR=\"$(pkgdatadir)\"
 
 if LINUX
@@ -90,5 +91,5 @@ uninstall-local:
 	rm $(DESTDIR)$(bindir)/lx200autostar $(DESTDIR)$(bindir)/lx200_16 $(DESTDIR)$(bindir)/lx200gps
 
 if LINUX
-SUBDIRS = fli webcam apogee @EXTRA_SUBDIR@
+SUBDIRS = @EXTRA_SUBDIR@ fli webcam apogee
 endif
