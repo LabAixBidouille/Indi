@@ -1,7 +1,6 @@
 #if 0
-    FLI CCD
-    INDI Interface for Finger Lakes Instruments CCDs
-    Copyright (C) 2003 Jasem Mutlaq (mutlaqja@ikarustech.com)
+    Inter-driver communications tutorial - Dome Driver
+    Copyright (C) 2007 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -163,6 +162,9 @@ void closeDome()
 	
 }
 
+/* This is the callback function called by INDI when a new state from the rain collector driver is recieved.
+   Please note that the prototype of this function is specific for SWITCH properties. There are unique callback 
+   prototypes defined for all property types in the INDI API */
 void check_rain(const char *dev, const char *name, IDState driver_state, IPState *states, char *names[], int n)
 {
 

@@ -36,8 +36,8 @@
 
 /* Definitions */
 
-#define mydev			"Simple Device"				/* Device name */
-#define MAIN_GROUP	"Main Control"					/* Group name */
+#define mydev		"Simple Device"				/* Device name */
+#define MAIN_GROUP	"Main Control"				/* Group name */
 
 /* Function protptypes */
 void ISInit(void);

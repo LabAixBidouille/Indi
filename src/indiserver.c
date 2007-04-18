@@ -250,7 +250,7 @@ static void
 usage(void)
 {
 	fprintf (stderr, "Usage: %s [options] driver [driver ...]\n", me);
-	fprintf (stderr, "%s\n", "$Revision: 615727 $");
+	fprintf (stderr, "%s\n", "$Revision: 631881 $");
 	fprintf (stderr, "Purpose: INDI Server\n");
 	fprintf (stderr, "Options:\n");
 	fprintf (stderr, " -p p  : alternate IP port, default %d\n", INDIPORT);
@@ -917,7 +917,8 @@ q2Observers  (DvrInfo *sender, XMLEle *root, char *dev, Msg *mp)
 	if (sender == NULL)
 	{
 
-	   if (nobserverinfo_active == 0)
+	   // If we don't have observers, or the message is newXXX, discard.
+	   if (nobserverinfo_active == 0 || strstr(tagXMLEle(root), "new"))
 		return mp;
 
 	   /* if message from a client (and not a driver), then let's first make sure we have an observer with it
@@ -943,7 +944,7 @@ q2Observers  (DvrInfo *sender, XMLEle *root, char *dev, Msg *mp)
        else if (!strcmp(tagXMLEle(root), "message"))
 		return mp;
 
-	/* We have no observers, return */
+	/* if We have no observers, return */
 	if (nobserverinfo_active == 0)
 		return mp;
 	
@@ -961,7 +962,7 @@ q2Observers  (DvrInfo *sender, XMLEle *root, char *dev, Msg *mp)
 	ap = findXMLAtt(root, "state");
 	if (!ap && strcmp(tagXMLEle(root), "delProperty"))
 	{
-		fprintf(stderr, "<%s> missing 'name' attribute.\n", tagXMLEle(root));
+		fprintf(stderr, "<%s> missing 'state' attribute.\n", tagXMLEle(root));
 		return mp;
 	}
 	else if (ap)
@@ -1060,6 +1061,7 @@ manageObservers (DvrInfo *dp, XMLEle *root)
 	if (!ap)
 	{
 		fprintf(stderr, "<%s> missing 'device' attribute.\n", tagXMLEle(root));
+                freeMsg(mp); 
 		return;
 	}
 	
@@ -1069,6 +1071,7 @@ manageObservers (DvrInfo *dp, XMLEle *root)
 	if (!ap)
 	{
 		fprintf(stderr, "<%s> missing 'name' attribute.\n", tagXMLEle(root));
+                freeMsg(mp);
 		return;
 	}
 	
@@ -1081,6 +1084,7 @@ manageObservers (DvrInfo *dp, XMLEle *root)
 		if (ob_type < 0)
 		{
 			fprintf(stderr, "<%s> invalid notification state '%s'.\n", tagXMLEle(root), valuXMLAtt(ap));
+	                freeMsg(mp);
 			return;
 		}
 	}
@@ -1089,6 +1093,7 @@ manageObservers (DvrInfo *dp, XMLEle *root)
 	if (!ap)
 	{
 		fprintf(stderr, "<%s> missing 'action' attribute.\n", tagXMLEle(root));
+                freeMsg(mp);
 		return;
 	}
 	
@@ -1099,8 +1104,10 @@ manageObservers (DvrInfo *dp, XMLEle *root)
 		for (ob = observerinfo; ob < &observerinfo[nobserverinfo]; ob++)
 		{
 			if (ob->in_use && (ob->dp == dp) && !strcmp(ob->dev, ob_dev) && !strcmp(ob->name, ob_name)
-						 && (ob->type == (unsigned) ob_type))
+						 && (ob->type == (unsigned) ob_type)) {
+				freeMsg(mp);
 				return;
+		        }
 		}
 		
 		/* Next check for the first avaiable slot to use */

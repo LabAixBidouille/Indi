@@ -6,6 +6,7 @@ From 0.4 to 0.5
 
 	# Features:
 	     + Added INDI Observer pattern to enable flexible inter-driver communication.
+             + getINDI now supports BLOBs.
 	     + LX200 Drivers use client timestamp to update the telescope internal clock. The old behavior was to use to system's time.
 	     + Added a new INDI Standard Property: UTC_OFFSET.
 	     + Dropping threaded INDI server in favor of the slightly better non-threaded version due to performance considerations.
@@ -16,7 +17,9 @@ From 0.4 to 0.5
 	     + Fixed INDI Mac OSX Crash.
 
 	# Known Issues
-		+ Astrophysics Mount driver (apmount) is not working. With no volunteers to test or develop this driver, the driver will remain broken.
+	     + Astrophysics Mount driver (apmount) is not working. It is currently under new development and is intented to be released in the next version as it matures.
+             + Meade LPI exposure is locked to 1 second. The Video4Linux support for timed exposures is limited. A fix should be available in the next release.
+             + The SBIG driver does not allow autoguiding. When one selects the guider CCD, any exposure on the imaging CCD is cancelled and vice-versa.
 
 From v0.3 to v0.4:
 

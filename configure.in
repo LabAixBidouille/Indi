@@ -13,7 +13,7 @@ AC_PROG_CC
 
 AM_PROG_LIBTOOL
 
-AM_INIT_AUTOMAKE(indi, 0.4)
+AM_INIT_AUTOMAKE(indi, 0.5)
 
 timezone_int=no
 AC_TRY_COMPILE(
@@ -69,22 +69,22 @@ if test "${use_libusb}" != false ; then
 
 fi
 
+have_cfitsio=false
 AC_LANG_PUSH(C)
 LDFLAGS="$LDFLAGS -lm -lz"
-AC_SUBST(LIBCFITSIO)
-AC_SUBST(EXTRA_SUBDIR)
 AC_CHECK_LIB(cfitsio, ffppx,
              [ LIBS="-lcfitsio $LIBS"],
              [ EXTRA_SUBDIR="cfitsio"
                LIBCFITSIO="cfitsio/libcfitsio.la"])
+AC_SUBST(LIBCFITSIO)
+AC_SUBST(EXTRA_SUBDIR)
 LDFLAGS="-lusb $LDFLAGS"
-AC_SUBST(LIBSBIGUDRV)
 AC_CHECK_LIB(sbigudrv, SBIGUnivDrvCommand,
              [ have_libsbigudrv=true
                LIBSBIGUDRV="-lsbigudrv"],
              [ have_libsbigudrv=false
-               EXTRA_SUBDIR=""
                LIBSBIGUDRV="libsbigudrv.la"])
+AC_SUBST(LIBSBIGUDRV)
 AC_LANG_POP(C)
 
 dnl check if v4l2 is available

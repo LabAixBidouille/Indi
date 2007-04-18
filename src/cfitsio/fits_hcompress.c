@@ -708,6 +708,7 @@ int stat = 0;
 	if (0 == qwrite(outfile, (char *) nbitplanes, sizeof(nbitplanes))) {
 	        *nlength = noutchar;
 		ffpmsg("encode: output buffer too small");
+                free(signbits);
 		return(DATA_COMPRESSION_ERR);
         }
 	 
@@ -872,6 +873,7 @@ int stat = 0;
 	if (0 == qwrite(outfile, (char *) nbitplanes, sizeof(nbitplanes))) {
 	        *nlength = noutchar;
 		ffpmsg("encode: output buffer too small");
+                free(signbits);
 		return(DATA_COMPRESSION_ERR);
         }
 	 
@@ -1221,6 +1223,8 @@ unsigned char *scratch, *buffer;
 		exit(-1);  */
 		
 		ffpmsg("qtree_encode: insufficient memory");
+                if (buffer) free(buffer);
+                if (scratch) free(scratch);
 		return(DATA_COMPRESSION_ERR);
 	}
 	/*
@@ -1343,6 +1347,8 @@ unsigned char *scratch, *buffer;
 		exit(-1);  */
 		
 		ffpmsg("qtree_encode64: insufficient memory");
+                if (buffer) free(buffer);
+                if (scratch) free(scratch);
 		return(DATA_COMPRESSION_ERR);
 	}
 	/*

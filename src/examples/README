@@ -11,11 +11,13 @@ The tutorials included in the INDI Library can be used with any INDI compatible 
 Tutorials
 ----------
 
-Three tutorials are presented to introduce developers to the INDI architecture. 
+Four tutorials are presented to introduce developers to the INDI architecture. 
 
 tutorial_one: We construct a most basic (and useless) device driver to illustate basic INDI structures.
 tutorial_two:  We create a simple simulator. We will use a few handy utility functions provided by INDI like timers, string <---> number conversion, and more.
 tutorial_three:  We create a simple device, and establish a data channel with the client to transmit a FITS file. 
+
+tutorial_dome and tutorial_rain are part of the inter-driver communication tutorial. 
 
 Usage
 --------
@@ -41,6 +43,10 @@ Enter "127.0.0.1" in the host name and "8000" in the port entry (without the quo
 $ indiserver -v -p 8000 ./tutorial_NUM
 
 where num is the tutorial number (tutorial_one, tutorial_two, or tutorial_three).
+
+For the inter-driver communications tutorial, type instead:
+
+$ indiserver -v -p 8000 ./tutorial_dome ./tutorial_rain
 
 ------------------------------------------------------------------------------------------
 

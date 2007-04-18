@@ -1,5 +1,5 @@
-INDI Library v0.4
-March ??, 2006
+INDI Library v0.5
+April 16, 2006
 
 Running an INDI server
 ======================
@@ -52,12 +52,13 @@ Supported Devices:
  ** CCD
 	+ Finger Lakes Instruments
 	+ Apogee (Experimental)
-	+ SBIG (Experimental)
+	+ SBIG
 
  ** Video
 	+ Any Video4Linux (V4L 1 and V4L 2) compatible camera
 	+ Philips webcam
 	+ Meade Lunar Planetary Imager (Experimental)
+        + SBIG STV
 
  ** Focuser
 	+ Meade LX200GPS Microfocuser
@@ -68,6 +69,7 @@ Supported Devices:
 
  ** Filter Wheel
 	+ Finger Lakes Instruments filter wheel
+        + True Technology Filter Wheel
 	+ SBIG CWF
 
 

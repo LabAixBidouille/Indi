@@ -1,7 +1,6 @@
 #if 0
-    FLI CCD
-    INDI Interface for Finger Lakes Instruments CCDs
-    Copyright (C) 2003 Jasem Mutlaq (mutlaqja@ikarustech.com)
+    Inter-driver communications tutorial - Rain Driver 
+    Copyright (C) 2007 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public

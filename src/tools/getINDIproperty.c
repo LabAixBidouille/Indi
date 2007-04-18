@@ -1,5 +1,8 @@
 /* connect to an INDI server and show all desired device.property.element
- * with possible wild card * in any category.
+ *   with possible wild card * in any category.
+ * All types but BLOBs are handled from their defXXX messages. Receipt of a
+ *   defBLOB sends enableBLOB then uses setBLOBVector for the value. BLOBs
+ *   are stored in a file dev.nam.elem.format. only .z compression is handled.
  * exit status: 0 at least some found, 1 some not found, 2 real trouble.
  */
 
@@ -18,17 +21,22 @@
 
 #include "indiapi.h"
 #include "lilxml.h"
+#include "base64.h"
+#include "zlib.h"
+
 
 /* table of INDI definition elements */
 typedef struct {
-    char *defType;	/* defXXXVector name */
-    char *defOne;	/* defXXX name */
+    char *vec;		/* vector name */
+    char *one;		/* one element name */
 } INDIDef;
 static INDIDef defs[] = {
     {"defTextVector", "defText"},
     {"defNumberVector", "defNumber"},
     {"defSwitchVector", "defSwitch"},
     {"defLightVector", "defLight"},
+    {"defBLOBVector", "defBLOB"},
+    {"setBLOBVector", "oneBLOB"},
 };
 #define NDEFS   (sizeof(defs)/sizeof(defs[0]))
 
@@ -60,15 +68,18 @@ static int nsrchs;
 static void usage (void);
 static void crackDPE (char *spec);
 static void addSearchDef (char *dev, char *prop, char *ele);
-static FILE *openINDIServer(void);
-static void getprops(FILE *fp);
-static void listenINDI(FILE *fp);
+static void openINDIServer(void);
+static void getprops(void);
+static void listenINDI(void);
 static int finished (void);
 static void onAlarm (int dummy);
-static int readServerChar(FILE *fp);
+static int readServerChar(void);
 static void findDPE (XMLEle *root);
 static void findEle (XMLEle *root, char *dev, char *nam, char *defone,
     SearchDef *sp);
+static void enableBLOBs(char *dev, char *nam);
+static void oneBLOB (XMLEle *root, char *dev, char *nam, char *enam, char *p,
+    int plen);
 
 static char *me;			/* our name for usage() message */
 static char host_def[] = "localhost";	/* default host name */
@@ -83,12 +94,12 @@ static LilXML *lillp;			/* XML parser context */
 static int onematch;			/* only one possible match */
 static int justvalue;			/* if just one match show only value */
 static int directfd = -1;		/* direct filedes to server, if >= 0 */
+static FILE *svrwfp;			/* FILE * to talk to server */
+static FILE *svrrfp;			/* FILE * to read from server */
 
 int
 main (int ac, char *av[])
 {
-	FILE *fp;
-
 	/* save our name */
 	me = av[0];
 
@@ -161,15 +172,16 @@ main (int ac, char *av[])
 
 	/* open connection */
 	if (directfd >= 0) {
-	    fp = fdopen (directfd, "r+");
-	    if (!fp) {
+	    svrwfp = fdopen (directfd, "w");
+	    svrrfp = fdopen (directfd, "r");
+	    if (!svrwfp || !svrrfp) {
 		fprintf (stderr, "Direct fd %d: %s\n",directfd,strerror(errno));
 		exit(1);
 	    }
 	    if (verbose)
 		fprintf (stderr, "Using direct fd %d\n", directfd);
 	} else {
-	    fp = openINDIServer();
+	    openINDIServer();
 	    if (verbose)
 		fprintf (stderr, "Connected to %s on port %d\n", host, port);
 	}
@@ -178,10 +190,10 @@ main (int ac, char *av[])
 	lillp = newLilXML();
 
 	/* issue getProperties */
-	getprops(fp);
+	getprops();
 
 	/* listen for responses, looking for d.p.e or timeout */
-	listenINDI(fp);
+	listenINDI();
 
 	return (0);
 }
@@ -192,10 +204,11 @@ usage()
 	int i;
 
 	fprintf(stderr, "Purpose: retrieve readable properties from an INDI server\n");
-	fprintf(stderr, "%s\n", "$Revision: 1.3 $");
+	fprintf(stderr, "%s\n", "$Revision: 1.23 $");
 	fprintf(stderr, "Usage: %s [options] [device.property.element ...]\n",me);
 	fprintf(stderr, "  Any component may be \"*\" to match all (beware shell metacharacters).\n");
 	fprintf(stderr, "  Reports all properties if none specified.\n");
+	fprintf(stderr, "  BLOBs are saved in file named device.property.element.format\n");
 	fprintf(stderr, "  In perl try: %s\n", "%props = split (/[=\\n]/, `getINDI`);");
 	fprintf(stderr, "  Set element to one of following to return property attribute:\n");
 	for (i = 0; i < NKWA; i++)
@@ -249,10 +262,10 @@ addSearchDef (char *dev, char *prop, char *ele)
 	nsrchs++;
 }
 
-/* open a connect to the given host and port or die.
- * return FILE pointer to socket.
+/* open a connection to the given host and port.
+ * set svrwfp and svrrfp or die.
  */
-static FILE *
+static void
 openINDIServer (void)
 {
 	struct sockaddr_in serv_addr;
@@ -262,7 +275,7 @@ openINDIServer (void)
 	/* lookup host address */
 	hp = gethostbyname (host);
 	if (!hp) {
-	    perror ("gethostbyname");
+	    herror ("gethostbyname");
 	    exit (2);
 	}
 
@@ -284,12 +297,13 @@ openINDIServer (void)
 	}
 
 	/* prepare for line-oriented i/o with client */
-	return (fdopen (sockfd, "r+"));
+	svrwfp = fdopen (sockfd, "w");
+	svrrfp = fdopen (sockfd, "r");
 }
 
-/* issue getProperties, possibly constrained to one device */
+/* issue getProperties to svrwfp, possibly constrained to one device */
 static void
-getprops(FILE *fp)
+getprops()
 {
 	char *onedev = NULL;
 	int i;
@@ -305,22 +319,22 @@ getprops(FILE *fp)
 	}
 
 	if (onedev)
-	    fprintf(fp, "<getProperties version='%g' device='%s'/>\n", INDIV,
-	    								onedev);
+	    fprintf(svrwfp, "<getProperties version='%g' device='%s'/>\n",
+								INDIV, onedev);
 	else
-	    fprintf(fp, "<getProperties version='%g'/>\n", INDIV);
-	fflush (fp);
+	    fprintf(svrwfp, "<getProperties version='%g'/>\n", INDIV);
+	fflush (svrwfp);
 
 	if (verbose)
 	    fprintf (stderr, "Queried properties from %s\n", onedev?onedev:"*");
 }
 
-/* listen for INDI traffic on fp.
+/* listen for INDI traffic on svrrfp.
  * print matching srchs[] and return when see all.
  * timeout and exit if any trouble.
  */
 static void
-listenINDI (FILE *fp)
+listenINDI ()
 {
 	char msg[1024];
 
@@ -330,7 +344,7 @@ listenINDI (FILE *fp)
 
 	/* read from server, exit if find all requested properties */
 	while (1) {
-	    XMLEle *root = readXMLEle (lillp, readServerChar(fp), msg);
+	    XMLEle *root = readXMLEle (lillp, readServerChar(), msg);
 	    if (root) {
 		/* found a complete XML element */
 		if (verbose > 1)
@@ -378,13 +392,14 @@ onAlarm (int dummy)
 	exit (trouble ? 1 : 0);
 }
 
+/* read one char from svrrfp */
 static int
-readServerChar (FILE *fp)
+readServerChar ()
 {
-	int c = fgetc (fp);
+	int c = fgetc (svrrfp);
 
 	if (c == EOF) {
-	    if (ferror(fp))
+	    if (ferror(svrrfp))
 		perror ("read");
 	    else
 		fprintf (stderr,"INDI server %s/%d disconnected\n", host, port);
@@ -407,7 +422,7 @@ findDPE (XMLEle *root)
 	    /* for each property we are looking for */
 	    for (j = 0; j < NDEFS; j++) {
 		/* for each possible type */
-		if (strcmp (tagXMLEle (root), defs[j].defType) == 0) {
+		if (strcmp (tagXMLEle (root), defs[j].vec) == 0) {
 		    /* legal defXXXVector, check device */
 		    char *dev = findXMLAttValu (root, "device");
 		    char *idev = srchs[i].d;
@@ -424,7 +439,10 @@ findDPE (XMLEle *root)
 								    dev, nam);
 			    } else {
 				/* check elements or attr keywords */
-				findEle (root,dev,nam,defs[j].defOne,&srchs[i]);
+				if (!strcmp (defs[j].vec, "defBLOBVector"))
+				    enableBLOBs (dev,nam);
+				else
+				    findEle(root,dev,nam,defs[j].one,&srchs[i]);
 				if (onematch)
 				    return;		/* only one can match */
 				alarm (timeout);	/* reset timeout */
@@ -469,7 +487,9 @@ findEle (XMLEle *root, char *dev, char *nam, char *defone, SearchDef *sp)
 		    /* found it! */
 		    char *p = pcdataXMLEle(ep);
 		    sp->ok = 1;   		/* progress */
-		    if (onematch && justvalue)
+		    if (!strcmp (defone, "oneBLOB"))
+			oneBLOB (ep, dev, nam, enam, p, pcdatalenXMLEle(ep));
+		    else if (onematch && justvalue)
 			printf ("%s\n", p);
 		    else
 			printf ("%s.%s.%s=%s\n",  dev, nam, enam, p);
@@ -480,5 +500,80 @@ findEle (XMLEle *root, char *dev, char *nam, char *defone, SearchDef *sp)
 	}
 }
 
-/* For RCS Only -- Do Not Edit */
-static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile: getINDI.c,v $ $Date: 2006/09/12 19:55:51 $ $Revision: 1.3 $ $Name:  $"};
+/* send server command to svrwfp that enables blobs for the given dev nam
+ */
+static void
+enableBLOBs(char *dev, char *nam)
+{
+	if (verbose)
+	    fprintf (stderr, "sending enableBLOB %s.%s\n", dev, nam);
+	fprintf (svrwfp,"<enableBLOB device='%s' name='%s'>Also</enableBLOB>\n",
+								    dev, nam);
+	fflush (svrwfp);
+}
+
+/* given a oneBLOB, save
+ */
+static void
+oneBLOB (XMLEle *root, char *dev, char *nam, char *enam, char *p, int plen)
+{
+	char *format;
+	FILE *fp;
+	int bloblen;
+	char *blob;
+	int ucs;
+	int isz;
+	char fn[128];
+	int i;
+
+	/* get uncompressed size */
+	ucs = atoi(findXMLAttValu (root, "size"));
+	if (verbose)
+	    fprintf (stderr, "%s.%s.%s reports uncompressed size as %d\n",
+							dev, nam, enam, ucs);
+
+	/* get format and length */
+	format = findXMLAttValu (root, "format");
+	isz = !strcmp (&format[strlen(format)-2], ".z");
+
+	/* decode blob from base64 in p */
+	blob = malloc (3*plen/4);
+	bloblen = from64tobits (blob, p);
+	if (bloblen < 0) {
+	    fprintf (stderr, "%s.%s.%s bad base64\n", dev, nam, enam);
+	    exit(2);
+	}
+
+	/* uncompress effectively in place if z */
+	if (isz) {
+	    uLong nuncomp = ucs;
+	    unsigned char *uncomp = malloc (ucs);
+	    int ok = uncompress (uncomp, &nuncomp, blob, bloblen);
+	    if (ok != Z_OK) {
+		fprintf (stderr, "%s.%s.%s uncompress error %d\n", dev, nam,
+								    enam, ok);
+		exit(2);
+	    }
+	    free (blob);
+	    blob = uncomp;
+	    bloblen = nuncomp;
+	}
+
+	/* rig up a file name from property name */
+	i = sprintf (fn, "%s.%s.%s%s", dev, nam, enam, format);
+	if (isz)
+	    fn[i-2] = '\0'; 	/* chop off .z */
+
+	/* save */
+	fp = fopen (fn, "w");
+	if (fp) {
+	    if (verbose)
+		fprintf (stderr, "Wrote %s\n", fn);
+	    fwrite (blob, bloblen, 1, fp);
+	    fclose (fp);
+	} else {
+	    fprintf (stderr, "%s: %s\n", fn, strerror(errno));
+	}
+}
+
+

@@ -7,7 +7,7 @@ CLDFLAGS = -g
 GCCFLAGS = -ffast-math -Wall
 CFLAGS = $(CLDFLAGS) $(GCCFLAGS) -I$(LIBROOT)
 LDFLAGS = $(CLDFLAGS) -L$(LIBROOT)
-LIBS = -llilxml -lindicom -lm
+LIBS = -llilxml -lindicom -lm -lz
 
 # list each sample device
 TOOLS = getINDI setINDI evalINDI

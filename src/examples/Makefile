@@ -5,7 +5,7 @@ LIBROOT = ../
 CC = gcc
 CLDFLAGS = -g
 GCCFLAGS = -ffast-math -Wall -DHAVE_CONFIG_H
-CFLAGS = $(CLDFLAGS) $(GCCFLAGS) -I$(LIBROOT)
+CFLAGS = $(CLDFLAGS) $(GCCFLAGS) -I$(LIBROOT) -I../../
 LDFLAGS = $(CLDFLAGS) -L$(LIBROOT)
 LIBS = -llilxml -lindicom -lm
 
