@@ -36,11 +36,12 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
+#ifndef HAVE_CONFIG_H
+#include "config-kstars.h"
+#endif
+
 #ifndef _WIN32
 #include <termios.h>
-#endif
 #endif
 
 #include <math.h>

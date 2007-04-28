@@ -69,19 +69,32 @@ static IBLOB imageB = {"CCD1", "Feed", "", 0, 0, 0, 0, 0, 0, 0};
 static IBLOBVectorProperty imageBP = {mydev, "Video", "Video", COMM_GROUP,
   IP_RO, 0, IPS_IDLE, &imageB, 1, "", 0};
 
+/* Initilization Routine, called one time only when the driver starts */
+void CCDInit()
+{
+  static int init=0;
+
+  if (init) return;
+
+  IEAddTimer(1000, ISPoll, NULL);
+
+  init = 1;
+
+}
+
 void ISGetProperties (const char *dev)
 { 
 
   if (dev && strcmp (mydev, dev))
     return;
 
+  CCDInit();
+
   /* COMM_GROUP */
   IDDefSwitch(&PowerSP, NULL);
   IDDefNumber(&ExposeTimeNP, NULL);
   IDDefNumber(&TemperatureNP, NULL);
   IDDefBLOB(&imageBP, NULL);
-
-  IEAddTimer(1000, ISPoll, NULL);
   
 }
 
@@ -99,7 +112,7 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	/* Connection */
 	if (!strcmp (name, PowerSP.name))
 	{
-	  IUUpdateSwitches(&PowerSP, states, names, n);
+	  if (IUUpdateSwitches(&PowerSP, states, names, n) < 0) return;
    	  PowerSP.s = IPS_OK;
           if (PowerS[0].s == ISS_ON)
           	IDSetSwitch(&PowerSP, "CCD Simulator is online.");

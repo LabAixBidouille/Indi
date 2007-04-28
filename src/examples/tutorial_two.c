@@ -39,10 +39,10 @@
 /* Definitions */
 
 #define	mydev			"Telescope Simulator"			/* Device name */
-#define 	MAIN_GROUP		"Main Control"					/* Group name */
-#define	SLEWRATE		1							/* slew rate, degrees/s */
-#define	POLLMS			250							/* poll period, ms */
-#define 	SIDRATE			0.004178						/* sidereal rate, degrees/s */
+#define MAIN_GROUP		"Main Control"				/* Group name */
+#define	SLEWRATE		1					/* slew rate, degrees/s */
+#define	POLLMS			250					/* poll period, ms */
+#define SIDRATE			0.004178				/* sidereal rate, degrees/s */
 
 /* Function protptypes */
 static void connectTelescope (void);
