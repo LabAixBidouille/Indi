@@ -1,3 +1,9 @@
+From 0.5 to 1.0
+
+        # Devices:
+                + Davis Weahter (Monitor & Pro)
+
+
 From 0.4 to 0.5
 
 	# Devices:
@@ -57,4 +63,4 @@ From v0.2 to v0.3:
 		+ INDI scripting tools
 		+ Various bug fixing
 
-INDI Library v0.5 conforms to INDI wire protocol v1.6
+INDI Library v1.0 conforms to INDI wire protocol v1.6
