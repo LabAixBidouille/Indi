@@ -250,7 +250,7 @@ static void
 usage(void)
 {
 	fprintf (stderr, "Usage: %s [options] driver [driver ...]\n", me);
-	fprintf (stderr, "%s\n", "$Revision: 631881 $");
+	fprintf (stderr, "%s\n", "$Revision: 655821 $");
 	fprintf (stderr, "Purpose: INDI Server\n");
 	fprintf (stderr, "Options:\n");
 	fprintf (stderr, " -p p  : alternate IP port, default %d\n", INDIPORT);
@@ -917,7 +917,7 @@ q2Observers  (DvrInfo *sender, XMLEle *root, char *dev, Msg *mp)
 	if (sender == NULL)
 	{
 
-	   // If we don't have observers, or the message is newXXX, discard.
+	   /* If we don't have observers, or the message is newXXX, discard.*/
 	   if (nobserverinfo_active == 0 || strstr(tagXMLEle(root), "new"))
 		return mp;
 

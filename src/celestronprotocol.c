@@ -36,13 +36,16 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-#ifndef HAVE_CONFIG_H
-#include "config-kstars.h"
+/* do NOT change this to config-kstars.h! 
+INDI is independent of KStars*/
+#ifdef HAVE_CONFIG_H
+#include <config.h>
 #endif
 
 #ifndef _WIN32
 #include <termios.h>
 #endif
+
 
 #include <math.h>
 #include "celestronprotocol.h"
