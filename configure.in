@@ -73,17 +73,29 @@ have_cfitsio=false
 AC_LANG_PUSH(C)
 LDFLAGS="$LDFLAGS -lm -lz"
 AC_CHECK_LIB(cfitsio, ffppx,
-             [ LIBS="-lcfitsio $LIBS"],
-             [ EXTRA_SUBDIR="cfitsio"
-               LIBCFITSIO="cfitsio/libcfitsio.la"])
+             [  have_cfitsio=true
+		LIBS="-lcfitsio $LIBS"],
+	     [	have_cfitsio=false
+		AC_MSG_WARN([**************************************************************])
+		AC_MSG_WARN([We cannot find CFITSIO Library in your system!])
+		AC_MSG_WARN([CFITSIO is needed by all CCD & Video drivers.])
+		AC_MSG_WARN([INDI will not compile CCD & Video drivers.])
+		AC_MSG_WARN([http://heasarc.gsfc.nasa.gov/docs/software/fitsio/fitsio.html])]
+		AC_MSG_WARN([*************************************************************]))
+			  
 AC_SUBST(LIBCFITSIO)
-AC_SUBST(EXTRA_SUBDIR)
 LDFLAGS="-lusb $LDFLAGS"
 AC_CHECK_LIB(sbigudrv, SBIGUnivDrvCommand,
              [ have_libsbigudrv=true
                LIBSBIGUDRV="-lsbigudrv"],
              [ have_libsbigudrv=false
-               LIBSBIGUDRV="libsbigudrv.la"])
+               LIBSBIGUDRV="libsbigudrv.la"
+	       AC_MSG_WARN([**************************************************************])
+	       AC_MSG_WARN([SBIG CCDs require a special propietery library to run.])
+	       AC_MSG_WARN([This library is not included by default with INDI.])
+	       AC_MSG_WARN([Please download the library from INDI Official Site:])
+	       AC_MSG_WARN([http://indi.sourceforge.net])
+	       AC_MSG_WARN([*************************************************************])])
 AC_SUBST(LIBSBIGUDRV)
 AC_LANG_POP(C)
 
@@ -130,11 +142,16 @@ if test x$have_v4l2 = xtrue; then
   AC_DEFINE(HAVE_LINUX_VIDEODEV2_H, 1, [Define to 1 if you have the <linux/videodev2.h> header file.])
 fi
 
+if test x$have_cfitsio = xtrue; then
+  AC_DEFINE(HAVE_CFITSIO_H,1,[Define to 1 if you have CFITSIO library.])
+fi
+
 AM_CONDITIONAL(BSD, test x$OSDIR = xbsd)
 AM_CONDITIONAL(LINUX, test x$OSDIR = xlinux)
 AM_CONDITIONAL(NULL, test x$OSDIR = xnull)
 AM_CONDITIONAL(HAVE_LIBUSB, test x$have_libusb = xyes)
 AM_CONDITIONAL(HAVE_V4L2, test x$have_v4l2 = xtrue)
 AM_CONDITIONAL(HAVE_LIBSBIGUDRV, test x$have_libsbigudrv = xtrue)
+AM_CONDITIONAL(HAVE_CFITSIO, test x$have_cfitsio = xtrue)
 
-AC_OUTPUT(Makefile src/Makefile src/fli/Makefile src/webcam/Makefile src/apogee/Makefile src/cfitsio/Makefile)
+AC_OUTPUT(Makefile src/Makefile src/fli/Makefile src/webcam/Makefile src/apogee/Makefile)

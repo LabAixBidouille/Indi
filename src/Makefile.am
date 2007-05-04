@@ -7,10 +7,18 @@ lib_LTLIBRARIES = libsbigudrv.la
 libsbigudrv_la_LIBADD = -lm
 libsbigudrv_la_SOURCES = sbig_dummy.cpp
 endif
-bin_add   =  sbigccd apogee_ppi v4ldriver v4lphilips meade_lpi fliccd fliwheel flipdf
+if HAVE_CFITSIO
+bin_linux   =  sbigccd apogee_ppi v4ldriver v4lphilips meade_lpi fliccd fliwheel flipdf
+else
+bin_linux   =  fliwheel flipdf
+endif
 endif
 
-bin_PROGRAMS = indiserver lx200basic lx200generic celestrongps temma skycommander intelliscope robofocus orionatlas trutechwheel stv $(bin_add)
+if HAVE_CFITSIO
+bin_fitsdep = stv
+endif
+
+bin_PROGRAMS = indiserver lx200basic lx200generic celestrongps temma skycommander intelliscope robofocus orionatlas trutechwheel $(bin_fitsdep) $(bin_linux)
 
 liblilxml_a_SOURCES = lilxml.c
 libindicom_a_SOURCES = indicom.c base64.c  observer.c
@@ -91,5 +99,9 @@ uninstall-local:
 	rm $(DESTDIR)$(bindir)/lx200autostar $(DESTDIR)$(bindir)/lx200_16 $(DESTDIR)$(bindir)/lx200gps
 
 if LINUX
-SUBDIRS = @EXTRA_SUBDIR@ fli webcam apogee
+if HAVE_CFITSIO
+SUBDIRS = fli webcam apogee
+else
+SUBDIRS = fli
+endif
 endif
