@@ -1,24 +1,28 @@
 
 AM_CPPFLAGS = @CPPFLAGS@ -DTOP_DATADIR=\"$(pkgdatadir)\"
 
+# Only compile if platform is Linux
 if LINUX
+# Only compile SBIG Library if we have libusb. If libsbigudrv is not available, compile a dummy version so that users can
+# install the proprietery version later on.
+if HAVE_LIBUSB
+usb_drivers = apogee_ppi
 if !HAVE_LIBSBIGUDRV
 lib_LTLIBRARIES = libsbigudrv.la
-libsbigudrv_la_LIBADD = -lm
+libsbigudrv_la_LIBADD = -lm -lusb
 libsbigudrv_la_SOURCES = sbig_dummy.cpp
+usb_drivers += sbigccd
 endif
+endif
+# Only compile CCD & Vdeo driver if we have CFITSIO
 if HAVE_CFITSIO
-bin_linux   =  sbigccd apogee_ppi v4ldriver v4lphilips meade_lpi fliccd fliwheel flipdf
+bin_linux   =  v4ldriver v4lphilips meade_lpi fliccd stv fliwheel flipdf $(usb_drivers)
 else
 bin_linux   =  fliwheel flipdf
 endif
 endif
 
-if HAVE_CFITSIO
-bin_fitsdep = stv
-endif
-
-bin_PROGRAMS = indiserver lx200basic lx200generic celestrongps temma skycommander intelliscope robofocus orionatlas trutechwheel $(bin_fitsdep) $(bin_linux)
+bin_PROGRAMS = indiserver lx200basic lx200generic celestrongps temma skycommander intelliscope robofocus orionatlas trutechwheel $(bin_linux)
 
 liblilxml_a_SOURCES = lilxml.c
 libindicom_a_SOURCES = indicom.c base64.c  observer.c
@@ -77,7 +81,7 @@ orionatlas_SOURCES =  indidrivermain.c base64.c eventloop.c orionatlas.cpp
 orionatlas_LDADD = liblilxml.a libindicom.a -lm
 
 apogee_ppi_SOURCES = apogee_ppi.cpp base64.c eventloop.c indidrivermain.c
-apogee_ppi_LDADD = libindicom.a liblilxml.a apogee/libapogee_PPI.la -lz
+apogee_ppi_LDADD = libindicom.a liblilxml.a apogee/libapogee_PPI.la -lz -lusb
 
 sbigccd_SOURCES = sbigcam.cpp base64.c eventloop.c indidrivermain.c
 sbigccd_LDADD = libindicom.a liblilxml.a @LIBCFITSIO@ @LIBSBIGUDRV@ -lz
