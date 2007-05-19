@@ -137,6 +137,9 @@ if test x$have_v4l2 = xtrue; then
 fi
 
 if test x$have_cfitsio = xtrue; then
+  OLDCPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="-I/usr/include/cfitsio $CPPFLAGS"
+  AC_CHECK_HEADER([fitsio.h], [], [CPPFLAGS="$OLDCPPFLAGS"])
   AC_DEFINE(HAVE_CFITSIO_H,1,[Define to 1 if you have CFITSIO library.])
 fi
 
