@@ -40,9 +40,6 @@ tutorial_dome: $(IDAI) tutorial_dome.o
 tutorial_rain: $(IDAI) tutorial_rain.o
 	$(CC) $(LDFLAGS) -o $@ $(IDAI) tutorial_rain.o $(LIBS) -lz
 
-telescope_simulator: $(IDAI) telescope_simulator.o
-	$(CC) $(LDFLAGS) -o $@ $(IDAI) telescope_simulator.o $(LIBS) -lz
-
 # clean up
 clean:
 	touch x.o
