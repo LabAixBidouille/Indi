@@ -1,5 +1,6 @@
-INCLUDES = -I$(top_srcdir)/src
+INCLUDES = -I$(top_srcdir)/src -I$(top_srcdir)/src/libs
 
+if HAVE_CFITSIO
 if HAVE_V4L2
    libwebcam_linux = libwebcam_v4l2_linux.la
 else
@@ -13,6 +14,7 @@ libwebcam_v4l2_linux_la_SOURCES = PPort.cpp port.cpp v4l2_base.cpp ccvt_c2.c ccv
 
 libwebcam_la_SOURCES = empty_file.cpp
 libwebcam_la_LIBADD = $(libwebcam_linux)
+endif
 
 empty_file.cpp:
 	echo > empty_file.cpp

@@ -5,6 +5,6 @@ include $(top_srcdir)/src/Makefile.include
 bin_PROGRAMS = indiserver
 
 indiserver_SOURCES = indiserver.c fq.c
-indiserver_LDADD = liblilxml.a $(LIBSOCKET)
+indiserver_LDADD = libs/liblilxml.a $(LIBSOCKET)
 
 SUBDIRS = libs . drivers

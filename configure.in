@@ -152,4 +152,4 @@ AM_CONDITIONAL(HAVE_LIBSBIGUDRV, test x$have_libsbigudrv = xtrue)
 AM_CONDITIONAL(HAVE_CFITSIO, test x$have_cfitsio = xtrue)
 
 #AC_OUTPUT(Makefile src/Makefile src/libs/fli/Makefile src/libs/webcam/Makefile src/libs/apogee/Makefile)
-AC_OUTPUT(Makefile src/Makefile src/libs/Makefile src/libs/fli/Makefile src/libs/apogee/Makefile src/libs/webcam/Makefile src/drivers/Makefile src/drivers/ccd/Makefile src/drivers/filter_wheel/Makefile src/drivers/focuser/Makefile src/drivers/telescope/Makefile src/drivers/video/Makefile)
+AC_OUTPUT(Makefile src/Makefile src/libs/Makefile src/libs/fli/Makefile src/libs/apogee/Makefile src/libs/webcam/Makefile src/drivers/Makefile src/drivers/ccd/Makefile src/drivers/filter_wheel/Makefile src/drivers/focuser/Makefile src/drivers/telescope/Makefile src/drivers/video/Makefile src/drivers/examples/Makefile)
