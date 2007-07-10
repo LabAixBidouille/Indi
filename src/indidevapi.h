@@ -91,11 +91,12 @@ after all, the framework must know how to call the callback correctlty.</p>
  */
 
 #include "indiapi.h"
+#include "lilxml.h"
 
 /*******************************************************************************
  *******************************************************************************
  *
- *   Functions the INDI device driver framework defines which the Driver calls
+ *  Functions the INDI device driver framework defines which the Driver may call
  *
  *******************************************************************************
  *******************************************************************************
@@ -233,9 +234,6 @@ extern void IDSetBLOB (const IBLOBVectorProperty *b, const char *msg, ...)
 #endif
 ;
 
-/*@}*/
-
-
 /** \brief Function Drivers call to send log messages to Clients.
  
     If dev is specified the Client shall associate the message with that device; if dev is NULL the Client shall treat the message as generic from no specific Device.
@@ -272,6 +270,38 @@ extern void IDLog (const char *msg, ...)
         __attribute__ ( ( format( printf, 1, 2 ) ) )
 #endif
 ;
+
+/**
+ * \defgroup snoopFunctions Snoop Functions: Functions drivers call to snoop on other drivers.
+ 
+ */
+/*@{*/
+
+
+/** \brief Function a Driver calls to snoop on another Device. Snooped messages will then arrive via ISSnoopDevice.
+    \param snooped_device name of the device to snoop.
+    \param snooped_property name of the snooped property in the device.
+*/
+extern void IDSnoopDevice (const char *snooped_device, char *snooped_property);
+
+
+/** \typedef BLOBHandling
+    \brief How drivers handle BLOBs incoming from snooping drivers */
+typedef enum {B_NEVER=0, B_ALSO, B_ONLY} BLOBHandling;
+
+/** \brief Function a Driver calls to control whether they will receive BLOBs from snooped devices.
+    \param snooped_device name of the device to snoop.
+    \param bh How drivers handle BLOBs incoming from snooping drivers.
+*/
+extern void IDSnoopBLOBs (const char *snooped_device_name, BLOBHandling bh);
+
+extern int IUSnoopNumber (XMLEle *root, INumberVectorProperty *nvp);
+extern int IUSnoopText (XMLEle *root, ITextVectorProperty *tvp);
+extern int IUSnoopLight (XMLEle *root, ILightVectorProperty *lvp);
+extern int IUSnoopSwitch (XMLEle *root, ISwitchVectorProperty *svp);
+extern int IUSnoopBLOB (XMLEle *root, IBLOBVectorProperty *bvp);
+
+/*@}*/
 
 /**
  * \defgroup deventFunctions IE Functions: Functions drivers call to register with the INDI event utilities.
@@ -336,13 +366,10 @@ extern void IERmTimer (int timerid);
 */
 extern int  IEAddWorkProc (IE_WPF *fp, void *userpointer);
 
-/** \brief Remove the work procedure with the given \e workprocid, as returned from IEAddWorkProc().
-*
-* \param workprocid the work procedure callback ID returned from IEAddWorkProc().
-*/
-extern void IERmWorkProc (int workprocid);
+/* wait in-line for a flag to set, presumably by another event function */
 
-/*@}*/
+extern int IEDeferLoop (int maxms, int *flagp);
+extern int IEDeferLoop0 (int maxms, int *flagp);
 
 /**
  * \defgroup dutilFunctions IU Functions: Functions drivers call to perform handy utility routines.
@@ -583,8 +610,9 @@ extern void ISNewSwitch (const char *dev, const char *name, ISState *states,
 /** \brief Update data of an existing blob vector property.
     \param dev the name of the device.
     \param name the name of the blob vector property to update.
-    \param sizes an array of blob sizes in bytes.
-    \param blobs the blob data array in bytes
+    \param sizes an array of base64 blob sizes in bytes \e before decoding.
+    \param blobsizes an array of the sizes of blobs \e after decoding from base64.
+    \param blobs an array of decoded data. Each blob size is found in \e blobsizes array.
     \param formats Blob data format (e.g. fits.z).
     \param names names of blob members to update. 
     \param n the number of blobs to update.
@@ -592,8 +620,13 @@ extern void ISNewSwitch (const char *dev, const char *name, ISState *states,
           e.g. BLOB element with name names[0] has data located in blobs[0] with size sizes[0] and format formats[0].
 */
 
-extern void ISNewBLOB (const char *dev, const char *name, int sizes[],
-    char *blobs[], char *formats[], char *names[], int n); 
+extern void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n); 
+
+/** \brief Function defined by Drivers that is called when another Driver it is snooping (by having previously called IDSnoopDevice()) sent any INDI message.
+    \param root The argument contains the full message exactly as it was sent by the driver.
+    \e Hint: use the IUSnoopXXX utility functions to help crack the message if it was one of setXXX or defXXX.
+*/
+extern void ISSnoopDevice (XMLEle *root);
 
 /*@}*/
 

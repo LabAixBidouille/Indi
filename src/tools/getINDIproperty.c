@@ -25,20 +25,26 @@
 #include "zlib.h"
 
 
-/* table of INDI definition elements */
+/* table of INDI definition elements, plus setBLOB.
+ * we also look for set* if -m
+ */
 typedef struct {
     char *vec;		/* vector name */
     char *one;		/* one element name */
 } INDIDef;
 static INDIDef defs[] = {
-    {"defTextVector", "defText"},
+    {"defTextVector",   "defText"},
     {"defNumberVector", "defNumber"},
     {"defSwitchVector", "defSwitch"},
-    {"defLightVector", "defLight"},
-    {"defBLOBVector", "defBLOB"},
-    {"setBLOBVector", "oneBLOB"},
+    {"defLightVector",  "defLight"},
+    {"defBLOBVector",   "defBLOB"},
+    {"setBLOBVector",   "oneBLOB"},
+    {"setTextVector",   "oneText"},
+    {"setNumberVector", "oneNumber"},
+    {"setSwitchVector", "oneSwitch"},
+    {"setLightVector",  "oneLight"},
 };
-#define NDEFS   (sizeof(defs)/sizeof(defs[0]))
+static int ndefs = 6;			/* or 10 if -m */
 
 /* table of keyword to use in query vs name of INDI defXXX attribute */
 typedef struct {
@@ -93,6 +99,7 @@ static LilXML *lillp;			/* XML parser context */
 #define WILDCARD	'*'		/* show all in this category */
 static int onematch;			/* only one possible match */
 static int justvalue;			/* if just one match show only value */
+static int monitor;			/* keep watching even after seen def */
 static int directfd = -1;		/* direct filedes to server, if >= 0 */
 static FILE *svrwfp;			/* FILE * to talk to server */
 static FILE *svrrfp;			/* FILE * to read from server */
@@ -130,6 +137,10 @@ main (int ac, char *av[])
 		    }
 		    host = *++av;
 		    ac--;
+		    break;
+		case 'm':
+		    monitor++;
+		    ndefs = 10;			/* include set*Vectors too */
 		    break;
 		case 'p':
 		    if (directfd >= 0) {
@@ -204,7 +215,7 @@ usage()
 	int i;
 
 	fprintf(stderr, "Purpose: retrieve readable properties from an INDI server\n");
-	fprintf(stderr, "%s\n", "$Revision: 1.23 $");
+	fprintf(stderr, "%s\n", "$Revision: 1.6 $");
 	fprintf(stderr, "Usage: %s [options] [device.property.element ...]\n",me);
 	fprintf(stderr, "  Any component may be \"*\" to match all (beware shell metacharacters).\n");
 	fprintf(stderr, "  Reports all properties if none specified.\n");
@@ -221,6 +232,7 @@ usage()
 	fprintf(stderr, "  -d f  : use file descriptor f already open to server\n");
 	fprintf(stderr, "  -h h  : alternate host, default is %s\n", host_def);
 	fprintf(stderr, "  -p p  : alternate port, default is %d\n", INDIPORT);
+	fprintf(stderr, "  -m    : keep monitoring for more updates\n");
 	fprintf(stderr, "  -t t  : max time to wait, default is %d secs\n",TIMEOUT);
 	fprintf(stderr, "  -v    : verbose (cumulative)\n");
 	fprintf(stderr, "Exit status:\n");
@@ -366,6 +378,9 @@ finished ()
 {
 	int i;
 
+	if (monitor)
+	    return(-1);
+
 	for (i = 0; i < nsrchs; i++)
 	    if (srchs[i].wc || !srchs[i].ok)
 		return (-1);
@@ -420,7 +435,7 @@ findDPE (XMLEle *root)
 
 	for (i = 0; i < nsrchs; i++) {
 	    /* for each property we are looking for */
-	    for (j = 0; j < NDEFS; j++) {
+	    for (j = 0; j < ndefs; j++) {
 		/* for each possible type */
 		if (strcmp (tagXMLEle (root), defs[j].vec) == 0) {
 		    /* legal defXXXVector, check device */
@@ -520,7 +535,7 @@ oneBLOB (XMLEle *root, char *dev, char *nam, char *enam, char *p, int plen)
 	char *format;
 	FILE *fp;
 	int bloblen;
-	char *blob;
+	unsigned char *blob;
 	int ucs;
 	int isz;
 	char fn[128];
@@ -538,7 +553,7 @@ oneBLOB (XMLEle *root, char *dev, char *nam, char *enam, char *p, int plen)
 
 	/* decode blob from base64 in p */
 	blob = malloc (3*plen/4);
-	bloblen = from64tobits (blob, p);
+	bloblen = from64tobits ((char *)blob, p);
 	if (bloblen < 0) {
 	    fprintf (stderr, "%s.%s.%s bad base64\n", dev, nam, enam);
 	    exit(2);
@@ -574,6 +589,9 @@ oneBLOB (XMLEle *root, char *dev, char *nam, char *enam, char *p, int plen)
 	} else {
 	    fprintf (stderr, "%s: %s\n", fn, strerror(errno));
 	}
+
+	/* clean up */
+	free (blob);
 }
 
 

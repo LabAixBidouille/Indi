@@ -1,0 +1,2 @@
+indi_src_api = $(top_srcdir)/src/eventloop.c $(top_srcdir)/src/base64.c $(top_srcdir)/src/indidrivermain.c
+indi_lib_api = $(top_srcdir)/src/libs/libindicom.a $(top_srcdir)/src/libs/liblilxml.a
