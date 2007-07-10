@@ -2,4 +2,4 @@
 # have all needed files, that a GNU package needs
 AUTOMAKE_OPTIONS = foreign 1.4
 
-SUBDIRS = ccd filter_wheel focuser telescope video
+SUBDIRS = ccd filter_wheel focuser telescope video examples

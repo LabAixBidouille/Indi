@@ -308,10 +308,6 @@ void mountSim (void *p)
 	IEAddTimer (POLLMS, mountSim, NULL);
 }
 
-void ISNewBLOB (const char *dev, const char *name, int sizes[], char *blobs[], char *formats[], char *names[], int n)
-{
-}
-
 static void connectTelescope ()
 {
 	if (connectS[0].s == ISS_ON)
@@ -325,3 +321,6 @@ static void connectTelescope ()
 	    IDSetSwitch (&connectSP, "Telescope is disconnected.");
 	}
 }
+
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) {}
+void ISSnoopDevice (XMLEle *root) {}

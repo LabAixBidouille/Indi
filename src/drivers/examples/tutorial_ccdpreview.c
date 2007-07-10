@@ -148,17 +148,8 @@ void ISGetProperties (const char *dev)
   
 }
 
-void ISNewBLOB (const char *dev, const char *name, int sizes[], char *blobs[], char *formats[], char *names[], int n)
-{
-	
-       /* ignore if not ours */ 
-       if (dev && strcmp (mydev, dev))
-         return;
-
-	/* suppress warning */
-	n=n; dev=dev; name=name; names=names; 
-
-}
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) {}
+void ISSnoopDevice (XMLEle *root) {}
   
 void ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
