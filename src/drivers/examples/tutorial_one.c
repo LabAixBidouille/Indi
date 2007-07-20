@@ -183,6 +183,8 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
         return;
 }
 
+
+/* Note that we must define ISNewBLOB and ISSnoopDevice even if we don't use them, otherwise, the driver will NOT compile */
 void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) {}
 void ISSnoopDevice (XMLEle *root) {}
 

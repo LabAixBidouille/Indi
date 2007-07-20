@@ -76,8 +76,6 @@ void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[],
 void ISSnoopDevice (XMLEle *root)
 {
 
-  prXMLEle(stderr, root, 0);
-
   IPState old_state = RainL[0].s;
 
   /* If the "Rain Alert" property gets updated in the Rain device, we will receive a notification. We need to process the new values of Rain Alert and update the local version
