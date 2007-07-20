@@ -290,7 +290,12 @@ extern void IDLog (const char *msg, ...)
 
 /** \typedef BLOBHandling
     \brief How drivers handle BLOBs incoming from snooping drivers */
-typedef enum {B_NEVER=0, B_ALSO, B_ONLY} BLOBHandling;
+typedef enum 
+{
+  B_NEVER=0,	/*!< Never receive BLOBs */
+  B_ALSO,	/*!< Receive BLOBs along with normal messages */
+  B_ONLY	/*!< ONLY receive BLOBs from drivers, ignore all other traffic */
+} BLOBHandling;
 
 /** \brief Function a Driver calls to snoop on another Device. Snooped messages will then arrive via ISSnoopDevice.
     \param snooped_device name of the device to snoop.
@@ -299,10 +304,10 @@ typedef enum {B_NEVER=0, B_ALSO, B_ONLY} BLOBHandling;
 extern void IDSnoopDevice (const char *snooped_device, char *snooped_property);
 
 /** \brief Function a Driver calls to control whether they will receive BLOBs from snooped devices.
-    \param snooped_device name of the device to snoop.
+    \param snooped_device_name name of the device to snoop.
     \param bh How drivers handle BLOBs incoming from snooping drivers.
 */
-extern void IDSnoopBLOBs (const char *snooped_device_name, BLOBHandling bh);
+extern void IDSnoopBLOBs (const char *snooped_device, BLOBHandling bh);
 
 /*@}*/
 
@@ -450,8 +455,8 @@ extern int IUUpdateNumbers(INumberVectorProperty *nvp, double values[], char *na
 
 /** \brief Update all text members in a text vector property.
 *
-* \param nvp a pointer to a text vector property.
-* \param text a pointer to the text members
+* \param tvp a pointer to a text vector property.
+* \param texts a pointer to the text members
 * \param names the names of the IText members to update.
 * \param n the number of IText members to update.
 * \return 0 if update successful, -1 otherwise. Update will fail in case of property name mismatch.

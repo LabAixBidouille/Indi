@@ -660,7 +660,7 @@ IDSnoopDevice (const char *snooped_device_name, char *snooped_property_name)
  * silently ignored if given device is not already registered for snooping.
  */
 void 
-IDSnoopBLOBs (const char *snooped_device_name, BLOBHandling bh)
+IDSnoopBLOBs (const char *snooped_device, BLOBHandling bh)
 {
 	char *how;
 
@@ -673,7 +673,7 @@ IDSnoopBLOBs (const char *snooped_device_name, BLOBHandling bh)
 
 	xmlv1();
 	printf ("<enableBLOB device='%s'>%s</enableBLOB>\n",
-						snooped_device_name, how);
+						snooped_device, how);
 	fflush (stdout);
 }
 
