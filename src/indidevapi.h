@@ -234,6 +234,14 @@ extern void IDSetBLOB (const IBLOBVectorProperty *b, const char *msg, ...)
 #endif
 ;
 
+/*@}*/
+
+/**
+ * \defgroup d2duFunctions ID Functions: Functions to delete properties, and log messages locally or remotely.
+ */
+/*@{*/
+
+
 /** \brief Function Drivers call to send log messages to Clients.
  
     If dev is specified the Client shall associate the message with that device; if dev is NULL the Client shall treat the message as generic from no specific Device.
@@ -271,12 +279,18 @@ extern void IDLog (const char *msg, ...)
 #endif
 ;
 
+/*@}*/
+
 /**
- * \defgroup snoopFunctions Snoop Functions: Functions drivers call to snoop on other drivers.
+ * \defgroup snoopFunctions ISnoop Functions: Functions drivers call to snoop on other drivers.
  
  */
 /*@{*/
 
+
+/** \typedef BLOBHandling
+    \brief How drivers handle BLOBs incoming from snooping drivers */
+typedef enum {B_NEVER=0, B_ALSO, B_ONLY} BLOBHandling;
 
 /** \brief Function a Driver calls to snoop on another Device. Snooped messages will then arrive via ISSnoopDevice.
     \param snooped_device name of the device to snoop.
@@ -284,22 +298,11 @@ extern void IDLog (const char *msg, ...)
 */
 extern void IDSnoopDevice (const char *snooped_device, char *snooped_property);
 
-
-/** \typedef BLOBHandling
-    \brief How drivers handle BLOBs incoming from snooping drivers */
-typedef enum {B_NEVER=0, B_ALSO, B_ONLY} BLOBHandling;
-
 /** \brief Function a Driver calls to control whether they will receive BLOBs from snooped devices.
     \param snooped_device name of the device to snoop.
     \param bh How drivers handle BLOBs incoming from snooping drivers.
 */
 extern void IDSnoopBLOBs (const char *snooped_device_name, BLOBHandling bh);
-
-extern int IUSnoopNumber (XMLEle *root, INumberVectorProperty *nvp);
-extern int IUSnoopText (XMLEle *root, ITextVectorProperty *tvp);
-extern int IUSnoopLight (XMLEle *root, ILightVectorProperty *lvp);
-extern int IUSnoopSwitch (XMLEle *root, ISwitchVectorProperty *svp);
-extern int IUSnoopBLOB (XMLEle *root, IBLOBVectorProperty *bvp);
 
 /*@}*/
 
@@ -370,6 +373,8 @@ extern int  IEAddWorkProc (IE_WPF *fp, void *userpointer);
 
 extern int IEDeferLoop (int maxms, int *flagp);
 extern int IEDeferLoop0 (int maxms, int *flagp);
+
+/*@}*/
 
 /**
  * \defgroup dutilFunctions IU Functions: Functions drivers call to perform handy utility routines.
@@ -534,6 +539,41 @@ extern void IUFillNumberVector(INumberVectorProperty *nvp, INumber *np, int nnp,
     \param s the vector property initial state.
 */
 extern void IUFillTextVector(ITextVectorProperty *tvp, IText *tp, int ntp, const char * dev, const char *name, const char *label, const char* group, IPerm p, double timeout, IPState s);
+
+/** \brief Update a snooped number vector property from the given XML root element.
+    \param root XML root elememnt containing the snopped property content
+    \param nvp a pointer to the number vector property to be updated.
+    \return 0 if cracking the XML element and updating the property proceeded without errors, -1 if trouble.
+*/
+extern int IUSnoopNumber (XMLEle *root, INumberVectorProperty *nvp);
+
+/** \brief Update a snooped text vector property from the given XML root element.
+    \param root XML root elememnt containing the snopped property content
+    \param tvp a pointer to the text vector property to be updated.
+    \return 0 if cracking the XML element and updating the property proceeded without errors, -1 if trouble.
+*/
+extern int IUSnoopText (XMLEle *root, ITextVectorProperty *tvp);
+
+/** \brief Update a snooped light vector property from the given XML root element.
+    \param root XML root elememnt containing the snopped property content
+    \param lvp a pointer to the light vector property to be updated.
+    \return 0 if cracking the XML element and updating the property proceeded without errors, -1 if trouble.
+*/
+extern int IUSnoopLight (XMLEle *root, ILightVectorProperty *lvp);
+
+/** \brief Update a snooped switch vector property from the given XML root element.
+    \param root XML root elememnt containing the snopped property content
+    \param svp a pointer to the switch vector property to be updated.
+    \return 0 if cracking the XML element and updating the property proceeded without errors, -1 if trouble.
+*/
+extern int IUSnoopSwitch (XMLEle *root, ISwitchVectorProperty *svp);
+
+/** \brief Update a snooped BLOB vector property from the given XML root element.
+    \param root XML root elememnt containing the snopped property content
+    \param bvp a pointer to the BLOB vector property to be updated.
+    \return 0 if cracking the XML element and updating the property proceeded without errors, -1 if trouble.
+*/
+extern int IUSnoopBLOB (XMLEle *root, IBLOBVectorProperty *bvp);
 
 /*@}*/
 

@@ -1110,6 +1110,7 @@ IUSnoopLight (XMLEle *root, ILightVectorProperty *lvp)
 	    return (-1);
 	if (strcmp (dev, lvp->device) || strcmp (name, lvp->name))
 	    return (-1);	/* not this property */
+
 	(void) crackIPState (findXMLAttValu (root,"state"), &lvp->s);
 
 	/* match each oneLight with one ILight */

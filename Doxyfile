@@ -4,7 +4,7 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 PROJECT_NAME           = "Instrument Neutral Distributed Interface INDI"
-PROJECT_NUMBER         = 0.5
+PROJECT_NUMBER         = 0.6
 OUTPUT_DIRECTORY       = /home/jasem/Projects/doc
 CREATE_SUBDIRS         = NO
 OUTPUT_LANGUAGE        = English
@@ -102,65 +102,11 @@ FILE_PATTERNS          = *.c \
                          *.xpm \
                          *.dox
 RECURSIVE              = YES
-EXCLUDE                = /home/jasem/Projects/indi/src/fli \
-                         /home/jasem/Projects/indi/src/lzo \
-                         /home/jasem/Projects/indi/src/webcam \
-                         /home/jasem/Projects/indi/src/celestrongps.cpp \
-                         /home/jasem/Projects/indi/src/celestrongps.h \
-                         /home/jasem/Projects/indi/src/celestronprotocol.c \
-                         /home/jasem/Projects/indi/src/celestronprotocol.h \
-                         /home/jasem/Projects/indi/src/fli_ccd.c \
-                         /home/jasem/Projects/indi/src/lx200_16.cpp \
-                         /home/jasem/Projects/indi/src/lx200_16.h \
-                         /home/jasem/Projects/indi/src/lx200autostar.cpp \
-                         /home/jasem/Projects/indi/src/lx200autostar.h \
-                         /home/jasem/Projects/indi/src/lx200classic.cpp \
-                         /home/jasem/Projects/indi/src/lx200classic.h \
-                         /home/jasem/Projects/indi/src/lx200driver.c \
-                         /home/jasem/Projects/indi/src/lx200driver.h \
-                         /home/jasem/Projects/indi/src/lx200generic.cpp \
-                         /home/jasem/Projects/indi/src/lx200generic.h \
-                         /home/jasem/Projects/indi/src/lx200gps.cpp \
-                         /home/jasem/Projects/indi/src/lx200gps.h \
-                         /home/jasem/Projects/indi/src/mount_simulation.c \
-                         /home/jasem/Projects/indi/src/v4ldriver.cpp \
-                         /home/jasem/Projects/indi/src/v4lphilips.cpp \
-                         /home/jasem/Projects/indi/src/eventloop.c \
-                         /home/jasem/Projects/indi/src/fitsrw.c \
-                         /home/jasem/Projects/indi/src/indicom.c \
-                         /home/jasem/Projects/indi/src/indidrivermain.c \
-                         /home/jasem/Projects/indi/src/lilxml.c \
-                         /home/jasem/Projects/indi/src/apogee \
-                         /home/jasem/Projects/indi/src/apmount.cpp \
-                         /home/jasem/Projects/indi/src/apmount.h \
-                         /home/jasem/Projects/indi/src/apogee_ppi.cpp \
-                         /home/jasem/Projects/indi/src/apogee_ppi.h \
-                         /home/jasem/Projects/indi/src/base64.h \
-                         /home/jasem/Projects/indi/src/fq.h \
-                         /home/jasem/Projects/indi/src/indi_lpi.cpp \
-                         /home/jasem/Projects/indi/src/indi_philips.cpp \
-                         /home/jasem/Projects/indi/src/indi_v4l.cpp \
-                         /home/jasem/Projects/indi/src/sbigccd.cpp \
-                         /home/jasem/Projects/indi/src/sbigccd.h \
-                         /home/jasem/Projects/indi/src/temmadriver.c \
-                         /home/jasem/Projects/indi/src/temmadriver.h \
-                         /home/jasem/Projects/indi/src/v4ldriver.cpp \
-                         /home/jasem/Projects/indi/src/v4lphilips.cpp \
-                         /home/jasem/Projects/indi/src/fli_wheel.c \
-                         /home/jasem/Projects/indi/src/v4ldriver.h \
-                         /home/jasem/Projects/indi/src/v4lphilips.h \
-                         /home/jasem/Projects/indi/src/indiserver.c \
-                         /home/jasem/Projects/indi/src/examples/tutorial_ccdpreview.c \
-                         /home/jasem/Projects/indi/src/examples/tutorial_ccdpreview.c \
-                         /home/jasem/Projects/indi/src/tools/compiler.c \
-                         /home/jasem/Projects/indi/src/cfitsio \
-                         /home/jasem/Projects/indi/src/sbigudrv.h \
-                         /home/jasem/Projects/indi/src/sbigcam.h \
-                         /home/jasem/Projects/indi/src/sbigcam.cpp \
-                         /home/jasem/Projects/indi/src/orionatlas.h \
-                         /home/jasem/Projects/indi/src/fli_pdf.c \
-                         /home/jasem/Projects/indi/src/stvdriver.h \
-                         /home/jasem/Projects/indi/src/lx200basic.h
+EXCLUDE                = /home/jasem/Projects/indi/src/drivers \
+                         /home/jasem/Projects/indi/src/tools \
+                         /home/jasem/Projects/indi/src/libs/apogee \
+                         /home/jasem/Projects/indi/src/libs/fli \
+                         /home/jasem/Projects/indi/src/libs/webcam
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = 
 EXAMPLE_PATH           = 

@@ -24,7 +24,7 @@ bin_PROGRAMS = $(bin_linux)
 include $(top_srcdir)/src/Makefile.include
 
 fli_ccd_SOURCES =  fli_ccd.c $(indi_src_api)
-fli_ccd_LDADD = $(top_srcdir)/src/libs/fli/libfli.la ($indi_lib_api) @LIBCFITSIO@ -lm -lz $(LIBSOCKET)
+fli_ccd_LDADD = $(top_srcdir)/src/libs/fli/libfli.la $(indi_lib_api) @LIBCFITSIO@ -lm -lz $(LIBSOCKET)
 
 sbig_ccd_SOURCES = sbigcam.cpp $(indi_src_api)
 sbig_ccd_LDADD = $(indi_lib_api) @LIBCFITSIO@ @LIBSBIGUDRV@ -lz

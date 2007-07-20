@@ -13,7 +13,7 @@ stv_SOURCES = stv.cpp stvdriver.c $(indi_src_api)
 stv_LDADD = $(indi_lib_api) @LIBCFITSIO@ -lm -lz
 
 v4ldriver_SOURCES = v4ldriver.cpp indi_v4l.cpp $(indi_src_api)
-v4ldriver_LDADD = $(indi_lib_api) webcam/libwebcam.la @LIBCFITSIO@ -lm -lz
+v4ldriver_LDADD = $(indi_lib_api) $(top_srcdir)/src/libs/webcam/libwebcam.la @LIBCFITSIO@ -lm -lz
 
 v4lphilips_SOURCES = v4ldriver.cpp v4lphilips.cpp indi_philips.cpp $(indi_src_api)
 v4lphilips_LDADD = $(indi_lib_api) $(top_srcdir)/src/libs/webcam/libwebcam.la @LIBCFITSIO@ -lm -lz
