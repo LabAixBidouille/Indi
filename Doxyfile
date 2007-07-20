@@ -106,7 +106,13 @@ EXCLUDE                = /home/jasem/Projects/indi/src/drivers \
                          /home/jasem/Projects/indi/src/tools \
                          /home/jasem/Projects/indi/src/libs/apogee \
                          /home/jasem/Projects/indi/src/libs/fli \
-                         /home/jasem/Projects/indi/src/libs/webcam
+                         /home/jasem/Projects/indi/src/libs/webcam \
+                         /home/jasem/Projects/indi/src/base64.c \
+                         /home/jasem/Projects/indi/src/base64.h \
+                         /home/jasem/Projects/indi/src/fq.c \
+                         /home/jasem/Projects/indi/src/fq.h \
+                         /home/jasem/Projects/indi/src/indidrivermain.c \
+                         /home/jasem/Projects/indi/src/indiserver.c
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = 
 EXAMPLE_PATH           = 
