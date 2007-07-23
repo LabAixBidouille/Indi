@@ -486,7 +486,7 @@ APN_USB_TYPE ApnUsbStopCI( unsigned short PostStopCount )
 //	}
      
  
-	DownloadCountPostStop = (unsigned int)&PostStopCount; 
+	DownloadCountPostStop = (unsigned long) &PostStopCount; 
  
 	Success = usb_control_msg(g_hSysDriver,
                                USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,  VND_APOGEE_STOP_IMAGE,
