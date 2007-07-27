@@ -261,6 +261,8 @@ void
 ISNewNumber (const char *dev, const char *name, double *doubles, char *names[],
 int n)
 {
+/* FIXME */
+#if 0
         if (!IUCrackNumber (&expvalues, dev, name, doubles, names, n)) {
 	    int roiw, roih, osw, osh, binw, binh, roix, roiy;
 	    char whynot[1024];
@@ -296,6 +298,7 @@ int n)
 	    IDSetNumber (&settemp, "Set cooler target to %.1f", newt);
 	}
 
+#endif
 }
 
 void
@@ -408,11 +411,6 @@ ISNewBLOB (const char *dev, const char *name, int sizes[],
 void
 ISSnoopDevice (XMLEle *root)
 {
-	// fprintf (stderr, "Snooping %s.%s\n", findXMLAttValu (root, "device"), findXMLAttValu (root, "name"));
-
-	/* just record if ever needed for image header */
-	IUSnoopNumber (root, &pointing);
-	IUSnoopNumber (root, &envnow);
 }
 
 /* save conditions at start of exposure */
@@ -422,17 +420,6 @@ getStartConditions()
 
 	gettimeofday (&exp0, NULL);
 
-	ra0  = pointing.np[RA2K_TP].value;
-	dec0 = pointing.np[DEC2K_TP].value;
-	alt0 = pointing.np[ALT_TP].value;
-	az0  = pointing.np[AZ_TP].value;
-	am0  = pointing.np[AM_TP].value;
-
-	winds0 = envnow.np[WINDSPD_NOW].value;
-	windd0 = envnow.np[WINDDIR_NOW].value;
-	hum0 = envnow.np[HUMIDITY_NOW].value;
-	extt0 = envnow.np[EXT_NOW].value;
-	mirrort0 = envnow.np[MIRROR_NOW].value;
 }
 
 /* called when exposure is expected to be complete
@@ -441,6 +428,10 @@ getStartConditions()
 static void
 expTO (void *vp)
 {
+
+/* FIXME */
+
+#if 0
 	int npix = impixw*impixh;
 	int nfits = npix*2 + FHDRSZ;
 	char whynot[1024];
@@ -487,6 +478,9 @@ expTO (void *vp)
 	    expgo.sp[ON_EG].s = ISS_OFF;
 	    IDSetSwitch (&expgo, "Exposure complete");
 	}
+
+#endif
+
 }
 
 /* hack together a FITS header for the current image
@@ -495,6 +489,10 @@ expTO (void *vp)
 static void
 setHeader (char *fits)
 {
+
+/* FIXME */
+
+#if 0
 	double expt = expvalues.np[EXP_EV].value;
 	double tempt = tempnow.np[T_TN].value;
 	int binw = expvalues.np[BINW_EV].value;
@@ -587,7 +585,10 @@ setHeader (char *fits)
 	while (fits-fits0 < FHDRSZ-80)
 	    fits += sprintf (fits, "%80s", "");
 	fits += sprintf (fits, "%-79s", "END");
+
 	*fits = ' ';
+
+#endif
 }
 
 /* send the given fits file out the Pixels BLOB
@@ -608,6 +609,10 @@ sendFITS (char *fits, int nfits)
 static void
 fixFITSpix (char *fits, int nfits)
 {
+
+/* FIXME */
+
+#if 0
 	typedef unsigned char *bp;
 	bp p, pend;	/* avoid sign ext */
 
@@ -619,6 +624,7 @@ fixFITSpix (char *fits, int nfits)
 	    p[1] = (char)(f);
 	}
 
+#endif
 }
 
 /* timer to read the cooler, repeats forever */

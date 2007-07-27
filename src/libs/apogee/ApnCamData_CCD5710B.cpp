@@ -16,7 +16,6 @@
 // Construction/Destruction
 /////////////////////////////////////////////////////////////
 
-
 CApnCamData_CCD5710B::CApnCamData_CCD5710B()
 {
 }

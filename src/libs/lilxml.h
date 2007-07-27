@@ -296,7 +296,7 @@ extern void indi_xmlMalloc (void *(*newmalloc)(size_t size),
  */
 
 /* For RCS Only -- Do Not Edit
- * @(#) $RCSfile$ $Date: 2006-05-20 17:49:17 +0300 (Sat, 20 May 2006) $ $Revision: 542858 $ $Name:  $
+ * @(#) $RCSfile$ $Date: 2007-07-27 20:00:46 +0300 (Fri, 27 Jul 2007) $ $Revision: 693301 $ $Name:  $
  */
 
 #endif	/* LILXML_H */

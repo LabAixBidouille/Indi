@@ -43,4 +43,5 @@ private:
 						unsigned short		BinPatternData[][APN_MAX_PATTERN_ENTRIES] );
 
 }; 
+
  

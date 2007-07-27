@@ -374,6 +374,12 @@ extern void IERmTimer (int timerid);
 */
 extern int  IEAddWorkProc (IE_WPF *fp, void *userpointer);
 
+/** \brief Remove a work procedure.
+*
+* \param workprocid The unique ID for the work procedure to be removed.
+*/
+extern void IERmWorkProc (int workprocid);
+
 /* wait in-line for a flag to set, presumably by another event function */
 
 extern int IEDeferLoop (int maxms, int *flagp);

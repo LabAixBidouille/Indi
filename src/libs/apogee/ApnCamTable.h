@@ -10,8 +10,6 @@
 #ifndef __APN_CAM_TABLE_H__
 #define __APN_CAM_TABLE_H__
 
-
-
 #define APN_ALTA_KAF0401E_CAM_ID	0
 #define APN_ALTA_KAF0401E_CAM_SZ	"1"
 	

@@ -40,7 +40,7 @@ INDI is intended for developers who seek a scalable API for device control and a
 
 \section Development Developing under INDI
 
-<p>Please refere to the <a href="http://indi.sf.net/manual/">INDI Developers Manual</a> for a complete guide on INDI's driver developemnt framework.</p>
+<p>Please refere to the <a href="http://indi.sourceforge.net/index.php/Manual">INDI Developers Manual</a> for a complete guide on INDI's driver developemnt framework.</p>
 
 <p>The INDI Library API is divided into the following main sections:</p>
 <ul>
@@ -70,6 +70,10 @@ You can find information on INDI development in the <a href="http://indi.sf.net"
  */
 
 #define	INDIV	1.7
+
+
+/* INDI Library version */
+#define INDI_LIBV	0.6
 
 /*******************************************************************************
  * Manifest constants

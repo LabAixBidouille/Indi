@@ -7,15 +7,17 @@ if HAVE_LIBUSB
 ##usb_drivers = apogee_ccd
 if !HAVE_LIBSBIGUDRV
 lib_LTLIBRARIES = libsbigudrv.la
-libsbigudrv_la_LIBADD = -lm -lusb
+
 libsbigudrv_la_SOURCES = sbig_dummy.cpp
-usb_drivers = sbig_ccd
+libsbigudrv_la_LIBADD = -lm
+
+usb_drivers = indi_sbig_ccd
 endif
 endif
 
 # Only compile CCD & Vdeo driver if we have CFITSIO
 if HAVE_CFITSIO
-bin_linux   =  fli_ccd $(usb_drivers)
+bin_linux   =  indi_fli_ccd $(usb_drivers)
 endif
 
 bin_PROGRAMS = $(bin_linux)
@@ -23,11 +25,13 @@ bin_PROGRAMS = $(bin_linux)
 # For indi_src_api and indi_lib_api
 include $(top_srcdir)/src/Makefile.include
 
-fli_ccd_SOURCES =  fli_ccd.c $(indi_src_api)
-fli_ccd_LDADD = $(top_srcdir)/src/libs/fli/libfli.la $(indi_lib_api) @LIBCFITSIO@ -lm -lz $(LIBSOCKET)
+indi_fli_ccd_SOURCES =  fli_ccd.c $(indi_src_api)
+indi_fli_ccd_LDADD = $(top_srcdir)/src/libs/fli/libfli.la $(indi_lib_api) @LIBCFITSIO@ -lm -lz $(LIBSOCKET)
 
-sbig_ccd_SOURCES = sbigcam.cpp $(indi_src_api)
-sbig_ccd_LDADD = $(indi_lib_api) @LIBCFITSIO@ @LIBSBIGUDRV@ -lz
+indi_sbig_ccd_SOURCES = sbigcam.cpp $(indi_src_api)
+indi_sbig_ccd_LDADD = $(indi_lib_api) @LIBCFITSIO@ @LIBSBIGUDRV@ -lz
+
+
 
 # NOTE: indialta does not conform to INDI Library standard practices. That is, it doesn't use cfitsio and it doesn't conform to
 # INDI Standard Properties. Have a look at fli_ccd.c and sbigcam.cpp for a compliant driver. The driver needs to implement all 
