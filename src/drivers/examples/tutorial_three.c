@@ -201,7 +201,7 @@ void uploadFile(const char* filename)
    /* #1 Let's get the file size */
    if ( -1 ==  stat (filename, &stat_p))
    { 
-     IDLog(" Error occoured attempting to stat file.\n"); 
+     IDLog(" Error occoured attempting to stat file: %s.\n", filename); 
      return; 
    }
    

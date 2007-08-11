@@ -1,11 +1,11 @@
 # relative path to dir with libraries
-LIBROOT = ../
+LIBROOT = ../libs
 
 # compiler and linker flags
 CC = gcc
 CLDFLAGS = -g
 GCCFLAGS = -ffast-math -Wall
-CFLAGS = $(CLDFLAGS) $(GCCFLAGS) -I$(LIBROOT)
+CFLAGS = $(CLDFLAGS) $(GCCFLAGS) -I$(LIBROOT) -I../
 LDFLAGS = $(CLDFLAGS) -L$(LIBROOT)
 LIBS = -llilxml -lindicom -lm -lz
 
