@@ -143,8 +143,21 @@ void ISNewText (const char *dev, const char *name, char *texts[], char *names[],
 void ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
 { ISInit(); telescope->ISNewNumber(dev, name, values, names, n);}
 void ISPoll (void *p) { telescope->ISPoll();    IEAddTimer (POLLMS, ISPoll, NULL); p=p;}
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) {}
-void ISSnoopDevice (XMLEle *root) {}
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) 
+{
+  INDI_UNUSED(dev);
+  INDI_UNUSED(name);
+  INDI_UNUSED(sizes);
+  INDI_UNUSED(blobsizes);
+  INDI_UNUSED(blobs);
+  INDI_UNUSED(formats);
+  INDI_UNUSED(names);
+  INDI_UNUSED(n);
+}
+void ISSnoopDevice (XMLEle *root) 
+{
+  INDI_UNUSED(root);
+}
 
 OrionAtlas::OrionAtlas()
 {
@@ -297,8 +310,8 @@ void OrionAtlas::ISNewSwitch (const char *dev, const char *name, ISState *states
 
     // FIRST Switch ALWAYS for power
     if (!strcmp(name,PowerSw.name)) {
-        IUResetSwitches(&PowerSw); // sets all to off?
-        IUUpdateSwitches(&PowerSw,states,names,n);
+        IUResetSwitch(&PowerSw); // sets all to off?
+        IUUpdateSwitch(&PowerSw,states,names,n);
         if (PowerS[2].s  == ISS_ON) {
             DisconnectTel();
         }
@@ -306,8 +319,8 @@ void OrionAtlas::ISNewSwitch (const char *dev, const char *name, ISState *states
         return;
         }
     else if (!strcmp(name,UpdateSw.name)) {
-        IUResetSwitches(&UpdateSw);
-        IUUpdateSwitches(&UpdateSw,states,names,n);
+        IUResetSwitch(&UpdateSw);
+        IUUpdateSwitch(&UpdateSw,states,names,n);
         IDSetSwitch(&UpdateSw,NULL);
         Updating=!Updating;
     }
@@ -334,8 +347,8 @@ void OrionAtlas::ISNewSwitch (const char *dev, const char *name, ISState *states
             }
         }
         log("after  RA=%f  Dec=%f\n",returnRA,returnDec);
-        IUResetSwitches(&MovementRADecSw);
-        IUUpdateSwitches(&MovementRADecSw,states,names,n);
+        IUResetSwitch(&MovementRADecSw);
+        IUUpdateSwitch(&MovementRADecSw,states,names,n);
         IDSetSwitch(&MovementRADecSw,NULL);
         MoveScope(RADEC,returnRA,returnDec);
         UpdateCoords();
@@ -363,8 +376,8 @@ void OrionAtlas::ISNewSwitch (const char *dev, const char *name, ISState *states
             }
         }
         log("commanded  Az=%f  Alt=%f\n",returnAz,returnAlt);
-        IUResetSwitches(&MovementAzAltSw);
-        IUUpdateSwitches(&MovementAzAltSw,states,names,n);
+        IUResetSwitch(&MovementAzAltSw);
+        IUUpdateSwitch(&MovementAzAltSw,states,names,n);
         IDSetSwitch(&MovementAzAltSw,NULL);
         MoveScope(AZALT,returnAz,returnAlt);
         UpdateCoords();

@@ -111,8 +111,21 @@ void ISPoll (void */*p*/)
  IEAddTimer (POLLMS, ISPoll, NULL);
 }
 
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) {}
-void ISSnoopDevice (XMLEle *root) {}
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+ {
+  INDI_UNUSED(dev);
+  INDI_UNUSED(name);
+  INDI_UNUSED(sizes);
+  INDI_UNUSED(blobsizes);
+  INDI_UNUSED(blobs);
+  INDI_UNUSED(formats);
+  INDI_UNUSED(names);
+  INDI_UNUSED(n);
+ }
+void ISSnoopDevice (XMLEle *root) 
+{
+  INDI_UNUSED(root);
+}
 
 /**************************************************
 *** AP Mount
@@ -307,7 +320,7 @@ void LX200Basic::ISNewNumber (const char *dev, const char *name, double values[]
 	/* Update tracking precision limits */
 	if (!strcmp (name, TrackPrecisionNP.name))
 	{
-		if (!IUUpdateNumbers(&TrackPrecisionNP, values, names, n))
+		if (!IUUpdateNumber(&TrackPrecisionNP, values, names, n))
 		{
 			TrackPrecisionNP.s = IPS_OK;
 			IDSetNumber(&TrackPrecisionNP, NULL);
@@ -322,7 +335,7 @@ void LX200Basic::ISNewNumber (const char *dev, const char *name, double values[]
 	/* Update slew precision limit */
 	if (!strcmp(name, SlewPrecisionNP.name))
 	{
-		IUUpdateNumbers(&SlewPrecisionNP, values, names, n);
+		IUUpdateNumber(&SlewPrecisionNP, values, names, n);
 		{
 			SlewPrecisionNP.s = IPS_OK;
 			IDSetNumber(&SlewPrecisionNP, NULL);
@@ -346,8 +359,8 @@ void LX200Basic::ISNewSwitch (const char *dev, const char *name, ISState *states
 	// Connection
 	if (!strcmp (name, PowerSP.name))
 	{
-	 IUResetSwitches(&PowerSP);
-	 IUUpdateSwitches(&PowerSP, states, names, n);
+	 IUResetSwitch(&PowerSP);
+	 IUUpdateSwitch(&PowerSP, states, names, n);
    	 connectTelescope();
 	 return;
 	}
@@ -358,8 +371,8 @@ void LX200Basic::ISNewSwitch (const char *dev, const char *name, ISState *states
   	  if (checkPower(&OnCoordSetSP))
 	   return;
 
-	  IUResetSwitches(&OnCoordSetSP);
-	  IUUpdateSwitches(&OnCoordSetSP, states, names, n);
+	  IUResetSwitch(&OnCoordSetSP);
+	  IUUpdateSwitch(&OnCoordSetSP, states, names, n);
 	  currentSet = getOnSwitch(&OnCoordSetSP);
 	  OnCoordSetSP.s = IPS_OK;
 	  IDSetSwitch(&OnCoordSetSP, NULL);
@@ -375,7 +388,7 @@ void LX200Basic::ISNewSwitch (const char *dev, const char *name, ISState *states
 	    return;
 	  }
 	  
-	  IUResetSwitches(&AbortSlewSP);
+	  IUResetSwitch(&AbortSlewSP);
 	  abortSlew(fd);
 
 	    if (EqNP.s == IPS_BUSY)
@@ -550,7 +563,7 @@ void LX200Basic::ISPoll()
 		
 	       lastRA  = currentRA;
 	       lastDEC = currentDEC;
-	       IUResetSwitches(&OnCoordSetSP);
+	       IUResetSwitch(&OnCoordSetSP);
 	       OnCoordSetSP.s = IPS_OK;
 	       EqNP.s = IPS_OK;
 	       IDSetNumber (&EqNP, NULL);

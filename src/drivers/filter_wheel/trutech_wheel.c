@@ -123,8 +123,21 @@ void ISGetProperties (const char *dev)
 	IDDefNumber(&FilterPositionNP, NULL);
 }
 
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) {}
-void ISSnoopDevice (XMLEle *root) {}
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) 
+{
+  INDI_UNUSED(dev);
+  INDI_UNUSED(name);
+  INDI_UNUSED(sizes);
+  INDI_UNUSED(blobsizes);
+  INDI_UNUSED(blobs);
+  INDI_UNUSED(formats);
+  INDI_UNUSED(names);
+  INDI_UNUSED(n);
+}
+void ISSnoopDevice (XMLEle *root) 
+{
+  INDI_UNUSED(root);
+}
 
 void ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
@@ -140,7 +153,7 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	/* Connection */
 	if (!strcmp (name, PowerSP.name))
 	{
-		IUUpdateSwitches(&PowerSP, states, names, n);
+		IUUpdateSwitch(&PowerSP, states, names, n);
 		connectFilter();
 		return;
 	}
@@ -193,7 +206,7 @@ void ISNewText (const char *dev, const char *name, char *texts[], char *names[],
 
 	if (!strcmp(name, PortTP.name))
 	{
-		if (IUUpdateTexts(&PortTP, texts, names, n))
+		if (IUUpdateText(&PortTP, texts, names, n))
 		  return;
 
 		PortTP.s = IPS_OK;
@@ -243,7 +256,7 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 				return;
 			}
 
-			IUUpdateNumbers(&FilterPositionNP, values, names, n);
+			IUUpdateNumber(&FilterPositionNP, values, names, n);
 			err = tty_write(fd, filter_command, CMD_SIZE, &nbytes);
 
 			FilterPositionNP.s = IPS_OK;
@@ -272,7 +285,7 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 		np = IUFindNumber(&FilterCountNP, names[0]);
 		if (np == &FilterCountN[0])
 		{
-			if (IUUpdateNumbers(&FilterCountNP, values, names, n) <0)
+			if (IUUpdateNumber(&FilterCountNP, values, names, n) <0)
 				return;
 
 			FilterPositionN[0].min = 1;

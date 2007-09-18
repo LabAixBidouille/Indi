@@ -51,8 +51,8 @@ static void clientMsgCB(int fd, void *arg);
 static int dispatch (XMLEle *root, char msg[]);
 static int crackDN (XMLEle *root, char **dev, char **name, char msg[]);
 static int isPropDefined(const char *property_name);
-static int crackIPState (char *str, IPState *ip);
-static int crackISState (char *str, ISState *ip);
+static int crackIPState (const char *str, IPState *ip);
+static int crackISState (const char *str, ISState *ip);
 static void xmlv1(void);
 const char *pstateStr(IPState s);
 const char *sstateStr(ISState s);
@@ -546,7 +546,7 @@ IDSetBLOB (const IBLOBVectorProperty *bvp, const char *fmt, ...)
 
 	for (i = 0; i < bvp->nbp; i++) {
 	    IBLOB *bp = &bvp->bp[i];
-	    char *encblob;
+	    unsigned char *encblob;
 	    int j, l;
 
 	    printf ("  <oneBLOB\n");
@@ -568,7 +568,7 @@ IDSetBLOB (const IBLOBVectorProperty *bvp, const char *fmt, ...)
 }
 
 /* tell client to update min/max elements of an existing number vector property */
-void IUUpdateMinMax(INumberVectorProperty *nvp)
+void IUUpdateMinMax(const INumberVectorProperty *nvp)
 {
   int i;
 
@@ -662,7 +662,7 @@ IDSnoopDevice (const char *snooped_device_name, char *snooped_property_name)
 void 
 IDSnoopBLOBs (const char *snooped_device, BLOBHandling bh)
 {
-	char *how;
+	const char *how;
 
 	switch (bh) {
 	case B_NEVER: how = "Never"; break;
@@ -784,7 +784,7 @@ IUFindOnSwitch(const ISwitchVectorProperty *svp)
 
 /* Set all switches to off */
 void 
-IUResetSwitches(const ISwitchVectorProperty *svp)
+IUResetSwitch(ISwitchVectorProperty *svp)
 {
   int i;
   
@@ -794,7 +794,7 @@ IUResetSwitches(const ISwitchVectorProperty *svp)
 
 /* Update property switches in accord with states and names. */
 int 
-IUUpdateSwitches(ISwitchVectorProperty *svp, ISState *states, char *names[], int n)
+IUUpdateSwitch(ISwitchVectorProperty *svp, ISState *states, char *names[], int n)
 {
  int i=0;
  ISwitch *sp;
@@ -806,7 +806,7 @@ IUUpdateSwitches(ISwitchVectorProperty *svp, ISState *states, char *names[], int
  	sp = IUFindOnSwitch(svp);
  	if (sp) strncpy(sn, sp->name, MAXINDINAME);
  
-	IUResetSwitches(svp);
+	IUResetSwitch(svp);
  }
  
  for (i = 0; i < n ; i++)
@@ -834,7 +834,7 @@ IUUpdateSwitches(ISwitchVectorProperty *svp, ISState *states, char *names[], int
 	}
 	if (t_count != 1)
 	{
-		IUResetSwitches(svp);
+		IUResetSwitch(svp);
 		sp = IUFindSwitch(svp, sn);
 		if (sp) sp->s = ISS_ON;
 		svp->s = IPS_IDLE;
@@ -848,7 +848,7 @@ IUUpdateSwitches(ISwitchVectorProperty *svp, ISState *states, char *names[], int
 }
 
 /* Update property numbers in accord with values and names */
-int IUUpdateNumbers(INumberVectorProperty *nvp, double values[], char *names[], int n)
+int IUUpdateNumber(INumberVectorProperty *nvp, double values[], char *names[], int n)
 {
   int i=0;
   
@@ -885,7 +885,7 @@ int IUUpdateNumbers(INumberVectorProperty *nvp, double values[], char *names[], 
 }
 
 /* Update property text in accord with texts and names */
-int IUUpdateTexts(ITextVectorProperty *tvp, char * texts[], char *names[], int n)
+int IUUpdateText(ITextVectorProperty *tvp, char * texts[], char *names[], int n)
 {
   int i=0;
   
@@ -1139,7 +1139,7 @@ IUSnoopLight (XMLEle *root, ILightVectorProperty *lvp)
 	/* match each oneLight with one ILight */
 	for (ep = nextXMLEle(root,1); ep; ep = nextXMLEle(root,0)) {
 	    if (!strcmp (tagXMLEle(ep), "oneLight")) {
-		char *name = findXMLAttValu (ep, "name");
+		const char *name = findXMLAttValu (ep, "name");
 		for (i = 0; i < lvp->nlp; i++) {
 		    if (!strcmp (lvp->lp[i].name, name)) {
 			if (crackIPState(pcdataXMLEle(ep), &lvp->lp[i].s) < 0) {
@@ -1178,7 +1178,7 @@ IUSnoopSwitch (XMLEle *root, ISwitchVectorProperty *svp)
 	/* match each oneSwitch with one ISwitch */
 	for (ep = nextXMLEle(root,1); ep; ep = nextXMLEle(root,0)) {
 	    if (!strcmp (tagXMLEle(ep), "oneSwitch")) {
-		char *name = findXMLAttValu (ep, "name");
+		const char *name = findXMLAttValu (ep, "name");
 		for (i = 0; i < svp->nsp; i++) {
 		    if (!strcmp (svp->sp[i].name, name)) {
 			if (crackISState(pcdataXMLEle(ep), &svp->sp[i].s) < 0) {
@@ -1218,7 +1218,7 @@ IUSnoopBLOB (XMLEle *root, IBLOBVectorProperty *bvp)
 	/* match each oneBLOB with one IBLOB */
 	for (ep = nextXMLEle(root,1); ep; ep = nextXMLEle(root,0)) {
 	    if (!strcmp (tagXMLEle(ep), "oneBLOB")) {
-		char *name = findXMLAttValu (ep, "name");
+		const char *name = findXMLAttValu (ep, "name");
 		for (i = 0; i < bvp->nbp; i++) {
 		    IBLOB *bp = &bvp->bp[i];
 		    if (!strcmp (bp->name, name)) {
@@ -1619,7 +1619,7 @@ pstateStr (IPState s)
  * return 0 if ok, else -1
  */
 static int
-crackIPState (char *str, IPState *ip)
+crackIPState (const char *str, IPState *ip)
 {
 	     if (!strcmp (str, "Idle"))  *ip = IPS_IDLE;
 	else if (!strcmp (str, "Ok"))    *ip = IPS_OK;
@@ -1633,7 +1633,7 @@ crackIPState (char *str, IPState *ip)
  * return 0 if ok, else -1
  */
 static int
-crackISState (char *str, ISState *ip)
+crackISState (const char *str, ISState *ip)
 {
 	     if (!strcmp (str, "On"))  *ip = ISS_ON;
 	else if (!strcmp (str, "Off")) *ip = ISS_OFF;

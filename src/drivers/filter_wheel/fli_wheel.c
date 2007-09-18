@@ -150,8 +150,21 @@ void ISGetProperties (const char *dev)
 	
 }
 
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) {}
-void ISSnoopDevice (XMLEle *root) {}
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) 
+{
+  INDI_UNUSED(dev);
+  INDI_UNUSED(name);
+  INDI_UNUSED(sizes);
+  INDI_UNUSED(blobsizes);
+  INDI_UNUSED(blobs);
+  INDI_UNUSED(formats);
+  INDI_UNUSED(names);
+  INDI_UNUSED(n);
+}
+void ISSnoopDevice (XMLEle *root) 
+{
+  INDI_UNUSED(root);
+}
 
 void ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
@@ -165,8 +178,8 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	if (!strcmp (name, PortSP.name))
 	{
 		PortSP.s = IPS_IDLE; 
-		IUResetSwitches(&PortSP);
-		IUUpdateSwitches(&PortSP, states, names, n);
+		IUResetSwitch(&PortSP);
+		IUUpdateSwitch(&PortSP, states, names, n);
 		portSwitchIndex = getOnSwitch(&PortSP);
 		
 		PortSP.s = IPS_OK; 
@@ -177,8 +190,8 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	/* Connection */
 	if (!strcmp (name, PowerSP.name))
 	{
-		IUResetSwitches(&PowerSP);
-		IUUpdateSwitches(&PowerSP, states, names, n);
+		IUResetSwitch(&PowerSP);
+		IUUpdateSwitch(&PowerSP, states, names, n);
 		connectFilter();
 		return;
 	}

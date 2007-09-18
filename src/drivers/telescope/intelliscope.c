@@ -99,8 +99,8 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 
    if (!strcmp(name, PowerSP.name))
    {
-      IUResetSwitches(&PowerSP);
-      IUUpdateSwitches(&PowerSP, states, names, n);
+      IUResetSwitch(&PowerSP);
+      IUUpdateSwitch(&PowerSP, states, names, n);
       connectTelescope();
       return;
    }
@@ -127,8 +127,21 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
  dev=dev;name=name;values=values;names=names;n=n;
 }
 
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) {}
-void ISSnoopDevice (XMLEle *root) {}
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) 
+{
+  INDI_UNUSED(dev);
+  INDI_UNUSED(name);
+  INDI_UNUSED(sizes);
+  INDI_UNUSED(blobsizes);
+  INDI_UNUSED(blobs);
+  INDI_UNUSED(formats);
+  INDI_UNUSED(names);
+  INDI_UNUSED(n);
+}
+void ISSnoopDevice (XMLEle *root) 
+{
+  INDI_UNUSED(root);
+}
 
 void ISPoll (void *p)
 {
@@ -169,7 +182,7 @@ void connectTelescope(void)
      if (tty_connect(PortT[0].text, 9600, 8, 0, 1, &fd) != TTY_OK)
      {
        PowerSP.s = IPS_ALERT;
-       IUResetSwitches(&PowerSP);
+       IUResetSwitch(&PowerSP);
        IDSetSwitch(&PowerSP, "Error connecting to port %s", PortT[0].text);
        return;
      }
@@ -180,7 +193,7 @@ void connectTelescope(void)
 
    case ISS_OFF:
 	tty_disconnect(fd);
-	IUResetSwitches(&PowerSP);
+	IUResetSwitch(&PowerSP);
         eqNum.s = PortTP.s = PowerSP.s = IPS_IDLE;
 	IDSetSwitch(&PowerSP, "Intelliscope is offline.");
         IDSetText(&PortTP, NULL);
