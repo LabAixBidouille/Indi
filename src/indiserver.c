@@ -163,7 +163,7 @@ static void q2RDrivers (const char *dev, Msg *mp);
 static void q2SDrivers (int isblob, const char *dev, const char *name, Msg *mp);
 static void q2Clients (ClInfo *notme, int isblob, const char *dev, const char *name,
     Msg *mp);
-static void addSDevice (DvrInfo *dp, const char *dev, const char *name);;
+static void addSDevice (DvrInfo *dp, const char *dev, const char *name);
 static Snoopee *findSDevice (DvrInfo *dp, const char *dev, const char *name);
 static void addClDevice (ClInfo *cp, const char *dev, const char *name);
 static int findClDevice (ClInfo *cp, const char *dev, const char *name);
@@ -281,7 +281,7 @@ usage(void)
 {
 	fprintf (stderr, "Usage: %s [options] driver [driver ...]\n", me);
 	fprintf (stderr, "Purpose: server for local and remote INDI drivers\n");
-	fprintf (stderr, "Code %s. Protocol %g.\n", "$Revision: 713418 $", INDIV);
+	fprintf (stderr, "Code %s. Protocol %g.\n", "$Revision: 714578 $", INDIV);
 	fprintf (stderr, "Options:\n");
 	fprintf (stderr, " -l d  : log driver messages to <d>/YYYY-MM-DD.islog\n");
 	fprintf (stderr, " -m m  : kill client if gets more than this many MB behind, default %d\n", DEFMAXQSIZ);
