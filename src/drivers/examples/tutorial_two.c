@@ -208,13 +208,13 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	{
 		/* We update switches. This is different from the way we used to update switches in tutorial 1. This is 
 	 	* to illustrate that there are several ways to update the switches. Here, we try to find the switch with names[0],
-	 	* and if found, we update its state to states[0] and call connectTelescope(). We must call IUResetSwitches to erase any previous history */
+	 	* and if found, we update its state to states[0] and call connectTelescope(). We must call IUResetSwitch to erase any previous history */
 	 
 		sp = IUFindSwitch (&connectSP, names[0]);
 	
 		if (sp)
 		{
-	    		IUResetSwitches(&connectSP);
+	    		IUResetSwitch(&connectSP);
 	    		sp->s = states[0];
 	    		connectTelescope();
 		}

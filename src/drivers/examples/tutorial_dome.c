@@ -108,7 +108,7 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	/* Connection */
 	if (!strcmp (name, PowerSP.name))
 	{
-	  if (IUUpdateSwitches(&PowerSP, states, names, n) < 0)
+	  if (IUUpdateSwitch(&PowerSP, states, names, n) < 0)
 		return;
 
    	  PowerSP.s = IPS_OK;
@@ -134,7 +134,7 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 		  return;
 	  }
 	  
-	  if (IUUpdateSwitches(&DomeSP, states, names, n) < 0)
+	  if (IUUpdateSwitch(&DomeSP, states, names, n) < 0)
 		return;
 
 	DomeSP.s = IPS_BUSY;

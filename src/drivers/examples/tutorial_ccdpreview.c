@@ -161,7 +161,7 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	/* Connection */
 	if (!strcmp (name, PowerSP.name))
 	{
-	  IUUpdateSwitches(&PowerSP, states, names, n);
+	  IUUpdateSwitch(&PowerSP, states, names, n);
    	  PowerSP.s = IPS_OK;
           IDSetSwitch(&PowerSP, NULL);
 	  return;
@@ -169,7 +169,7 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	
 	if (!strcmp (name, StreamSP.name))
 	{
-	  IUUpdateSwitches(&StreamSP, states, names, n);
+	  IUUpdateSwitch(&StreamSP, states, names, n);
    	  StreamSP.s = IPS_OK;
           IDSetSwitch(&StreamSP, NULL);
 	  return;
@@ -178,7 +178,7 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
 	/* Readout start/stop*/
 	if (!strcmp (name, ReadoutSP.name))
 	{
-	  IUUpdateSwitches(&ReadoutSP, states, names, n);
+	  IUUpdateSwitch(&ReadoutSP, states, names, n);
    	  if (ReadoutS[0].s==ISS_ON) {
 		readout_start();  
 	  }
@@ -215,7 +215,7 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
        
 	if (!strcmp (name, CtrlNP.name)) {
 		if (readout_is_running==0) {
-			IUUpdateNumbers(&CtrlNP, values, names, n);
+			IUUpdateNumber(&CtrlNP, values, names, n);
 		}
 		else {
 			 IDMessage (mydev, "The Parameters can not be change during readout\n");
@@ -225,7 +225,7 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 	}
 	if (!strcmp (name, FocusNP.name)) {
 		if (readout_is_running==0) {
-			IUUpdateNumbers(&FocusNP, values, names, n);
+			IUUpdateNumber(&FocusNP, values, names, n);
 		}
 		else {
 			 IDMessage (mydev, "The Parameters can not be change during readout\n");

@@ -267,7 +267,7 @@ usage(void)
 {
 	fprintf (stderr, "Usage: %s [options] driver [driver ...]\n", me);
 	fprintf (stderr, "Purpose: server for local and remote INDI drivers\n");
-	fprintf (stderr, "Code %s. Protocol %g.\n", "$Revision: 714578 $", INDIV);
+	fprintf (stderr, "Code %s. Protocol %g.\n", "$Revision: 720993 $", INDIV);
 	fprintf (stderr, "Options:\n");
 	fprintf (stderr, " -l d  : log driver messages to <d>/YYYY-MM-DD.islog\n");
 	fprintf (stderr, " -m m  : kill client if gets more than this many MB behind, default %d\n", DEFMAXQSIZ);

@@ -139,8 +139,8 @@ void ISNewSwitch (const char *dev, const char *name, ISState *states, char *name
      {
           /* If the clients wants to update this property, let's perform the following */
 	  
-	  /* A. We update the switches by sending their names and updated states IUUpdateSwitches function. If there is an error, we return */
-	  if (IUUpdateSwitches(&PowerSP, states, names, n) < 0) return;
+	  /* A. We update the switches by sending their names and updated states IUUpdateSwitch function. If there is an error, we return */
+	  if (IUUpdateSwitch(&PowerSP, states, names, n) < 0) return;
 	  
 	  /* B. We try to establish a connection to our device */
    	  connectDevice();
