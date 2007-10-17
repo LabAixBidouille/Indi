@@ -103,6 +103,7 @@ static int monitor;			/* keep watching even after seen def */
 static int directfd = -1;		/* direct filedes to server, if >= 0 */
 static FILE *svrwfp;			/* FILE * to talk to server */
 static FILE *svrrfp;			/* FILE * to read from server */
+static int wflag;			/* show wo properties too */
 
 int
 main (int ac, char *av[])
@@ -165,6 +166,9 @@ main (int ac, char *av[])
 		case 'v':	/* verbose */
 		    verbose++;
 		    break;
+		case 'w':
+		    wflag++;
+		    break;
 		default:
 		    fprintf (stderr, "Unknown flag: %c\n", *s);
 		    usage();
@@ -185,6 +189,7 @@ main (int ac, char *av[])
 	if (directfd >= 0) {
 	    svrwfp = fdopen (directfd, "w");
 	    svrrfp = fdopen (directfd, "r");
+	    setbuf (svrrfp, NULL);	/* don't absorb next guy's stuff */
 	    if (!svrwfp || !svrrfp) {
 		fprintf (stderr, "Direct fd %d: %s\n",directfd,strerror(errno));
 		exit(1);
@@ -215,7 +220,7 @@ usage()
 	int i;
 
 	fprintf(stderr, "Purpose: retrieve readable properties from an INDI server\n");
-	fprintf(stderr, "%s\n", "$Revision: 1.6 $");
+	fprintf(stderr, "%s\n", "$Revision: 1.11 $");
 	fprintf(stderr, "Usage: %s [options] [device.property.element ...]\n",me);
 	fprintf(stderr, "  Any component may be \"*\" to match all (beware shell metacharacters).\n");
 	fprintf(stderr, "  Reports all properties if none specified.\n");
@@ -231,10 +236,11 @@ usage()
 	fprintf(stderr, "  -1    : print just value if expecting exactly one response\n");
 	fprintf(stderr, "  -d f  : use file descriptor f already open to server\n");
 	fprintf(stderr, "  -h h  : alternate host, default is %s\n", host_def);
-	fprintf(stderr, "  -p p  : alternate port, default is %d\n", INDIPORT);
 	fprintf(stderr, "  -m    : keep monitoring for more updates\n");
+	fprintf(stderr, "  -p p  : alternate port, default is %d\n", INDIPORT);
 	fprintf(stderr, "  -t t  : max time to wait, default is %d secs\n",TIMEOUT);
 	fprintf(stderr, "  -v    : verbose (cumulative)\n");
+	fprintf(stderr, "  -w    : show write-only properties too\n");
 	fprintf(stderr, "Exit status:\n");
 	fprintf(stderr, "  0: found at least one match for each query\n");
 	fprintf(stderr, "  1: at least one query returned nothing\n");
@@ -448,7 +454,7 @@ findDPE (XMLEle *root)
 			if (iprop[0] == WILDCARD || !strcmp (nam,iprop)) {
 			    /* found device and name, check perm */
 			    char *perm = findXMLAttValu (root, "perm");
-			    if (perm[0] && !strchr (perm, 'r')) {
+			    if (!wflag && perm[0] && !strchr (perm, 'r')) {
 				if (verbose)
 				    fprintf (stderr, "%s.%s is write-only\n",
 								    dev, nam);
@@ -460,7 +466,8 @@ findDPE (XMLEle *root)
 				    findEle(root,dev,nam,defs[j].one,&srchs[i]);
 				if (onematch)
 				    return;		/* only one can match */
-				alarm (timeout);	/* reset timeout */
+				if (!strncmp (defs[j].vec, "def", 3))
+				    alarm (timeout);	/* reset timer if def */
 			    }
 			}
 		    }
@@ -594,4 +601,5 @@ oneBLOB (XMLEle *root, char *dev, char *nam, char *enam, char *p, int plen)
 	free (blob);
 }
 
-
+/* For RCS Only -- Do Not Edit */
+static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile: getINDI.c,v $ $Date: 2007/10/11 20:11:23 $ $Revision: 1.11 $ $Name:  $"};

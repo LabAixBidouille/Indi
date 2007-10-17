@@ -63,6 +63,7 @@ static int fflag;			/* print final expression value */
 static int iflag;			/* read expresion from stdin */
 static int oflag;			/* print operands as they change */
 static int wflag;			/* wait for expression to be true */
+static int bflag;			/* beep when true */
 
 int
 main (int ac, char *av[])
@@ -77,6 +78,9 @@ main (int ac, char *av[])
 	    char *s = *av;
 	    while (*++s) {
 		switch (*s) {
+		case 'b':	/* beep when true */
+		    bflag++;
+		    break;
 		case 'd':
 		    if (ac < 2) {
 			fprintf (stderr, "-d requires open fileno\n");
@@ -155,6 +159,7 @@ main (int ac, char *av[])
         /* open connection */
 	if (directfd >= 0) {
 	    fp = fdopen (directfd, "r+");
+	    setbuf (fp, NULL);		/* don't absorb next guy's stuff */
 	    if (!fp) {
 		fprintf (stderr, "Direct fd %d: %s\n",directfd,strerror(errno));
 		exit(1);
@@ -188,8 +193,9 @@ usage()
 {
 	fprintf (stderr, "Usage: %s [options] [exp]\n", me);
 	fprintf (stderr, "Purpose: evaluate an expression of INDI operands\n");
-	fprintf (stderr, "Version: $Revision: 1.3 $\n");
+	fprintf (stderr, "Version: $Revision: 1.5 $\n");
 	fprintf (stderr, "Options:\n");
+	fprintf (stderr, "   -b   : beep when expression evaluates as true\n");
 	fprintf (stderr, "   -d f : use file descriptor f already open to server\n");
 
 	fprintf (stderr, "   -e   : print each updated expression value\n");
@@ -431,6 +437,8 @@ runEval (FILE *fp)
 		fprintf (stderr, "Eval: %s\n", errmsg);
 		exit(2);
 	    }
+	    if (bflag && v)
+		fprintf (stderr, "\a");
 	    if (eflag)
 		fprintf (stderr, "%g\n", v);
 	    if (!wflag || v != 0)

@@ -17,16 +17,9 @@
 #include "indiapi.h"
 #include "lilxml.h"
 
-static void usage (void);
-static void crackSpec (char *spec);
-static void openINDIServer(FILE **rfpp, FILE **wfpp);
-static void listenINDI (FILE *rfp, FILE *wfp);
-static int finished (void);
-static void onAlarm (int dummy);
-static int readServerChar (FILE *fp);
-static void findSet (XMLEle *root, FILE *fp);
-
-/* table of INDI definition elements we can set */
+/* table of INDI definition elements we can set
+ * N.B. do not change defs[] order, they are indexed via -x/-n/-s args
+ */
 typedef struct {
     char *defType;			/* defXXXVector name */
     char *defOne;			/* defXXX name */
@@ -62,27 +55,41 @@ typedef struct {
     char *p;				/* property */
     SetEV *ev;				/* elements */
     int nev;				/* n elements */
+    INDIDef *dp;			/* one of defs if known, else NULL */
 } SetSpec;
 
 static SetSpec *sets;			/* set of properties to set */
 static int nsets;
 
+
+static void usage (void);
+static int crackSpec (int *acp, char **avp[]);
+static void openINDIServer(FILE **rfpp, FILE **wfpp);
+static void listenINDI (FILE *rfp, FILE *wfp);
+static int finished (void);
+static void onAlarm (int dummy);
+static int readServerChar (FILE *fp);
+static void findSet (XMLEle *root, FILE *fp);
 static void scanEV (SetSpec *sp, char e[], char v[]);
 static void sendNew (FILE *fp, INDIDef *dp, SetSpec *sp);
+static void sendSpecs(FILE *wfp);
 
 int
 main (int ac, char *av[])
 {
 	FILE *rfp, *wfp;
+	int stop = 0;
+	int allspeced;
 
 	/* save our name */
 	me = av[0];
 
 	/* crack args */
-	while (--ac && **++av == '-') {
+	while (!stop && --ac && **++av == '-') {
 	    char *s = *av;
 	    while (*++s) {
 		switch (*s) {
+
 		case 'd':
 		    if (ac < 2) {
 			fprintf (stderr, "-d requires open fileno\n");
@@ -91,6 +98,7 @@ main (int ac, char *av[])
 		    directfd = atoi(*++av);
 		    ac--;
 		    break;
+
 		case 'h':
 		    if (directfd >= 0) {
 			fprintf (stderr, "Can not combine -d and -h\n");
@@ -103,6 +111,7 @@ main (int ac, char *av[])
 		    host = *++av;
 		    ac--;
 		    break;
+
 		case 'p':
 		    if (directfd >= 0) {
 			fprintf (stderr, "Can not combine -d and -p\n");
@@ -115,6 +124,7 @@ main (int ac, char *av[])
 		    port = atoi(*++av);
 		    ac--;
 		    break;
+
 		case 't':
 		    if (ac < 2) {
 			fprintf (stderr, "-t requires timeout\n");
@@ -123,9 +133,18 @@ main (int ac, char *av[])
 		    timeout = atoi(*++av);
 		    ac--;
 		    break;
+
 		case 'v':	/* verbose */
 		    verbose++;
 		    break;
+
+		case 'x':	/* FALLTHRU */
+		case 'n':	/* FALLTHRU */
+		case 's':
+		    /* stop if see one of the property types */
+		    stop = 1;
+		    break;
+
 		default:
 		    fprintf (stderr, "Unknown flag: %c\n", *s);
 		    usage();
@@ -138,13 +157,17 @@ main (int ac, char *av[])
 	    usage();
 
 	/* crack each property, add to sets[]  */
-	while (ac--)
-	    crackSpec(*av++);
+	allspeced = 1;
+	do {
+	    if (!crackSpec (&ac, &av))
+		allspeced = 0;
+	} while (ac > 0);
 
 	/* open connection */
 	if (directfd >= 0) {
-	    rfp = fdopen (directfd, "r");
 	    wfp = fdopen (directfd, "w");
+	    rfp = fdopen (directfd, "r");
+	    setbuf (rfp, NULL);		/* don't absorb next guy's stuff */
 	    if (!rfp || !wfp) {
 		fprintf (stderr, "Direct fd %d: %s\n",directfd,strerror(errno));
 		exit(1);
@@ -160,14 +183,19 @@ main (int ac, char *av[])
 	/* build a parser context for cracking XML responses */
 	lillp = newLilXML();
 
-	/* issue getProperties */
-	if (verbose)
-	    fprintf (stderr, "Querying for properties\n");
-	fprintf(wfp, "<getProperties version='%g'/>\n", INDIV);
-	fflush (wfp);
+	/* just send it all speced, else check with server */
+	if (allspeced) {
+	    sendSpecs(wfp);
+	} else {
+	    /* issue getProperties */
+	    if (verbose)
+		fprintf (stderr, "Querying for properties\n");
+	    fprintf(wfp, "<getProperties version='%g'/>\n", INDIV);
+	    fflush (wfp);
 
-	/* listen for properties, set when see any we recognize */
-	listenINDI(rfp, wfp);
+	    /* listen for properties, set when see any we recognize */
+	    listenINDI(rfp, wfp);
+	}
 
 	return (0);
 }
@@ -176,8 +204,8 @@ static void
 usage()
 {
 	fprintf(stderr, "Purpose: set one or more writable INDI properties\n");
-	fprintf(stderr, "%s\n", "$Revision: 1.2 $");
-	fprintf(stderr, "Usage: %s [options] device.property.e1[;e2...]=v1[;v2...] ...\n",
+	fprintf(stderr, "%s\n", "$Revision: 1.4 $");
+	fprintf(stderr, "Usage: %s [options] {[type] device.property.e1[;e2...]=v1[;v2...]} ...\n",
 									    me);
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "  -d f  : use file descriptor f already open to server\n");
@@ -185,6 +213,12 @@ usage()
 	fprintf(stderr, "  -p p  : alternate port, default is %d\n", INDIPORT);
 	fprintf(stderr, "  -t t  : max time to wait, default is %d secs\n",TIMEOUT);
 	fprintf(stderr, "  -v    : verbose (cumulative)\n");
+	fprintf(stderr, "Each property optionally preceded by its type is sent without first confirming\n");
+	fprintf(stderr, "its structure. This is much more efficient but there is no error checking.\n");
+	fprintf(stderr, "Types are indicated with the following flags:\n");
+	fprintf(stderr, "  -x    : Text\n");
+	fprintf(stderr, "  -n    : Number\n");
+	fprintf(stderr, "  -s    : Switch\n");
 	fprintf(stderr, "Exit status:\n");
 	fprintf(stderr, "  0: all settings successful\n");
 	fprintf(stderr, "  1: at least one setting was invalid\n");
@@ -193,15 +227,34 @@ usage()
 	exit (2);
 }
 
-/* crack property set spec, add to sets [] */
-static void
-crackSpec (char *spec)
+/* crack property set spec, add to sets [], move to next spec.
+ * return 1 if see a type
+ */
+static int
+crackSpec (int *acp, char **avp[])
 {
 	char d[1024], p[1024], e[2048], v[2048];
+	char *spec = *avp[0];
+	INDIDef *dp = NULL;
 
-	/* scan */
+	/* check if first arg is type indicator */
+	if (spec[0] == '-') {
+	    switch (spec[1]) {
+	    case 'x':	dp = &defs[0]; break;
+	    case 'n':	dp = &defs[1]; break;
+	    case 's':	dp = &defs[2]; break;
+	    default:
+		fprintf (stderr, "Bad property type: %s\n", spec);
+		usage();
+	    }
+	    (*acp)--;
+	    (*avp)++;
+	    spec = *avp[0];
+	}
+
+	/* then scan arg for property spec */
 	if (sscanf (spec, "%[^.].%[^.].%[^.=]=%s", d, p, e, v) != 4) {
-	    fprintf (stderr, "Bad format: %s\n", spec);
+	    fprintf (stderr, "Bad property format: %s\n", spec);
 	    usage();
 	}
 
@@ -211,9 +264,17 @@ crackSpec (char *spec)
 	sets = (SetSpec *) realloc (sets, (nsets+1)*sizeof(SetSpec));
 	sets[nsets].d = strcpy (malloc(strlen(d)+1), d);
 	sets[nsets].p = strcpy (malloc(strlen(p)+1), p);
+	sets[nsets].dp = dp;
 	sets[nsets].ev = (SetEV *) malloc (1);		/* seed realloc */
 	sets[nsets].nev = 0;
 	scanEV (&sets[nsets++], e, v);
+
+	/* update caller's pointers */
+	(*acp)--;
+	(*avp)++;
+
+	/* return 1 if saw a spec */
+	return (dp ? 1 : 0);
 }
 
 /* open a read and write connection to host and port or die.
@@ -443,5 +504,16 @@ scanEV (SetSpec *sp, char e[], char v[])
 	}
 }
 
+/* send each SetSpec, all of which have a known type, to wfp
+ */
+static void
+sendSpecs(FILE *wfp)
+{
+	int i;
+	
+	for (i = 0; i < nsets; i++)
+	    sendNew (wfp, sets[i].dp, &sets[i]);
+}
+
 /* For RCS Only -- Do Not Edit */
-static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile: setINDI.c,v $ $Date: 2006/09/12 19:55:51 $ $Revision: 1.2 $ $Name:  $"};
+static char *rcsid[2] = {(char *)rcsid, "@(#) $RCSfile: setINDI.c,v $ $Date: 2007/10/11 20:12:11 $ $Revision: 1.4 $ $Name:  $"};
