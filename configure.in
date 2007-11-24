@@ -64,6 +64,7 @@ if test "${use_libusb}" != false ; then
 		[ AC_MSG_WARN([libusb not found. INDI will compile without Apogee & SBIG USB support.]) ])
 fi
 
+have_nova=false
 have_cfitsio=false
 AC_LANG_PUSH(C)
 LDFLAGS="$LDFLAGS -lm -lz"
@@ -91,6 +92,18 @@ AC_CHECK_LIB(sbigudrv, SBIGUnivDrvCommand,
 	       AC_MSG_WARN([http://indi.sourceforge.net])
 	       AC_MSG_WARN([*************************************************************])])
 AC_SUBST(LIBSBIGUDRV)
+AC_CHECK_LIB(nova, ln_get_julian_from_sys,
+             [  have_nova=true
+		LIBS="-lnova $LIBS"],
+	     [	have_nova=false
+		AC_MSG_WARN([**************************************************************])
+		AC_MSG_WARN([We cannot find libnova in your system!])
+		AC_MSG_WARN([libnova is needed by some drivers to perform various astronomical calcualtions.])
+		AC_MSG_WARN([INDI will not compile features that depend on libnova.])
+		AC_MSG_WARN([http://libnova.sourceforge.net])]
+		AC_MSG_WARN([*************************************************************]))
+			  
+AC_SUBST(LIBNOVA)
 AC_LANG_POP(C)
 
 dnl check if v4l2 is available
@@ -143,6 +156,13 @@ if test x$have_cfitsio = xtrue; then
   AC_DEFINE(HAVE_CFITSIO_H,1,[Define to 1 if you have CFITSIO library.])
 fi
 
+if test x$have_nova = xtrue; then
+  OLDCPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="-I/usr/include/libnova $CPPFLAGS"
+  AC_CHECK_HEADER([libnova.h], [], [CPPFLAGS="$OLDCPPFLAGS"])
+  AC_DEFINE(HAVE_NOVA_H,1,[Define to 1 if you have libnova.])
+fi
+
 AM_CONDITIONAL(BSD, test x$OSDIR = xbsd)
 AM_CONDITIONAL(LINUX, test x$OSDIR = xlinux)
 AM_CONDITIONAL(NULL, test x$OSDIR = xnull)
@@ -150,6 +170,7 @@ AM_CONDITIONAL(HAVE_LIBUSB, test x$have_libusb = xyes)
 AM_CONDITIONAL(HAVE_V4L2, test x$have_v4l2 = xtrue)
 AM_CONDITIONAL(HAVE_LIBSBIGUDRV, test x$have_libsbigudrv = xtrue)
 AM_CONDITIONAL(HAVE_CFITSIO, test x$have_cfitsio = xtrue)
+AM_CONDITIONAL(HAVE_NOVA, test x$have_nova = xtrue)
 
 #AC_OUTPUT(Makefile src/Makefile src/libs/fli/Makefile src/libs/webcam/Makefile src/libs/apogee/Makefile)
 AC_OUTPUT(Makefile src/Makefile src/libs/Makefile src/libs/fli/Makefile src/libs/apogee/Makefile src/libs/webcam/Makefile src/drivers/Makefile src/drivers/ccd/Makefile src/drivers/filter_wheel/Makefile src/drivers/focuser/Makefile src/drivers/telescope/Makefile src/drivers/video/Makefile src/drivers/examples/Makefile)

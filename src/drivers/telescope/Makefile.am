@@ -1,6 +1,10 @@
 INCLUDES = -I$(top_srcdir)/src -I$(top_srcdir)/src/libs
 
-bin_PROGRAMS = indi_lx200basic indi_lx200generic indi_celestron_gps indi_temma indi_skycommander indi_intelliscope indi_orion_atlas
+if HAVE_NOVA
+extra_bin = indi_temma
+endif
+
+bin_PROGRAMS = indi_lx200basic indi_lx200generic indi_celestron_gps indi_skycommander indi_intelliscope indi_orion_atlas $(extra_bin)
 
 # For indi_src_api and indi_lib_api
 include $(top_srcdir)/src/Makefile.include
