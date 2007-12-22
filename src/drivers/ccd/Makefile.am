@@ -3,14 +3,11 @@ INCLUDES = -I$(top_srcdir)/src -I$(top_srcdir)/src/libs -I$(top_srcdir)/src/libs
 # Only compile SBIG Library if we have libusb. If libsbigudrv is not available, compile a dummy version so that users can
 # install the proprietery version later on.
 if HAVE_LIBUSB
-usb_drivers = indi_apogee_ccd
+usb_drivers = indi_apogee_ccd indi_sbig_ccd
 if !HAVE_LIBSBIGUDRV
 lib_LTLIBRARIES = libsbigudrv.la
-
 libsbigudrv_la_SOURCES = sbig_dummy.cpp
 libsbigudrv_la_LIBADD = -lm
-
-usb_drivers += indi_sbig_ccd
 endif
 endif
 
