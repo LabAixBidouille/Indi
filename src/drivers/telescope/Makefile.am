@@ -9,7 +9,7 @@ bin_PROGRAMS = indi_lx200basic indi_lx200generic indi_celestron_gps indi_skycomm
 # For indi_src_api and indi_lib_api
 include $(top_srcdir)/src/Makefile.include
 
-indi_lx200generic_SOURCES = lx200driver.c lx200autostar.cpp lx200_16.cpp lx200gps.cpp lx200generic.cpp lx200classic.cpp $(indi_src_api)
+indi_lx200generic_SOURCES = lx200driver.c lx200apdriver.c lx200autostar.cpp lx200_16.cpp lx200gps.cpp lx200generic.cpp lx200classic.cpp lx200ap.cpp $(indi_src_api)
 indi_lx200generic_LDADD = $(indi_lib_api) -lm
 
 indi_lx200basic_SOURCES = lx200driver.c lx200basic.cpp $(indi_src_api)
@@ -40,6 +40,8 @@ install-exec-hook:
 	$(LN_S) lx200generic $(DESTDIR)$(bindir)/indi_lx200_16
 	rm -f $(DESTDIR)$(bindir)/indi_lx200gps
 	$(LN_S) lx200generic $(DESTDIR)$(bindir)/indi_lx200gps
+	rm -f $(DESTDIR)$(bindir)/indi_lx200ap
+	$(LN_S) lx200generic $(DESTDIR)$(bindir)/indi_lx200ap
 
 uninstall-local:
-	rm $(DESTDIR)$(bindir)/indi_lx200autostar $(DESTDIR)$(bindir)/indi_lx200_16 $(DESTDIR)$(bindir)/indi_lx200gps
+	rm $(DESTDIR)$(bindir)/indi_lx200autostar $(DESTDIR)$(bindir)/indi_lx200_16 $(DESTDIR)$(bindir)/indi_lx200gps $(DESTDIR)$(bindir)/indi_lx200ap

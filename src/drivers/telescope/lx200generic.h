@@ -68,19 +68,13 @@ class LX200Generic
   int trackingMode;
 
   double JD;
-  double currentRA;
-  double currentDEC;
-  double targetRA;
-  double targetDEC;
   double lastRA;
   double lastDEC;
   bool   fault;
   bool   simulation;
-
-  char thisDevice[64];
-
-  int currentSet;
-  int lastSet;
+  char   thisDevice[64];
+  int    currentSet;
+  int    lastSet;
 
 };
 

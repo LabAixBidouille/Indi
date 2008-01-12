@@ -30,6 +30,7 @@
 #include "indicom.h"
 #include "lx200driver.h"
 #include "lx200gps.h"
+#include "lx200ap.h"
 #include "lx200classic.h"
 
 #include <config.h>
@@ -65,6 +66,12 @@ extern char* me;
 #define	SLEWRATE	1		/* slew rate, degrees/s */
 #define SIDRATE		0.004178	/* sidereal rate, degrees/s */
 
+/* Handy Macros */
+#define currentRA	EquatorialCoordsRN[0].value
+#define currentDEC	EquatorialCoordsRN[1].value
+#define targetRA	EquatorialCoordsWN[0].value
+#define targetDEC	EquatorialCoordsWN[1].value
+
 static void ISPoll(void *);
 static void retryConnection(void *);
 
@@ -83,8 +90,9 @@ ISwitchVectorProperty ConnectSP		= { mydev, "CONNECTION" , "Connection", COMM_GR
 /********************************************
  Property: Device Port
 *********************************************/
+/*wildi removed static */
 static IText PortT[]			= {{"PORT", "Port", 0, 0, 0, 0}};
-static ITextVectorProperty PortTP	= { mydev, "DEVICE_PORT", "Ports", COMM_GROUP, IP_RW, 0, IPS_IDLE, PortT, NARRAY(PortT), "", 0};
+ITextVectorProperty PortTP	= { mydev, "DEVICE_PORT", "Ports", COMM_GROUP, IP_RW, 0, IPS_IDLE, PortT, NARRAY(PortT), "", 0};
 
 /********************************************
  Property: Telescope Alignment Mode
@@ -119,13 +127,13 @@ INumberVectorProperty EquatorialCoordsRNP= { mydev, "EQUATORIAL_EOD_COORD", "Equ
 	     to the new coordinates.
 *********************************************/
 static ISwitch OnCoordSetS[]		 = {{"SLEW", "Slew", ISS_ON, 0, 0 }, {"TRACK", "Track", ISS_OFF, 0, 0}, {"SYNC", "Sync", ISS_OFF, 0 , 0}};
-static ISwitchVectorProperty OnCoordSetSP= { mydev, "ON_COORD_SET", "On Set", BASIC_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, OnCoordSetS, NARRAY(OnCoordSetS), "", 0};
+ISwitchVectorProperty OnCoordSetSP= { mydev, "ON_COORD_SET", "On Set", BASIC_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, OnCoordSetS, NARRAY(OnCoordSetS), "", 0};
 
 /********************************************
  Property: Abort telescope motion
 *********************************************/
 static ISwitch AbortSlewS[]		= {{"ABORT", "Abort", ISS_OFF, 0, 0 }};
-static ISwitchVectorProperty AbortSlewSP= { mydev, "TELESCOPE_ABORT_MOTION", "Abort Slew/Track", BASIC_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, AbortSlewS, NARRAY(AbortSlewS), "", 0};
+ISwitchVectorProperty AbortSlewSP= { mydev, "TELESCOPE_ABORT_MOTION", "Abort Slew/Track", BASIC_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, AbortSlewS, NARRAY(AbortSlewS), "", 0};
 
 /**********************************************************************************************/
 /************************************** GROUP: Motion *****************************************/
@@ -135,7 +143,7 @@ static ISwitchVectorProperty AbortSlewSP= { mydev, "TELESCOPE_ABORT_MOTION", "Ab
  Property: Slew Speed
 *********************************************/
 static ISwitch SlewModeS[]		= {{"Max", "", ISS_ON, 0, 0}, {"Find", "", ISS_OFF, 0, 0}, {"Centering", "", ISS_OFF, 0, 0}, {"Guide", "", ISS_OFF, 0 , 0}};
-static ISwitchVectorProperty SlewModeSP	= { mydev, "Slew rate", "", MOTION_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, SlewModeS, NARRAY(SlewModeS), "", 0};
+ISwitchVectorProperty SlewModeSP	= { mydev, "Slew rate", "", MOTION_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, SlewModeS, NARRAY(SlewModeS), "", 0};
 
 /********************************************
  Property: Tracking Mode
@@ -153,26 +161,26 @@ static INumberVectorProperty TrackingFreqNP= { mydev, "Tracking Frequency", "", 
  Property: Movement (Arrow keys on handset). North/South
 *********************************************/
 static ISwitch MovementNSS[]       = {{"MOTION_NORTH", "North", ISS_OFF, 0, 0}, {"MOTION_SOUTH", "South", ISS_OFF, 0, 0}};
-static ISwitchVectorProperty MovementNSSP      = { mydev, "TELESCOPE_MOTION_NS", "North/South", MOTION_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, MovementNSS, NARRAY(MovementNSS), "", 0};
+ISwitchVectorProperty MovementNSSP      = { mydev, "TELESCOPE_MOTION_NS", "North/South", MOTION_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, MovementNSS, NARRAY(MovementNSS), "", 0};
 
 /********************************************
  Property: Movement (Arrow keys on handset). West/East
 *********************************************/
 static ISwitch MovementWES[]       = {{"MOTION_WEST", "West", ISS_OFF, 0, 0}, {"MOTION_EAST", "East", ISS_OFF, 0, 0}};
-static ISwitchVectorProperty MovementWESP      = { mydev, "TELESCOPE_MOTION_WE", "West/East", MOTION_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, MovementWES, NARRAY(MovementWES), "", 0};
+ISwitchVectorProperty MovementWESP      = { mydev, "TELESCOPE_MOTION_WE", "West/East", MOTION_GROUP, IP_RW, ISR_1OFMANY, 0, IPS_IDLE, MovementWES, NARRAY(MovementWES), "", 0};
 
 /********************************************
- Property: Tracking Precision
+ Property: Tracking Accuracy
  Desciption: How close the scope have to be with
 	     respect to the requested coords for 
 	     the tracking operation to be successull
 	     i.e. returns OK
 *********************************************/
-INumber TrackingPrecisionN[] = {
+INumber TrackingAccuracyN[] = {
     {"TrackRA",  "RA (arcmin)", "%g",  0., 60., 1., 3.0, 0, 0, 0},
     {"TrackDEC", "Dec (arcmin)", "%g", 0., 60., 1., 3.0, 0, 0, 0},
 };
-static INumberVectorProperty TrackingPrecisionNP = {mydev, "Tracking Precision", "", MOTION_GROUP, IP_RW, 0, IPS_IDLE, TrackingPrecisionN, NARRAY(TrackingPrecisionN), "", 0};
+INumberVectorProperty TrackingAccuracyNP = {mydev, "Tracking Accuracy", "", MOTION_GROUP, IP_RW, 0, IPS_IDLE, TrackingAccuracyN, NARRAY(TrackingAccuracyN), "", 0};
 
 /********************************************
  Property: Slew precision
@@ -181,11 +189,11 @@ static INumberVectorProperty TrackingPrecisionNP = {mydev, "Tracking Precision",
 	     the slew operation to be successull
 	     i.e. returns OK
 *********************************************/
-INumber SlewPrecisionN[] = {
+INumber SlewAccuracyN[] = {
     {"SlewRA",  "RA (arcmin)", "%g",  0., 60., 1., 3.0, 0, 0, 0},
     {"SlewDEC", "Dec (arcmin)", "%g", 0., 60., 1., 3.0, 0, 0, 0},
 };
-static INumberVectorProperty SlewPrecisionNP = {mydev, "Slew Precision", "", MOTION_GROUP, IP_RW, 0, IPS_IDLE, SlewPrecisionN, NARRAY(SlewPrecisionN), "", 0};
+INumberVectorProperty SlewAccuracyNP = {mydev, "Slew Accuracy", "", MOTION_GROUP, IP_RW, 0, IPS_IDLE, SlewAccuracyN, NARRAY(SlewAccuracyN), "", 0};
 
 /**********************************************************************************************/
 /************************************** GROUP: Focus ******************************************/
@@ -256,8 +264,9 @@ static ITextVectorProperty SiteNameTP = { mydev, "Site Name", "", SITE_GROUP, IP
 static INumber geo[] = {
     {"LAT",  "Lat.  D:M:S +N", "%10.6m",  -90.,  90., 0., 0., 0, 0, 0},
     {"LONG", "Long. D:M:S +E", "%10.6m", 0., 360., 0., 0., 0, 0, 0},
+    {"HEIGHT", "Height m", "%10.2f", -300., 6000., 0., 610., 0, 0, 0},
 };
-static INumberVectorProperty geoNP = {
+INumberVectorProperty geoNP = {
     mydev, "GEOGRAPHIC_COORD", "Geographic Location", SITE_GROUP, IP_RW, 0., IPS_IDLE,
     geo, NARRAY(geo), "", 0};
 
@@ -284,8 +293,8 @@ void changeLX200GenericDeviceName(const char * newName)
   strcpy(TrackingFreqNP.device , newName );
   strcpy(MovementNSSP.device , newName );
   strcpy(MovementWESP.device , newName );
-  strcpy(TrackingPrecisionNP.device, newName);
-  strcpy(SlewPrecisionNP.device, newName);
+  strcpy(TrackingAccuracyNP.device, newName);
+  strcpy(SlewAccuracyNP.device, newName);
 
   // FOCUS_GROUP
   strcpy(FocusModeSP.device , newName );
@@ -308,6 +317,7 @@ void changeAllDeviceNames(const char *newName)
 {
   changeLX200GenericDeviceName(newName);
   changeLX200AutostarDeviceName(newName);
+  changeLX200AstroPhysicsDeviceName(newName);
   changeLX200_16DeviceName(newName);
   changeLX200ClassicDeviceName(newName);
   changeLX200GPSDeviceName(newName);
@@ -379,6 +389,18 @@ void ISInit()
 
    MaxReticleFlashRate = 9;
  }
+ else if (strstr(me, "indi_lx200ap"))
+ {
+   fprintf(stderr , "initilizaing from ap device...\n");
+  
+   // 1. change device name
+   changeAllDeviceNames("LX200 Astro-Physics");
+   // 2. device = sub_class
+   telescope = new LX200AstroPhysics();
+   telescope->setCurrentDeviceName("LX200 Astro-Physics");
+
+   MaxReticleFlashRate = 9;
+ }
  // be nice and give them a generic device
  else
  {
@@ -424,10 +446,6 @@ LX200Generic::LX200Generic()
    lastSet        = -1;
    fault          = false;
    simulation     = false;
-   targetRA       = 0;
-   targetDEC      = 0;
-   currentRA      = 0;
-   currentDEC     = 0;
    currentSet     = 0;
    fd             = -1;
 
@@ -471,8 +489,8 @@ void LX200Generic::ISGetProperties(const char *dev)
   IDDefSwitch (&TrackModeSP, NULL);
   IDDefSwitch (&MovementNSSP, NULL);
   IDDefSwitch (&MovementWESP, NULL);
-  IDDefNumber (&TrackingPrecisionNP, NULL);
-  IDDefNumber (&SlewPrecisionNP, NULL);
+  IDDefNumber (&TrackingAccuracyNP, NULL);
+  IDDefNumber (&SlewAccuracyNP, NULL);
 
   // FOCUS_GROUP
   IDDefSwitch(&FocusModeSP, NULL);
@@ -650,33 +668,33 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 	if (strcmp (dev, thisDevice))
 	    return;
 
-        // Tracking Precision
-        if (!strcmp (name, TrackingPrecisionNP.name))
+        // Tracking Accuracy
+        if (!strcmp (name, TrackingAccuracyNP.name))
 	{
-		if (!IUUpdateNumber(&TrackingPrecisionNP, values, names, n))
+		if (!IUUpdateNumber(&TrackingAccuracyNP, values, names, n))
 		{
-			TrackingPrecisionNP.s = IPS_OK;
-			IDSetNumber(&TrackingPrecisionNP, NULL);
+			TrackingAccuracyNP.s = IPS_OK;
+			IDSetNumber(&TrackingAccuracyNP, NULL);
 			return;
 		}
 		
-		TrackingPrecisionNP.s = IPS_ALERT;
-		IDSetNumber(&TrackingPrecisionNP, "unknown error while setting tracking precision");
+		TrackingAccuracyNP.s = IPS_ALERT;
+		IDSetNumber(&TrackingAccuracyNP, "unknown error while setting tracking precision");
 		return;
 	}
 
-	// Slew Precision
-	if (!strcmp(name, SlewPrecisionNP.name))
+	// Slew Accuracy
+	if (!strcmp(name, SlewAccuracyNP.name))
 	{
-		IUUpdateNumber(&SlewPrecisionNP, values, names, n);
+		IUUpdateNumber(&SlewAccuracyNP, values, names, n);
 		{
-			SlewPrecisionNP.s = IPS_OK;
-			IDSetNumber(&SlewPrecisionNP, NULL);
+			SlewAccuracyNP.s = IPS_OK;
+			IDSetNumber(&SlewAccuracyNP, NULL);
 			return;
 		}
 		
-		SlewPrecisionNP.s = IPS_ALERT;
-		IDSetNumber(&SlewPrecisionNP, "unknown error while setting slew precision");
+		SlewAccuracyNP.s = IPS_ALERT;
+		IDSetNumber(&SlewAccuracyNP, "unknown error while setting slew precision");
 		return;
 	}
 
@@ -842,13 +860,19 @@ void LX200Generic::ISNewNumber (const char *dev, const char *name, double values
 		fs_sexa (L, newLong, 4, 3600);
 		
 		if (!simulation)
-		if ( ( err = setSiteLongitude(fd, 360.0 - newLong) < 0) )
-	        {
-		   handleError(&geoNP, err, "Setting site coordinates");
-		   return;
-	         }
+		{
+			if ( ( err = setSiteLongitude(fd, 360.0 - newLong) < 0) )
+	        	{	
+		   		handleError(&geoNP, err, "Setting site longitude coordinates");	
+		   		return;
+	         	}	
+			if ( ( err = setSiteLatitude(fd, newLat) < 0) )
+	        	{
+		   		handleError(&geoNP, err, "Setting site latitude coordinates");
+		   		return;
+	        	}
+		}
 		
-		setSiteLatitude(fd, newLat);
 		geoNP.np[0].value = newLat;
 		geoNP.np[1].value = newLong;
 		snprintf (msg, sizeof(msg), "Site location updated to Lat %.32s - Long %.32s", l, L);
@@ -934,7 +958,14 @@ void LX200Generic::ISNewSwitch (const char *dev, const char *name, ISState *stat
 	// FIRST Switch ALWAYS for power
 	if (!strcmp (name, ConnectSP.name))
 	{
+         bool connectionEstablished = (ConnectS[0].s == ISS_ON);
 	 if (IUUpdateSwitch(&ConnectSP, states, names, n) < 0) return;
+	 if ( (connectionEstablished && ConnectS[0].s == ISS_ON) || (!connectionEstablished && ConnectS[1].s == ISS_ON))
+	 {
+		ConnectSP.s = IPS_OK;
+		IDSetSwitch(&ConnectSP, NULL);
+		return;
+	 }
    	 connectTelescope();
 	 return;
 	}
@@ -1525,8 +1556,8 @@ void LX200Generic::ISPoll()
 	case IPS_IDLE:
         if ( fabs (currentRA - lastRA) > 0.01 || fabs (currentDEC - lastDEC) > 0.01)
 	{
-	        EquatorialCoordsRNP.np[0].value = lastRA = currentRA;
-		EquatorialCoordsRNP.np[1].value = lastDEC = currentDEC;
+	        lastRA = currentRA;
+		lastDEC = currentDEC;
 		IDSetNumber (&EquatorialCoordsRNP, NULL);
 	}
         break;
@@ -1537,24 +1568,11 @@ void LX200Generic::ISPoll()
 	    dx = targetRA - currentRA;
 	    dy = targetDEC - currentDEC;
 
-	    /*IDLog("targetRA is %g, currentRA is %g\n", targetRA, currentRA);
-	    IDLog("targetDEC is %g, currentDEC is %g\n*************************\n", targetDEC, currentDEC);*/
-
-	    EquatorialCoordsRNP.np[0].value = currentRA;
-	    EquatorialCoordsRNP.np[1].value = currentDEC;
-
 	    // Wait until acknowledged or within threshold
-	    if ( fabs(dx) <= (SlewPrecisionN[0].value/(60.0*15.0)) && fabs(dy) <= (SlewPrecisionN[1].value/60.0))
+	    if ( fabs(dx) <= (SlewAccuracyN[0].value/(60.0*15.0)) && fabs(dy) <= (SlewAccuracyN[1].value/60.0))
 	    {
-	      /* Don't set current to target. This might leave residual cumulative error 
-		currentRA = targetRA;
-		currentDEC = targetDEC;
-	      */
-		
-	       EquatorialCoordsRNP.np[0].value = lastRA  = currentRA;
-	       EquatorialCoordsRNP.np[1].value = lastDEC = currentDEC;
-	       //IUResetSwitch(&OnCoordSetSP);
-	       //OnCoordSetSP.s = IPS_OK;
+	       lastRA  = currentRA;
+	       lastDEC = currentDEC;
 	       
 	       EquatorialCoordsWNP.s = IPS_OK;
 	       IDSetNumber(&EquatorialCoordsWNP, NULL);
@@ -1578,11 +1596,7 @@ void LX200Generic::ISPoll()
 		}
 
 	    } else
-	    {
-		EquatorialCoordsRNP.np[0].value = currentRA;
-		EquatorialCoordsRNP.np[1].value = currentDEC;
 		IDSetNumber (&EquatorialCoordsRNP, NULL);
-	    }
 	    break;
 
 	case IPS_OK:
@@ -1598,8 +1612,8 @@ void LX200Generic::ISPoll()
 	
 	if ( (currentRA != lastRA) || (currentDEC != lastDEC))
 	{
-	  	EquatorialCoordsRNP.np[0].value = lastRA  = currentRA;
-		EquatorialCoordsRNP.np[1].value = lastDEC = currentDEC;
+	  	lastRA  = currentRA;
+		lastDEC = currentDEC;
 		IDSetNumber (&EquatorialCoordsRNP, NULL);
 	}
         break;
@@ -1616,8 +1630,6 @@ void LX200Generic::ISPoll()
 	 case IPS_BUSY:
 	   getLX200RA(fd, &currentRA);
 	   getLX200DEC(fd, &currentDEC);
-	   EquatorialCoordsRNP.np[0].value = currentRA;
-	   EquatorialCoordsRNP.np[1].value = currentDEC;
 
 	   IDSetNumber (&EquatorialCoordsRNP, NULL);
 	     break;
@@ -1634,8 +1646,6 @@ void LX200Generic::ISPoll()
 	 case IPS_BUSY:
 	   getLX200RA(fd, &currentRA);
 	   getLX200DEC(fd, &currentDEC);
-	   EquatorialCoordsRNP.np[0].value = currentRA;
-	   EquatorialCoordsRNP.np[1].value = currentDEC;
 
 	   IDSetNumber (&EquatorialCoordsRNP, NULL);
 	     break;
@@ -1673,8 +1683,6 @@ void LX200Generic::mountSim ()
 	    /* RA moves at sidereal, Dec stands still */
 	    currentRA += (SIDRATE*dt/15.);
 	    
-	   EquatorialCoordsRNP.np[0].value = currentRA;
-	   EquatorialCoordsRNP.np[1].value = currentDEC;
 	   IDSetNumber(&EquatorialCoordsRNP, NULL);
 
 	    break;
@@ -1707,9 +1715,6 @@ void LX200Generic::mountSim ()
 	    else
 	      currentDEC -= da;
 
-	   EquatorialCoordsRNP.np[0].value = currentRA;
-	   EquatorialCoordsRNP.np[1].value = currentDEC;
-
 	    if (nlocked == 2)
 	    {
 		EquatorialCoordsRNP.s = IPS_OK;
@@ -1723,9 +1728,6 @@ void LX200Generic::mountSim ()
 
 	case IPS_OK:
 	    /* tracking */
-	   EquatorialCoordsRNP.np[0].value = currentRA;
-	   EquatorialCoordsRNP.np[1].value = currentDEC;
-
 	   IDSetNumber(&EquatorialCoordsRNP, NULL);
 	    break;
 
@@ -1795,9 +1797,9 @@ int LX200Generic::handleCoordSet()
   char syncString[256];
   char RAStr[32], DecStr[32];
   double dx, dy;
-  
-  //IDLog("In Handle Coord Set()\n");
-
+  #ifdef INDI_DEBUG
+  IDLog("In Handle Coord Set()\n");
+  #endif
   switch (currentSet)
   {
     // Slew
@@ -1851,12 +1853,8 @@ int LX200Generic::handleCoordSet()
 	  dy = fabs (targetDEC - currentDEC);
 
 	  
-	  if (dx >= (TrackingPrecisionN[0].value/(60.0*15.0)) || (dy >= TrackingPrecisionN[1].value/60.0)) 
+	  if (dx >= (TrackingAccuracyN[0].value/(60.0*15.0)) || (dy >= TrackingAccuracyN[1].value/60.0)) 
 	  {
-	        /*IDLog("Exceeded Tracking threshold, will attempt to slew to the new target.\n");
-		IDLog("targetRA is %g, currentRA is %g\n", targetRA, currentRA);
-	        IDLog("targetDEC is %g, currentDEC is %g\n*************************\n", targetDEC, currentDEC);*/
-
 	      if (!simulation)
           	if ((err = Slew(fd)))
 	  	{
@@ -1883,8 +1881,6 @@ int LX200Generic::handleCoordSet()
 	    
 	    EquatorialCoordsWNP.s = IPS_OK;
 	    EquatorialCoordsRNP.s = IPS_OK;
-	    EquatorialCoordsRNP.np[0].value = currentRA;
-	    EquatorialCoordsRNP.np[1].value = currentDEC;
 
 	    if (lastSet != LX200_TRACK)
 	    {
