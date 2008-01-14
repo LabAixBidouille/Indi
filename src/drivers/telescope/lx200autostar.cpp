@@ -156,6 +156,7 @@ void LX200Autostar::ISNewNumber (const char *dev, const char *name, double value
 	  ConnectSP.s   = IPS_IDLE;
 	  ConnectSP.sp[0].s = ISS_OFF;
 	  ConnectSP.sp[1].s = ISS_ON;
+	  tty_disconnect(fd);
 	  IDSetSwitch(&ParkSP, "The telescope is slewing to park position. Turn off the telescope after park is complete. Disconnecting...");
 	  IDSetSwitch(&ConnectSP, NULL);
 	  return;

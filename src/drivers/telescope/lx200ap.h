@@ -60,7 +60,7 @@ class LX200AstroPhysics : public LX200Generic
  void handleAZCoordSet() ;
  void handleEqCoordSet() ;
  void ISInit() ;
-
+ bool isMountInit(void) ;
  private:
 
  enum LX200_STATUS { LX200_SLEW, LX200_TRACK, LX200_SYNC, LX200_PARK };

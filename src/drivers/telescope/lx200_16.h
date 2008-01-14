@@ -37,13 +37,6 @@ class LX200_16 : public LX200Autostar
  void getBasicData();
  void handleAltAzSlew();
 
- private:
-
- double currentAlt;
- double currentAz;
- double targetAlt;
- double targetAz;
-
 };
 
 void changeLX200_16DeviceName(const char * newName);
