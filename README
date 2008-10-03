@@ -1,84 +1,3 @@
-INDI Library v1.0
-April XX, 2008
-
-Running an INDI server
-======================
-
-Client applications communiate to INDI driver through the INDI server. 
-
-Usage: indiserver [options] [driver ...]
-Purpose: INDI Server
-Options:
- -p p  : alternate IP port, default 7624
- -r n  : max restart attempts, default 2
- -vv   : more verbose to stderr
-Remaining args are names of INDI drivers to run.
-
-For example, to run LX200GPS driver on port 8000, type in:
-
-	indiserver -p 8000 lx200gps
-	
-Different clients have different methods of connecting to the indiserver. Refer to your client documenation for more details.
-
-
-Developing device drivers
-=========================
-
-Developers interested in developing their own device drivers under INDI should refer to the INDI Developers Manual at http://indi.sf.net/manual
-
-For driver-specific issues, refer to README.drivers
-
-Supported Devices:
-==================
-
- ** Telescope
-	+ LX200 Generic
-	+ LX200 Classic
-	+ LX200 Autostar
-	+ LX200 16"
-	+ LX200 GPS
-	+ NewGT
-	+ NexStar 5i/8i
-	+ NexStar GPS, CGE, AS-GT
-        + Astro-Physics AP
-    	+ Astro-Electronic FS-2
-    	+ Losmandy Gemini
-    	+ Mel Bartels Controllers
-	+ Vixen SkySensor 2000
-	+ Argo Navis
-	+ SkyCommander
-	+ Temma Takahashi
-
- ** CCD
-	+ Finger Lakes Instruments
-	+ Apogee (Experimental)
-	+ SBIG
-
- ** Video
-	+ Any Video4Linux (V4L 1 and V4L 2) compatible camera
-	+ Philips webcam
-	+ Meade Lunar Planetary Imager (Experimental)
-        + SBIG STV
-
- ** Focuser
-	+ Meade LX200GPS Microfocuser
-	+ Meade 1206 Primary Mirror Focuser
-	+ JMI NGF Series
-	+ JMI MOTOFOCUS
-	+ Robo Focus
-
- ** Filter Wheel
-	+ Finger Lakes Instruments filter wheel
-        + True Technology Filter Wheel
-	+ SBIG CWiF
-
- ** Weather
-        + Davis Vantage Pro
-
-
-INDI Architecture and Construction
-==================================
-
 The code here demonstrates the use of INDI, an Instrument-Neutral Device
 Interface protocol. See http://www.clearskyinstitute.com/INDI/INDI.pdf.
 
@@ -116,7 +35,7 @@ Construction:
 
     An INDI driver typically consists of one .c file, eg, mydriver.c, which
     #includes indiapi.h to access the reference API declarations. It is
-    compiled then linked with indidrivermain.o, eventloop.o ,liblilxml.a, and indicom.a (optional) to
+    compiled then linked with indidrivermain.o, eventloop.o and liblilxml.a to
     form an INDI process. These supporting files contain the implementation of
     the INDI Driver API and need not be changed in any way. Note that
     evenloop.[ch] provide a nice callback facility independent of INDI which
@@ -138,4 +57,47 @@ Construction:
     The sample indiserver is a stand alone process that may be used to run one
     or more INDI-compliant drivers. It takes the names of each driver process
     to run in its command line args.
+
+    To build indiserver type 'make indiserver';
+    to build all the sample drivers type 'make drivers';
+    to run the sample server with all drivers type 'make run'.
+    Killing indiserver will also kill all the drivers it started.
+
+Secure remote operation:
+
+    Suppose we want to run indiserver and its clients on a remote machine, r,
+    and connect them to our favorite INDI client, XEphem, running on the
+    local machine.
+
+    From the local machine log onto the remote machine, r, by typing:
+
+	ssh2 -L 7624:s:7624 r
+
+    after logging in, run indiserver on the remote machine:
     
+	make run
+	
+    Back on the local machine, start XEphem, then open Views -> Sky View ->
+    Telescope -> INDI panel. XEphem will connect to the remote INDI server
+    securely and automatically begin running. Sweet.
+
+Testing:
+
+    A low-level way to test the socket, forking and data steering abilities of
+    indiserver is to use the 'hose' command from the netpipes collection
+    (http://web.purplefrog.com/~thoth/netpipes/netpipes.html):
+
+    1. start indiserver using UNIX' cat program as the only INDI "device":
+
+	% indiserver cat &
+
+    2. use hose to connect to the "cat" device driver which just copies back:
+
+	% hose localhost 7624 --slave
+	hello world
+	hello world
+	more stuff
+	more stuff
+
+! For RCS Only -- Do Not Edit
+! @(#) $RCSfile$ $Date: 2004-02-03 09:34:32 +0300 (Tue, 03 Feb 2004) $ $Revision: 284704 $ $Name:  $
