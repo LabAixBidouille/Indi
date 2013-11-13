@@ -1,6 +1,0 @@
-fliusb-dkms (1.2) stable; urgency=low
-
-  * Automatically packaged by DKMS.
-
- -- Dynamic Kernel Modules Support Team <pkg-dkms-maint@lists.alioth.debian.org>  Sun, 05 May 2013 21:00:54 +0300
-
