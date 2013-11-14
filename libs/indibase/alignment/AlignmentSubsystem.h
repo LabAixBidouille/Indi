@@ -13,21 +13,22 @@
 #include <string>
 
 /*!
- * \class CTelescopeDirectionVector
+ * \class TelescopeDirectionVector
  * \brief Holds a nomalised direction vector (direction cosines)
  *
- *
+ * The x y,z fields of this class should always represent a nomrmalised (unit length)
+ * vector in a right handed rectangular coordinate space.
  */
-class CTelescopeDirectionVector;
+class TelescopeDirectionVector;
 
 /*!
- * \class CDatabasePlugin
+ * \class DatabasePlugin
  * \brief Provides functions for managing a table of sync points.
  *
  * \note This class is intended to be implemented as a dynamic shared object.
  *
  */
-class CDatabasePlugin
+class DatabasePlugin
 {
 public:
     /** \brief Add a sync point to the database.
@@ -38,12 +39,12 @@ public:
         \return True if successful
     */
     bool AddSyncPoint(const double ReferenceTime, const double LocalHourAngle, const double Declination,
-                        const CTelescopeDirectionVector& TelescopeDirectionVector);
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
 };
 
 
 /*!
- * \class CMathPlugin
+ * \class MathPlugin
  * \brief Provides functions for transforming celestial coordinates into telescope coordinates.
  *
  *
@@ -55,7 +56,7 @@ public:
  * when only two reference points are available and a third reference point has to artificially generated in order to
  * derive the matrix coefficients.
  */
-class CMathPlugin
+class MathPlugin
 {
 public:
     /** \brief Get the alignment corrected telescope pointing direction for the supplied celestial coordinates
@@ -64,7 +65,7 @@ public:
         \param TelescopeDirectionVector Parameter to receive the corrected telescope direction
         \return True if successful
     */
-    bool TransformCelestialToTelescope(const double RightAscension, const double Declination, CTelescopeDirectionVector& TelescopeDirectionVector);
+    virtual bool TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector) = 0;
 
     /** \brief Get the true celestial coordinates for the supplied telescope pointing direction
         \param TelescopeDirectionVector the telescope direction
@@ -72,16 +73,11 @@ public:
         \param Declination Parameter to receive the Declination (Decimal Degrees).
         \return True if successful
     */
-    bool TransformTelescopeToCelestial(const CTelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination);
-
-    /** \brief Set the current database plugin
-        \param CurrentDatabasePlugin A pointer to the current database plugin
-    */
-    void SetCurrentDatabasePlugin(CDatabasePlugin* CurrentDatabasePlugin);
+    virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination) = 0;
 };
 
 /*!
- * \class CAlignmentSubsystem
+ * \class AlignmentSubsystem
  * \brief Provides functions to manage the loading and initialisation of Alignment Subsystem plugin database and math modules. Also provides
  * helper functions for telescope drivers using the the Alignment Subsystem.
  *
@@ -90,22 +86,15 @@ public:
  * \note It is intended that this class should be included in the INDI::Telescope object
  * in some way, either as a direct class member of by multiple inheritance.
  */
-class CAlignmentSubsystem
+class AlignmentSubsystem
 {
 public:
     /*!
      * \brief Return lists of the names of the available database and math plugins.
-     * \param[out] DatabasePlugins Reference to a list of the names of the available database plugins.
      * \param[out] MathPlugins Reference to a list of the names of the available math plugins.
      * \return False on failure
      */
-    bool EnumeratePlugins(const std::vector<std::string>& DatabasePlugins , const std::vector<std::string>& MathPlugins);
-
-    /*! \brief Selects, loads and initialises the named database plugin.
-     * \param[in] DatabasePluginName The name of the required database plugin.
-     * \return False on failure.
-     */
-    bool SelectDatabasePlugin(const std::string& DatabasePluginName);
+    bool EnumerateMathPlugins(const std::vector<std::string>& MathPlugins);
 
     /*!
      * \brief Selects, loads and initialises the named math plugin.
@@ -115,45 +104,38 @@ public:
     bool SelectMathPlugin(const std::string& MathPluginName);
 
     /*!
-     * \brief Get a pointer to the current database plugin.
-     * \return NULL on failure.
-     */
-    const CDatabasePlugin* GetDatabasePluginPointer(void);
-
-    /*!
      * \brief Get a pointer to the current math plugin.
      * \return NULL on failure.
      */
-    const CMathPlugin* GetMathPluginPointer(void);
+    const MathPlugin* GetMathPluginPointer(void);
 
-    /*! @name Helper Functions
+    //! @name Helper Functions
+    ///@{
+
+    /*! @name TelescopeDirectionVector Helper Functions
      *  These functions are used to convert different coordinate systems to and from the
      *  normalised direction vectors (direction cosines) used for telescope coordinates in the
      *  alignment susbsystem.
      */
     ///@{
 
-    /*! \brief Calculates a normalised direction vector from the supplied local hour angle
+    /*! \brief Calculates a telescope direction vector from the supplied local hour angle
      * and declination.
      * \param[in] LocalHourAngle
      * \param[in] Declination
-     * \return A CTelescopeDirectionVector
+     * \return A TelescopeDirectionVector
      * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
      */
-    const CTelescopeDirectionVector& TelescopeDirectionVectorFromLocalHourAngleDeclination(const double LocalHourAngle, const double Declination);
+    const TelescopeDirectionVector& TelescopeDirectionVectorFromLocalHourAngleDeclination(const double LocalHourAngle, const double Declination);
 
-    /*! \brief Calculates a local hour angle and declination from the supplied normalised direction vector
+    /*! \brief Calculates a local hour angle and declination from the supplied n direction vector
      * and declination.
-     * \param[in] DirectionVectorX
-     * \param[in] DirectionVectorY
-     * \param[in] DirectionVectorZ
+     * \param[in] TelescopeDirectionVector
      * \param[out] LocalHourAngle
      * \param[out] Declination
      * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
      */
-    void LocalHourAngleDeclinationFromNormalisedDirectionVector(const double DirectionVectorX,
-                                                                const double DirectionVectorY,
-                                                                const double DirectionVectorZ,
+    void LocalHourAngleDeclinationFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
                                                                 double LocalHourAngle,
                                                                 double Declination);
 
@@ -161,27 +143,31 @@ public:
      * and azimuth.
      * \param[in] Altitude
      * \param[in] Azimuth
-     * \return A CTelescopeDirectionVector
-     * \note This assumes a right handed coordinate syste for the direction vector with XY being the azimuthal plane,
+     * \return A TelescopeDirectionVector
+     * \note This assumes a right handed coordinate syste for the telescope direction vector with XY being the azimuthal plane,
      * and azimuth being measured in a clockwise direction.
      */
-    const CTelescopeDirectionVector& NormalisedDirectionVectorFromAltitudeAzimuth(const double Altitude, const double Azimuth);
+    const TelescopeDirectionVector& TelescopeDirectionVectorFromAltitudeAzimuth(const double Altitude, const double Azimuth);
 
     /*! \brief Calculates an altitude and azimuth from the supplied normalised direction vector
      * and declination.
-     * \param[in] DirectionVectorX
-     * \param[in] DirectionVectorY
-     * \param[in] DirectionVectorZ
+     * \param[in] TelescopeDirectionVector
      * \param[out] Altitude
      * \param[out] Azimuth
-     * \note This assumes a right handed coordinate syste for the direction vector with XY being the azimuthal plane,
+     * \note This assumes a right handed coordinate system for the telescope direction vector with XY being the azimuthal plane,
      * and azimuth being measured in a clockwise direction.
      */
-    void AltitudeAzimuthFromNormalisedDirectionVector(const double DirectionVectorX,
-                                                                const double DirectionVectorY,
-                                                                const double DirectionVectorZ,
+    void AltitudeAzimuthFromNormalisedDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
                                                                 double Altitude,
                                                                 double Azimuth);
+
+    ///@}
+
+    /*! @name Database Helper Functions
+     */
+    ///@{
+
+    ///@}
 
     ///@}
 };
