@@ -31,15 +31,6 @@ class TelescopeDirectionVector;
 class DatabasePlugin
 {
 public:
-    /** \brief Add a sync point to the database.
-        \param ReferenceTime
-        \param LocalHourAngle Local hour angle of the observed object (Decimal Hours).
-        \param Declination Declination of the observed object (Decimal Degrees).
-        \param TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
-        \return True if successful
-    */
-    bool AddSyncPoint(const double ReferenceTime, const double LocalHourAngle, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
 };
 
 
@@ -89,8 +80,15 @@ public:
 class AlignmentSubsystem
 {
 public:
+    /*! @name Plugin Management
+     *  These functions are used to enumerate, load, and utilise math plugins.
+     *  They are intended to be used solely in driver modules and therefore are
+     *  non static.
+     */
+    ///@{
+
     /*!
-     * \brief Return lists of the names of the available database and math plugins.
+     * \brief Return a list of the names of the available math plugins.
      * \param[out] MathPlugins Reference to a list of the names of the available math plugins.
      * \return False on failure
      */
@@ -109,15 +107,35 @@ public:
      */
     const MathPlugin* GetMathPluginPointer(void);
 
-    //! @name Helper Functions
-    ///@{
+    ///@}
 
     /*! @name TelescopeDirectionVector Helper Functions
      *  These functions are used to convert different coordinate systems to and from the
-     *  normalised direction vectors (direction cosines) used for telescope coordinates in the
+     *  telescope direction vectors (normalised vector/direction cosines) used for telescope coordinates in the
      *  alignment susbsystem.
+     *  They are intended to be used by clients, drivers, and math plugins are are therefore declared static
      */
     ///@{
+
+    /*! \brief Calculates a telescope direction vector from the supplied right ascension
+     * and declination.
+     * \param[in] RightAscension
+     * \param[in] Declination
+     * \return A TelescopeDirectionVector
+     * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
+     */
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromRightAscensionDeclination(const double RightAscension, const double Declination);
+
+    /*! \brief Calculates right ascension and declination from the supplied telescope direction vector
+     * and declination.
+     * \param[in] TelescopeDirectionVector
+     * \param[out] RightAscension
+     * \param[out] Declination
+     * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
+     */
+    static void RightAscensionDeclinationFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+                                                                double RightAscension,
+                                                                double Declination);
 
     /*! \brief Calculates a telescope direction vector from the supplied local hour angle
      * and declination.
@@ -126,16 +144,16 @@ public:
      * \return A TelescopeDirectionVector
      * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
      */
-    const TelescopeDirectionVector& TelescopeDirectionVectorFromLocalHourAngleDeclination(const double LocalHourAngle, const double Declination);
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromLocalHourAngleDeclination(const double LocalHourAngle, const double Declination);
 
-    /*! \brief Calculates a local hour angle and declination from the supplied n direction vector
+    /*! \brief Calculates a local hour angle and declination from the supplied telescope direction vector
      * and declination.
      * \param[in] TelescopeDirectionVector
      * \param[out] LocalHourAngle
      * \param[out] Declination
      * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
      */
-    void LocalHourAngleDeclinationFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+    static void LocalHourAngleDeclinationFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
                                                                 double LocalHourAngle,
                                                                 double Declination);
 
@@ -147,7 +165,7 @@ public:
      * \note This assumes a right handed coordinate syste for the telescope direction vector with XY being the azimuthal plane,
      * and azimuth being measured in a clockwise direction.
      */
-    const TelescopeDirectionVector& TelescopeDirectionVectorFromAltitudeAzimuth(const double Altitude, const double Azimuth);
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromAltitudeAzimuth(const double Altitude, const double Azimuth);
 
     /*! \brief Calculates an altitude and azimuth from the supplied normalised direction vector
      * and declination.
@@ -157,7 +175,7 @@ public:
      * \note This assumes a right handed coordinate system for the telescope direction vector with XY being the azimuthal plane,
      * and azimuth being measured in a clockwise direction.
      */
-    void AltitudeAzimuthFromNormalisedDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+    static void AltitudeAzimuthFromNormalisedDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
                                                                 double Altitude,
                                                                 double Azimuth);
 
@@ -167,7 +185,16 @@ public:
      */
     ///@{
 
-    ///@}
+    /** \brief Add a sync point to the database.
+        \param ObservationTime The time the observation was made.
+        \param RightAscension Right Ascension (Decimal Hours).
+        \param Declination Declination of the observed object (Decimal Degrees).
+        \param TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+        \return True if successful
+        \note This is just here as a placeholder at the moment
+    */
+    bool AddSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
 
     ///@}
 };
