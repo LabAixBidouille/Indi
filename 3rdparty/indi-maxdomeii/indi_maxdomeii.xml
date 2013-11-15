@@ -1,6 +1,0 @@
-<devGroup group="Domes">
-	<device label="MaxDome II">
-                <driver name="MaxDome II">indi_maxdomeii</driver>
-		<version>0.9</version>
-	</device>
-</devGroup>
