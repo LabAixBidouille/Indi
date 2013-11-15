@@ -135,7 +135,20 @@ public:
                                                                                             const double PolarAngle, PolarAngleDirection PolarAngleDirection);
 
 
-    /*! \brief Calculates a telescope direction vector from the supplied equatorial cordinates.
+    /*! \brief Calculates a spherical coordinate from the supplied telescope direction vector
+     * \param[in] TelescopeDirectionVector
+     * \param[out] AzimuthAngle The azimuth angle in radians
+     * \param[in] AzimuthAngleDirection The direction the azimuth angle has been measured either CLOCKWISE or ANTI_CLOCKWISE
+     * \param[out] PolarAngle The polar angle in radians
+     * \param[in] PolarAngleDirection The direction the polar angle has been measured either FROM_POLAR_AXIS or FROM_AZIMUTHAL_PLANE
+     * \note TelescopeDirectionVectors are always normalised and right handed.
+     */
+    static void SphericalCoordinateFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+                                                                const double& AzimuthAngle, AzimuthAngleDirection AzimuthAngleDirection,
+                                                                const double& PolarAngle, PolarAngleDirection PolarAngleDirection);
+
+
+    /*! \brief Calculates a telescope direction vector from the supplied equatorial coordinates.
      * \param[in] EquatorialCoordinates The equatorial cordinates in decimal degrees
      * \return A TelescopeDirectionVector
      * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
@@ -145,7 +158,7 @@ public:
         return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
     };
 
-    /*! \brief Calculates a telescope direction vector from the supplied equatorial cordinates.
+    /*! \brief Calculates a telescope direction vector from the supplied equatorial coordinates.
      * \param[in] EquatorialCoordinates The equatorial cordinates in hour minutes seconds and degrees minutes seconds
      * \return A TelescopeDirectionVector
      * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
@@ -155,16 +168,37 @@ public:
         return TelescopeDirectionVectorFromSphericalCoordinate(ln_hms_to_rad(&EquatorialCoordinates.ra), CLOCKWISE, ln_dms_to_rad(&EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
     };
 
-    /*! \brief Calculates right ascension and declination from the supplied telescope direction vector
+    /*! \brief Calculates equatorial coordinates from the supplied telescope direction vector
      * and declination.
      * \param[in] TelescopeDirectionVector
-     * \param[out] RightAscension
-     * \param[out] Declination
+     * \param[out] EquatorialCoordinates The equatorial cordinates in decimal degrees
      * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
      */
-    static void RightAscensionDeclinationFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
-                                                                double RightAscension,
-                                                                double Declination);
+    static void EquatorialCoordinatesFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+                                                                struct ln_equ_posn& EquatorialCoordinates)
+    {
+        double AzimuthAngle;
+        double PolarAngle;
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
+        EquatorialCoordinates.ra = ln_rad_to_deg(AzimuthAngle);
+        EquatorialCoordinates.dec = ln_rad_to_deg(PolarAngle);
+    };
+
+    /*! \brief Calculates equatorial coordinates from the supplied telescope direction vector
+     * and declination.
+     * \param[in] TelescopeDirectionVector
+     * \param[out] EquatorialCoordinates The equatorial cordinates in hour minutes seconds and degrees minutes seconds
+     * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
+     */
+    static void EquatorialCoordinatesFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+                                                                struct lnh_equ_posn& EquatorialCoordinates)
+    {
+        double AzimuthAngle;
+        double PolarAngle;
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
+        ln_rad_to_hms(AzimuthAngle, &EquatorialCoordinates.ra);
+        ln_rad_to_dms(PolarAngle, &EquatorialCoordinates.dec);
+    };
 
     /*! \brief Calculates a telescope direction vector from the supplied local hour angle
      * and declination.
