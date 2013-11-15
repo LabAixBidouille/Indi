@@ -12,27 +12,23 @@
 #include <vector>
 #include <string>
 
+// Include libnova types N.B. This prefix should be stripped when this is included in a cmake build
+#include <libnova/utility.h>
+
 /*!
  * \class TelescopeDirectionVector
  * \brief Holds a nomalised direction vector (direction cosines)
  *
- * The x y,z fields of this class should always represent a nomrmalised (unit length)
+ * The x y,z fields of this class should always represent a normalised (unit length)
  * vector in a right handed rectangular coordinate space.
  */
-class TelescopeDirectionVector;
-
-/*!
- * \class DatabasePlugin
- * \brief Provides functions for managing a table of sync points.
- *
- * \note This class is intended to be implemented as a dynamic shared object.
- *
- */
-class DatabasePlugin
+class TelescopeDirectionVector
 {
 public:
+    double x;
+    double y;
+    double z;
 };
-
 
 /*!
  * \class MathPlugin
@@ -117,14 +113,47 @@ public:
      */
     ///@{
 
-    /*! \brief Calculates a telescope direction vector from the supplied right ascension
-     * and declination.
-     * \param[in] RightAscension
-     * \param[in] Declination
+    /*!
+     * \enum AzimuthAngleDirection
+     * The direction of measurement of an azimuth angle
+     */
+    enum AzimuthAngleDirection{ CLOCKWISE, /*!< Angle is measured clockwise */
+                                ANTI_CLOCKWISE /*!< Angle is measured anti clockwise */};
+
+    enum PolarAngleDirection{ FROM_POLAR_AXIS, /*!< Angle is measured down from the polar axis */
+                            FROM_AZIMUTHAL_PLANE /*!< Angle is measured upwards from the azimuthal plane */};
+
+    /*! \brief Calculates a telescope direction vector from the supplied spherical coordinate information
+     * \param[in] AzimuthAngle The azimuth angle in radians
+     * \param[in] AzimuthAngleDirection The direction the azimuth angle has been measured either CLOCKWISE or ANTI_CLOCKWISE
+     * \param[in] PolarAngle The polar angle in radians
+     * \param[in] PolarAngleDirection The direction the polar angle has been measured either FROM_POLAR_AXIS or FROM_AZIMUTHAL_PLANE
+     * \return A TelescopeDirectionVector
+     * \note TelescopeDirectionVectors are always normalised and right handed.
+     */
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromSphericalCoordinate(const double AzimuthAngle, AzimuthAngleDirection AzimuthAngleDirection,
+                                                                                            const double PolarAngle, PolarAngleDirection PolarAngleDirection);
+
+
+    /*! \brief Calculates a telescope direction vector from the supplied equatorial cordinates.
+     * \param[in] EquatorialCoordinates The equatorial cordinates in decimal degrees
      * \return A TelescopeDirectionVector
      * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
      */
-    static const TelescopeDirectionVector& TelescopeDirectionVectorFromRightAscensionDeclination(const double RightAscension, const double Declination);
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromEquatorialCoordinates(struct ln_equ_posn EquatorialCoordinates)
+    {
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
+    };
+
+    /*! \brief Calculates a telescope direction vector from the supplied equatorial cordinates.
+     * \param[in] EquatorialCoordinates The equatorial cordinates in hour minutes seconds and degrees minutes seconds
+     * \return A TelescopeDirectionVector
+     * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
+     */
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromEquatorialCoordinates(struct lnh_equ_posn EquatorialCoordinates)
+    {
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_hms_to_rad(&EquatorialCoordinates.ra), CLOCKWISE, ln_dms_to_rad(&EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
+    };
 
     /*! \brief Calculates right ascension and declination from the supplied telescope direction vector
      * and declination.
