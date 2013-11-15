@@ -29,7 +29,7 @@
 extern const char *IMAGE_SETTINGS_TAB;
 extern const char *IMAGE_INFO_TAB;
 extern const char *GUIDE_HEAD_TAB;
-extern const char *GUIDE_CONTROL_TAB;
+extern const char *IMAGE_GUIDESTAR_TAB;
 
 /**
  * @brief The CCDChip class provides functionality of a CCD Chip within a CCD.
@@ -42,7 +42,7 @@ public:
     CCDChip();
     ~CCDChip();
 
-    typedef enum { LIGHT_FRAME=0, BIAS_FRAME, DARK_FRAME, FLAT_FRAME } CCD_FRAME;
+    typedef enum { LIGHT_FRAME=0, BIAS_FRAME, DARK_FRAME, FLAT_FRAME, GUIDE_FRAME } CCD_FRAME;
     typedef enum { FRAME_X, FRAME_Y, FRAME_W, FRAME_H} CCD_FRAME_INDEX;
     typedef enum { BIN_W, BIN_H} CCD_BIN_INDEX;
     typedef enum { CCD_MAX_X, CCD_MAX_Y, CCD_PIXEL_SIZE, CCD_PIXEL_SIZE_X, CCD_PIXEL_SIZE_Y, CCD_BITSPERPIXEL} CCD_INFO_INDEX;
@@ -285,7 +285,7 @@ private:
     INumberVectorProperty *ImagePixelSizeNP;
     INumber ImagePixelSizeN[6];
 
-    ISwitch FrameTypeS[4];
+    ISwitch FrameTypeS[5];
     ISwitchVectorProperty *FrameTypeSP;
 
     ISwitch CompressS[2];
@@ -293,6 +293,9 @@ private:
 
     IBLOB FitsB;
     IBLOBVectorProperty *FitsBP;
+
+    INumberVectorProperty *GuideStarNP;
+    INumber GuideStarN[2];
 
     friend class INDI::CCD;
 };

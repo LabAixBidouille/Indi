@@ -268,6 +268,10 @@ bool CCDSim::updateProperties()
         defineNumber(&FilterSlotNP);
         if (FilterNameT != NULL)
             defineText(FilterNameTP);
+    } else
+    {
+        deleteProperty(FilterSlotNP.name);
+        deleteProperty(FilterNameTP->name);
     }
 
     return true;
@@ -1121,7 +1125,7 @@ bool CCDSim::GetFilterNames(const char* groupName)
         IUFillText(&FilterNameT[i], filterName, filterLabel, filterDesignation[i]);
     }
 
-    IUFillTextVector(FilterNameTP, FilterNameT, MaxFilter, getDeviceName(), "FILTER_NAME", "Filter", groupName, IP_RW, 0, IPS_IDLE);
+    IUFillTextVector(FilterNameTP, FilterNameT, MaxFilter, getDeviceName(), "FILTER_NAME", "Filter names", groupName, IP_RW, 0, IPS_IDLE);
 
     return true;
 }
