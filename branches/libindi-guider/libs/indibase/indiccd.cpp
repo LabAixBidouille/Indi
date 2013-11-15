@@ -265,7 +265,8 @@ bool INDI::CCD::initProperties()
 
     IUFillNumber(&PrimaryCCD.GuideStarN[0],"GUIDESTAR_X","Guide star position X","%5.2f",0,1024,0,0);
     IUFillNumber(&PrimaryCCD.GuideStarN[1],"GUIDESTAR_Y","Guide star position Y","%5.2f",0,1024,0,0);
-    IUFillNumberVector(PrimaryCCD.GuideStarNP,PrimaryCCD.GuideStarN,2,getDeviceName(),"CCD_GUIDESTAR","CCD Guide Star Position",IMAGE_GUIDESTAR_TAB,IP_RW,60,IPS_IDLE);
+    IUFillNumber(&PrimaryCCD.GuideStarN[2],"GUIDESTAR_FIT","Guide star fit","%5.2f",0,1024,0,0);
+    IUFillNumberVector(PrimaryCCD.GuideStarNP,PrimaryCCD.GuideStarN,3,getDeviceName(),"CCD_GUIDESTAR","CCD Guide Star Position",IMAGE_GUIDESTAR_TAB,IP_RO,60,IPS_IDLE);
 
     // GUIDER CCD Init
 
@@ -309,7 +310,8 @@ bool INDI::CCD::initProperties()
 
     IUFillNumber(&GuideCCD.GuideStarN[0],"GUIDESTAR_X","Guide star position X","%5.2f",0,1024,0,0);
     IUFillNumber(&GuideCCD.GuideStarN[1],"GUIDESTAR_Y","Guide star position Y","%5.2f",0,1024,0,0);
-    IUFillNumberVector(GuideCCD.GuideStarNP,GuideCCD.GuideStarN,2,getDeviceName(),"GUIDER_GUIDESTAR","Guider Guide Star Position",IMAGE_GUIDESTAR_TAB,IP_RW,60,IPS_IDLE);
+    IUFillNumber(&GuideCCD.GuideStarN[2],"GUIDESTAR_FIT","Guide star fit","%5.2f",0,1024,0,0);
+    IUFillNumberVector(GuideCCD.GuideStarNP,GuideCCD.GuideStarN,3,getDeviceName(),"GUIDER_GUIDESTAR","Guider Guide Star Position",IMAGE_GUIDESTAR_TAB,IP_RO,60,IPS_IDLE);
 
     // CCD Class Init
 
@@ -898,7 +900,76 @@ void INDI::CCD::fits_update_key_s(fitsfile* fptr, int type, std::string name, vo
 bool INDI::CCD::ExposureComplete(CCDChip *targetChip)
 {
 
-    if (targetChip->getFrameType() != CCDChip::GUIDE_FRAME)
+    if (targetChip->getFrameType() == CCDChip::GUIDE_FRAME)
+    {
+      static double P0 = 0.906, P1 = 0.584, P2 = 0.365, P3 = 0.117, P4 = 0.049, P5 = -0.05, P6 = -0.064, P7 = -0.074, P8 = -0.094;
+
+      targetChip->GuideStarNP->s=IPS_BUSY;
+
+      int width = targetChip->getSubW() / targetChip->getBinX();
+      int height = targetChip->getSubH() / targetChip->getBinY();
+      unsigned short *src = (unsigned short *) targetChip->getFrameBuffer();
+      int i0, i1, i2, i3, i4, i5, i6, i7, i8;
+      int ix = 0, iy = 0;
+      int xM4, yM4, yM3, yM2, yM1, yP0, yP1, yP2, yP3, yP4;
+      unsigned short *p;
+      double average, fit, bestFit = 0;
+      for (int x = 4; x < width - 4; x++)
+        for (int y = 4; y < height - 4; y++)
+        {
+          i0 = i1 = i2 = i3 = i4 = i5 = i6 = i7 = i8 = 0;
+          yM4 = (y - 4) * width; yM3 = (y - 3) * width; yM2 = (y - 2) * width; yM1 = (y - 1) * width; yP0 = y * width; yP1 =(y + 4) * width; yP2 =(y + 4) * width; yP3 =(y + 4) * width; yP4 =(y + 4) * width;
+          xM4 = x - 4; 
+          p = src + yM4 + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
+          p = src + yM3 + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i7 += *p++; i6 += *p++; i7 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
+          p = src + yM2 + xM4; i8 += *p++; i8 += *p++; i5 += *p++; i4 += *p++; i3 += *p++; i4 += *p++; i5 += *p++; i8 += *p++; i8 += *p++;
+          p = src + yM1 + xM4; i8 += *p++; i7 += *p++; i4 += *p++; i2 += *p++; i1 += *p++; i2 += *p++; i4 += *p++; i8 += *p++; i8 += *p++;
+          p = src + yP0 + xM4; i8 += *p++; i6 += *p++; i3 += *p++; i1 += *p++; i0 += *p++; i1 += *p++; i3 += *p++; i6 += *p++; i8 += *p++;
+          p = src + yP1 + xM4; i8 += *p++; i7 += *p++; i4 += *p++; i2 += *p++; i1 += *p++; i2 += *p++; i4 += *p++; i8 += *p++; i8 += *p++;
+          p = src + yP2 + xM4; i8 += *p++; i8 += *p++; i5 += *p++; i4 += *p++; i3 += *p++; i4 += *p++; i5 += *p++; i8 += *p++; i8 += *p++;
+          p = src + yP3 + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i7 += *p++; i6 += *p++; i7 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
+          p = src + yP4 + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
+          average = (i0 + i1 + i2 + i3 + i4 + i5 + i6 + i7 + i8) / 85.0;
+          fit = P0 * (i0 - average) + P1 * (i1 - 4 * average) + P2 * (i2 - 4 * average) + P3 * (i3 - 4 * average) + P4 * (i4 - 8 * average) + P5 * (i5 - 4 * average) + P6 * (i6 - 4 * average) + P7 * (i7 - 8 * average) + P8 * (i8 - 48 * average);
+          if (bestFit < fit)
+          {
+            bestFit = fit;
+            ix = x;
+            iy = y;
+          }
+        }
+
+      targetChip->GuideStarN[0].value = ix;
+      targetChip->GuideStarN[1].value = iy;
+      targetChip->GuideStarN[2].value = bestFit;
+      if (bestFit > 50)
+      {        
+        double sumX = 0;
+        double sumY = 0;
+        double total = 0;
+        for (int y = iy - 4; y <= iy + 4; y++) {
+          p = src + y * width + ix - 4;
+          for (int x = ix - 4; x <= ix + 4; x++) {
+            double w = *p++;
+            sumX += x * w;
+            sumY += y * w;
+            total += w;
+          }
+        }
+        if (total > 0)
+        {    
+          targetChip->GuideStarN[0].value = sumX/total;
+          targetChip->GuideStarN[1].value = sumY/total;
+          targetChip->GuideStarNP->s=IPS_OK;
+        }
+        else
+          targetChip->GuideStarNP->s=IPS_ALERT;
+      }
+      else
+        targetChip->GuideStarNP->s=IPS_ALERT;
+      IDSetNumber(targetChip->GuideStarNP,NULL);
+    }
+    else
     {
       void *memptr;
       size_t memsize;
@@ -995,12 +1066,8 @@ bool INDI::CCD::ExposureComplete(CCDChip *targetChip)
       IDSetBLOB(targetChip->FitsBP,NULL);
 
       free(memptr);
-    } else {
-      targetChip->GuideStarN[0].value++; // TODO real math
-      targetChip->GuideStarN[1].value++; // TODO real math
-      targetChip->GuideStarNP->s=IPS_OK;
-      IDSetNumber(targetChip->GuideStarNP,NULL);
-    }
+      
+    } 
 
     targetChip->ImageExposureNP->s=IPS_OK;
     IDSetNumber(targetChip->ImageExposureNP,NULL);

@@ -295,7 +295,7 @@ private:
     IBLOBVectorProperty *FitsBP;
 
     INumberVectorProperty *GuideStarNP;
-    INumber GuideStarN[2];
+    INumber GuideStarN[3];
 
     friend class INDI::CCD;
 };
