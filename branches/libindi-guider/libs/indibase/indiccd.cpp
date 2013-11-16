@@ -545,66 +545,29 @@ bool INDI::CCD::ISNewNumber (const char *dev, const char *name, double values[],
         //  Now lets see if it's something we process here
         if(strcmp(name,"CCD_EXPOSURE")==0)
         {
-            float n;
-            int rc;
-
-            n=values[0];
-
-            PrimaryCCD.ImageExposureN[0].value=n;
+            PrimaryCCD.ImageExposureN[0].value = ExposureTime = values[0];
 
             if (PrimaryCCD.ImageExposureNP->s==IPS_BUSY)
                 AbortExposure();
 
             PrimaryCCD.ImageExposureNP->s=IPS_BUSY;
-            //  now we have a new number, this is our requested exposure time
-            //  Tell the clients we are busy with this exposure
 
-            //  And now call the physical hardware layer to start the exposure
-            rc=StartExposure(ExposureTime = n);
-            switch(rc)
-            {
-                case 0: //  normal case, exposure running on timers, callbacks when it's finished
-                    PrimaryCCD.ImageExposureNP->s=IPS_BUSY;
-                    break;
-                case 1: //  Short exposure, it's already done
-                    PrimaryCCD.ImageExposureNP->s=IPS_OK;
-                    break;
-                case -1:    //  error condition
-                    PrimaryCCD.ImageExposureNP->s=IPS_ALERT;
-                break;
-            }
+            if (StartExposure(ExposureTime))
+               PrimaryCCD.ImageExposureNP->s=IPS_BUSY;
+            else
+               PrimaryCCD.ImageExposureNP->s=IPS_ALERT;
             IDSetNumber(PrimaryCCD.ImageExposureNP,NULL);
             return true;
         }
 
         if(strcmp(name,"GUIDER_EXPOSURE")==0)
         {
-            float n;
-            int rc;
-
-            n=values[0];
-
-            GuideCCD.ImageExposureN[0].value=n;
+            GuideCCD.ImageExposureN[0].value = GuiderExposureTime = values[0];
             GuideCCD.ImageExposureNP->s=IPS_BUSY;
-            //  now we have a new number, this is our requested exposure time
-            //  Tell the clients we are busy with this exposure
-
-            //  And now call the physical hardware layer to start the exposure
-            //  change of plans, this is just changing exposure time
-            //  the start/stop stream buttons do the rest
-            rc=StartGuideExposure(GuiderExposureTime = n);
-            //rc=1;   //  set it to ok
-            switch(rc) {
-                case 0: //  normal case, exposure running on timers, callbacks when it's finished
-                    GuideCCD.ImageExposureNP->s=IPS_BUSY;
-                    break;
-                case 1: //  Short exposure, it's already done
-                    GuideCCD.ImageExposureNP->s=IPS_OK;
-                    break;
-                case -1:    //  error condition
-                    GuideCCD.ImageExposureNP->s=IPS_ALERT;
-                break;
-            }
+            if (StartGuideExposure(GuiderExposureTime))
+               GuideCCD.ImageExposureNP->s=IPS_BUSY;
+            else
+               GuideCCD.ImageExposureNP->s=IPS_ALERT;
             IDSetNumber(GuideCCD.ImageExposureNP,NULL);
             return true;
         }
@@ -890,16 +853,16 @@ bool INDI::CCD::ISNewSwitch (const char *dev, const char *name, ISState *states,
     return DefaultDevice::ISNewSwitch(dev, name, states, names, n);
 }
 
-int INDI::CCD::StartExposure(float duration)
+bool INDI::CCD::StartExposure(float duration)
 {
     IDLog("INDI::CCD::StartExposure %4.2f -  Should never get here\n",duration);
-    return -1;
+    return false;
 }
 
-int INDI::CCD::StartGuideExposure(float duration)
+bool INDI::CCD::StartGuideExposure(float duration)
 {
     IDLog("INDI::CCD::StartGuide Exposure %4.2f -  Should never get here\n",duration);
-    return -1;
+    return false;
 }
 
 bool INDI::CCD::AbortExposure()
@@ -1248,7 +1211,26 @@ bool INDI::CCD::ExposureComplete(CCDChip *targetChip)
     
     if (autoLoop)
     {
-      // TODO...
+      if (targetChip == &PrimaryCCD)
+      {
+        PrimaryCCD.ImageExposureN[0].value = ExposureTime;
+        PrimaryCCD.ImageExposureNP->s=IPS_BUSY;
+        if (StartExposure(ExposureTime))
+           PrimaryCCD.ImageExposureNP->s=IPS_BUSY;
+        else
+           PrimaryCCD.ImageExposureNP->s=IPS_ALERT;
+        IDSetNumber(PrimaryCCD.ImageExposureNP,NULL);
+      }
+      else
+      {
+        GuideCCD.ImageExposureN[0].value = GuiderExposureTime;
+        GuideCCD.ImageExposureNP->s=IPS_BUSY;
+        if (StartGuideExposure(GuiderExposureTime))
+           GuideCCD.ImageExposureNP->s=IPS_BUSY;
+        else
+           GuideCCD.ImageExposureNP->s=IPS_ALERT;
+        IDSetNumber(GuideCCD.ImageExposureNP,NULL);
+      }
     }
 
     return true;

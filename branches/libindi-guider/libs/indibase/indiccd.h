@@ -338,10 +338,10 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
      protected:
         /** \brief Start exposing primary CCD chip
             \param duration Duration in seconds
-            \return 0 if OK and exposure will take some time to complete, 1 if exposure is short and complete already (e.g. bias), -1 on error.
+            \return true if OK and exposure will take some time to complete, false on error.
             \note This function is not implemented in INDI::CCD, it must be implemented in the child class
         */
-        virtual int StartExposure(float duration);
+        virtual bool StartExposure(float duration);
 
         /** \brief Uploads target Chip exposed buffer as FITS to the client. Dervied classes should class this function when an exposure is complete.
              \note This function is not implemented in INDI::CCD, it must be implemented in the child class
@@ -356,10 +356,10 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
 
         /** \brief Start exposing guide CCD chip
             \param duration Duration in seconds
-            \return 0 if OK and exposure will take some time to complete, 1 if exposure is short and complete already (e.g. bias), -1 on error.
+            \return true if OK and exposure will take some time to complete, false on error.
             \note This function is not implemented in INDI::CCD, it must be implemented in the child class
         */
-        virtual int StartGuideExposure(float duration);
+        virtual bool StartGuideExposure(float duration);
 
         /** \brief Abort ongoing exposure
             \return true is abort is successful, false otherwise.
