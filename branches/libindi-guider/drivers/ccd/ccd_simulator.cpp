@@ -591,7 +591,7 @@ int CCDSim::DrawCcdFrame(CCDChip *targetChip)
         //  if this is a light frame, we need a star field drawn
         CCDChip::CCD_FRAME ftype = targetChip->getFrameType();
 
-        if (ftype==CCDChip::LIGHT_FRAME || ftype==CCDChip::GUIDE_FRAME)
+        if (ftype==CCDChip::LIGHT_FRAME)
         {
             //sprintf(gsccmd,"gsc -c %8.6f %+8.6f -r 120 -m 0 9.1",rad+PEOffset,decPE);
             sprintf(gsccmd,"gsc -c %8.6f %+8.6f -r %4.1f -m 0 %4.2f -n 3000",rad+PEOffset,cameradec,radius,lookuplimit);
@@ -681,7 +681,7 @@ int CCDSim::DrawCcdFrame(CCDChip *targetChip)
         //  fwhm equivalent to the full field of view
 
 
-        if (ftype==CCDChip::LIGHT_FRAME || ftype==CCDChip::FLAT_FRAME || ftype==CCDChip::GUIDE_FRAME)
+        if (ftype==CCDChip::LIGHT_FRAME || ftype==CCDChip::FLAT_FRAME)
         {
             float skyflux;
             float glow;
