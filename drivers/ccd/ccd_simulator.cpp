@@ -283,7 +283,7 @@ bool CCDSim::Disconnect()
     return true;
 }
 
-int CCDSim::StartExposure(float duration)
+bool CCDSim::StartExposure(float duration)
 {
     //  for the simulator, we can just draw the frame now
     //  and it will get returned at the right time
@@ -298,10 +298,10 @@ int CCDSim::StartExposure(float duration)
     //  Now compress the actual wait time
     ExposureRequest=duration*TimeFactor;
     InExposure=true;
-    return 0;
+    return true;
 }
 
-int CCDSim::StartGuideExposure(float n)
+bool CCDSim::StartGuideExposure(float n)
 {
     GuideExposureRequest=n;
     AbortGuideFrame = false;
@@ -309,7 +309,7 @@ int CCDSim::StartGuideExposure(float n)
     DrawCcdFrame(&GuideCCD);
     gettimeofday(&GuideExpStart,NULL);
     InGuideExposure=true;
-    return 0;
+    return true;
 }
 
 bool CCDSim::AbortExposure()
