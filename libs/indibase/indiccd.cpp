@@ -1,5 +1,11 @@
 /*******************************************************************************
-  Copyright(c) 2010, 2011 Gerry Rozema, Jasem Mutlaq. All rights reserved.
+ Copyright(c) 2010, 2011 Gerry Rozema, Jasem Mutlaq. All rights reserved.
+
+ Rapid Guide support added by CloudMakers, s. r. o.
+ Copyright(c) 2013 CloudMakers, s. r. o. All rights reserved.
+  
+ Star detection algorithm is based on PHD Guiding by Craig Stark
+ Copyright (c) 2006-2010 Craig Stark. All rights reserved.
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -29,7 +35,7 @@ const char *IMAGE_SETTINGS_TAB  = "Image Settings";
 const char *IMAGE_INFO_TAB      = "Image Info";
 const char *GUIDE_HEAD_TAB      = "Guider Head";
 const char *GUIDE_CONTROL_TAB   = "Guider Control";
-const char *IMAGE_GUIDESTAR_TAB = "Guidestar Data";
+const char *RAPIDGUIDE_TAB      = "Rapid Guide";
 
 CCDChip::CCDChip()
 {
@@ -42,7 +48,7 @@ CCDChip::CCDChip()
     BinX = BinY = 1;
 
     FrameType=LIGHT_FRAME;
-
+    
     ImageFrameNP = new INumberVectorProperty;
     AbortExposureSP = new ISwitchVectorProperty;
     FrameTypeSP = new ISwitchVectorProperty;
@@ -51,8 +57,9 @@ CCDChip::CCDChip()
     ImagePixelSizeNP = new INumberVectorProperty;
     CompressSP = new ISwitchVectorProperty;
     FitsBP = new IBLOBVectorProperty;
-    GuideStarNP = new INumberVectorProperty;
-
+    RapidGuideSP = new ISwitchVectorProperty;
+    RapidGuideSetupSP = new ISwitchVectorProperty;
+    RapidGuideDataNP = new INumberVectorProperty;
 }
 
 CCDChip::~CCDChip()
@@ -69,6 +76,9 @@ CCDChip::~CCDChip()
     delete ImagePixelSizeNP;
     delete CompressSP;
     delete FitsBP;
+    delete RapidGuideSP;
+    delete RapidGuideSetupSP;
+    delete RapidGuideDataNP;
 }
 
 void CCDChip::setFrameType(CCD_FRAME type)
@@ -209,6 +219,19 @@ INDI::CCD::CCD()
     HasSt4Port=false;
     InExposure=false;
     InGuideExposure=false;
+    RapidGuideEnabled=false;
+    GuiderRapidGuideEnabled=false;
+    
+    AutoLoop=false;
+    SendImage=false;
+    ShowMarker=false;
+    GuiderAutoLoop=false;
+    GuiderSendImage=false;
+    GuiderShowMarker=false;
+
+    ExposureTime = 0.0;
+    GuiderExposureTime = 0.0;
+
     RA=0.0;
     Dec=90.0;
     ActiveDeviceTP = new ITextVectorProperty;
@@ -235,8 +258,7 @@ bool INDI::CCD::initProperties()
     IUFillSwitch(&PrimaryCCD.FrameTypeS[1],"FRAME_BIAS","Bias",ISS_OFF);
     IUFillSwitch(&PrimaryCCD.FrameTypeS[2],"FRAME_DARK","Dark",ISS_OFF);
     IUFillSwitch(&PrimaryCCD.FrameTypeS[3],"FRAME_FLAT","Flat",ISS_OFF);
-    IUFillSwitch(&PrimaryCCD.FrameTypeS[4],"FRAME_GUIDE","Guide",ISS_OFF);
-    IUFillSwitchVector(PrimaryCCD.FrameTypeSP,PrimaryCCD.FrameTypeS,5,getDeviceName(),"CCD_FRAME_TYPE","FrameType",IMAGE_SETTINGS_TAB,IP_RW,ISR_1OFMANY,60,IPS_IDLE);
+    IUFillSwitchVector(PrimaryCCD.FrameTypeSP,PrimaryCCD.FrameTypeS,4,getDeviceName(),"CCD_FRAME_TYPE","FrameType",IMAGE_SETTINGS_TAB,IP_RW,ISR_1OFMANY,60,IPS_IDLE);
 
     IUFillNumber(&PrimaryCCD.ImageExposureN[0],"CCD_EXPOSURE_VALUE","Duration (s)","%5.2f",0,36000,0,1.0);
     IUFillNumberVector(PrimaryCCD.ImageExposureNP,PrimaryCCD.ImageExposureN,1,getDeviceName(),"CCD_EXPOSURE","Expose",MAIN_CONTROL_TAB,IP_RW,60,IPS_IDLE);
@@ -263,10 +285,19 @@ bool INDI::CCD::initProperties()
     IUFillBLOB(&PrimaryCCD.FitsB,"CCD1","Image","");
     IUFillBLOBVector(PrimaryCCD.FitsBP,&PrimaryCCD.FitsB,1,getDeviceName(),"CCD1","Image Data",IMAGE_INFO_TAB,IP_RO,60,IPS_IDLE);
 
-    IUFillNumber(&PrimaryCCD.GuideStarN[0],"GUIDESTAR_X","Guide star position X","%5.2f",0,1024,0,0);
-    IUFillNumber(&PrimaryCCD.GuideStarN[1],"GUIDESTAR_Y","Guide star position Y","%5.2f",0,1024,0,0);
-    IUFillNumber(&PrimaryCCD.GuideStarN[2],"GUIDESTAR_FIT","Guide star fit","%5.2f",0,1024,0,0);
-    IUFillNumberVector(PrimaryCCD.GuideStarNP,PrimaryCCD.GuideStarN,3,getDeviceName(),"CCD_GUIDESTAR","CCD Guide Star Position",IMAGE_GUIDESTAR_TAB,IP_RO,60,IPS_IDLE);
+    IUFillSwitch(&PrimaryCCD.RapidGuideS[0], "ENABLE", "Enable", ISS_OFF);
+    IUFillSwitch(&PrimaryCCD.RapidGuideS[1], "DISABLE", "Disable", ISS_ON);
+    IUFillSwitchVector(PrimaryCCD.RapidGuideSP, PrimaryCCD.RapidGuideS, 2, getDeviceName(), "CCD_RAPID_GUIDE", "Rapid Guide", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+    IUFillSwitch(&PrimaryCCD.RapidGuideSetupS[0], "AUTO_LOOP", "Auto loop", ISS_ON);
+    IUFillSwitch(&PrimaryCCD.RapidGuideSetupS[1], "SEND_IMAGE", "Send image", ISS_OFF);
+    IUFillSwitch(&PrimaryCCD.RapidGuideSetupS[2], "SHOW_MARKER", "Show marker", ISS_OFF);
+    IUFillSwitchVector(PrimaryCCD.RapidGuideSetupSP, PrimaryCCD.RapidGuideSetupS, 3, getDeviceName(), "CCD_RAPID_GUIDE_SETUP", "Rapid Guide Setup", RAPIDGUIDE_TAB, IP_RW, ISR_NOFMANY, 0, IPS_IDLE);
+
+    IUFillNumber(&PrimaryCCD.RapidGuideDataN[0],"GUIDESTAR_X","Guide star position X","%5.2f",0,1024,0,0);
+    IUFillNumber(&PrimaryCCD.RapidGuideDataN[1],"GUIDESTAR_Y","Guide star position Y","%5.2f",0,1024,0,0);
+    IUFillNumber(&PrimaryCCD.RapidGuideDataN[2],"GUIDESTAR_FIT","Guide star fit","%5.2f",0,1024,0,0);
+    IUFillNumberVector(PrimaryCCD.RapidGuideDataNP,PrimaryCCD.RapidGuideDataN,3,getDeviceName(),"CCD_RAPID_GUIDE_DATA","Rapid Guide Data",RAPIDGUIDE_TAB,IP_RO,60,IPS_IDLE);
 
     // GUIDER CCD Init
 
@@ -292,8 +323,7 @@ bool INDI::CCD::initProperties()
     IUFillSwitch(&GuideCCD.FrameTypeS[1],"FRAME_BIAS","Bias",ISS_OFF);
     IUFillSwitch(&GuideCCD.FrameTypeS[2],"FRAME_DARK","Dark",ISS_OFF);
     IUFillSwitch(&GuideCCD.FrameTypeS[3],"FRAME_FLAT","Flat",ISS_OFF);
-    IUFillSwitch(&GuideCCD.FrameTypeS[4],"FRAME_GUIDE","Guide",ISS_OFF);
-    IUFillSwitchVector(GuideCCD.FrameTypeSP,GuideCCD.FrameTypeS,5,getDeviceName(),"GUIDE_FRAME_TYPE","FrameType",GUIDE_HEAD_TAB,IP_RW,ISR_1OFMANY,60,IPS_IDLE);
+    IUFillSwitchVector(GuideCCD.FrameTypeSP,GuideCCD.FrameTypeS,4,getDeviceName(),"GUIDE_FRAME_TYPE","FrameType",GUIDE_HEAD_TAB,IP_RW,ISR_1OFMANY,60,IPS_IDLE);
 
     IUFillNumber(&GuideCCD.ImageExposureN[0],"GUIDER_EXPOSURE_VALUE","Duration (s)","%5.2f",0,36000,0,1.0);
     IUFillNumberVector(GuideCCD.ImageExposureNP,GuideCCD.ImageExposureN,1,getDeviceName(),"GUIDER_EXPOSURE","Guide Head",MAIN_CONTROL_TAB,IP_RW,60,IPS_IDLE);
@@ -308,10 +338,19 @@ bool INDI::CCD::initProperties()
     IUFillBLOB(&GuideCCD.FitsB,"CCD2","Guider Image","");
     IUFillBLOBVector(GuideCCD.FitsBP,&GuideCCD.FitsB,1,getDeviceName(),"CCD2","Image Data",IMAGE_INFO_TAB,IP_RO,60,IPS_IDLE);
 
-    IUFillNumber(&GuideCCD.GuideStarN[0],"GUIDESTAR_X","Guide star position X","%5.2f",0,1024,0,0);
-    IUFillNumber(&GuideCCD.GuideStarN[1],"GUIDESTAR_Y","Guide star position Y","%5.2f",0,1024,0,0);
-    IUFillNumber(&GuideCCD.GuideStarN[2],"GUIDESTAR_FIT","Guide star fit","%5.2f",0,1024,0,0);
-    IUFillNumberVector(GuideCCD.GuideStarNP,GuideCCD.GuideStarN,3,getDeviceName(),"GUIDER_GUIDESTAR","Guider Guide Star Position",IMAGE_GUIDESTAR_TAB,IP_RO,60,IPS_IDLE);
+    IUFillSwitch(&GuideCCD.RapidGuideS[0], "ENABLE", "Enable", ISS_OFF);
+    IUFillSwitch(&GuideCCD.RapidGuideS[1], "DISABLE", "Disable", ISS_ON);
+    IUFillSwitchVector(GuideCCD.RapidGuideSP, GuideCCD.RapidGuideS, 2, getDeviceName(), "GUIDER_RAPID_GUIDE", "Guder Head Rapid Guide", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+    IUFillSwitch(&GuideCCD.RapidGuideSetupS[0], "AUTO_LOOP", "Auto loop", ISS_ON);
+    IUFillSwitch(&GuideCCD.RapidGuideSetupS[1], "SEND_IMAGE", "Send image", ISS_OFF);
+    IUFillSwitch(&GuideCCD.RapidGuideSetupS[2], "SHOW_MARKER", "Show marker", ISS_OFF);
+    IUFillSwitchVector(GuideCCD.RapidGuideSetupSP, GuideCCD.RapidGuideSetupS, 3, getDeviceName(), "GUIDER_RAPID_GUIDE_SETUP", "Rapid Guide Setup", RAPIDGUIDE_TAB, IP_RW, ISR_NOFMANY, 0, IPS_IDLE);
+
+    IUFillNumber(&GuideCCD.RapidGuideDataN[0],"GUIDESTAR_X","Guide star position X","%5.2f",0,1024,0,0);
+    IUFillNumber(&GuideCCD.RapidGuideDataN[1],"GUIDESTAR_Y","Guide star position Y","%5.2f",0,1024,0,0);
+    IUFillNumber(&GuideCCD.RapidGuideDataN[2],"GUIDESTAR_FIT","Guide star fit","%5.2f",0,1024,0,0);
+    IUFillNumberVector(GuideCCD.RapidGuideDataNP,GuideCCD.RapidGuideDataN,3,getDeviceName(),"GUIDER_RAPID_GUIDE_DATA","Rapid Guide Data",RAPIDGUIDE_TAB,IP_RO,60,IPS_IDLE);
 
     // CCD Class Init
 
@@ -380,11 +419,23 @@ bool INDI::CCD::updateProperties()
             defineNumber(&GuideWENP);
         }
         defineSwitch(PrimaryCCD.FrameTypeSP);
+        
         if (HasGuideHead)
             defineSwitch(GuideCCD.FrameTypeSP);
-        defineNumber(PrimaryCCD.GuideStarNP);
+        
+        defineSwitch(PrimaryCCD.RapidGuideSP);
+
         if (HasGuideHead)
-          defineNumber(GuideCCD.GuideStarNP);
+          defineSwitch(GuideCCD.RapidGuideSP);
+            
+        if (RapidGuideEnabled) {
+          defineSwitch(PrimaryCCD.RapidGuideSetupSP);
+          defineNumber(PrimaryCCD.RapidGuideDataNP);
+        }
+        if (GuiderRapidGuideEnabled) {
+          defineSwitch(GuideCCD.RapidGuideSetupSP);
+          defineNumber(GuideCCD.RapidGuideDataNP);
+        }
         defineText(ActiveDeviceTP);
     }
     else
@@ -396,7 +447,12 @@ bool INDI::CCD::updateProperties()
         deleteProperty(PrimaryCCD.AbortExposureSP->name);
         deleteProperty(PrimaryCCD.FitsBP->name);
         deleteProperty(PrimaryCCD.CompressSP->name);
-        deleteProperty(PrimaryCCD.GuideStarNP->name);
+        deleteProperty(PrimaryCCD.RapidGuideDataNP->name);
+        deleteProperty(PrimaryCCD.RapidGuideSP->name);
+        if (RapidGuideEnabled) {
+          deleteProperty(PrimaryCCD.RapidGuideSetupSP->name);
+          deleteProperty(PrimaryCCD.RapidGuideDataNP->name);
+        }
         if(HasGuideHead)
         {
             deleteProperty(GuideCCD.ImageExposureNP->name);
@@ -407,13 +463,17 @@ bool INDI::CCD::updateProperties()
             deleteProperty(GuideCCD.ImageBinNP->name);
             deleteProperty(GuideCCD.CompressSP->name);
             deleteProperty(GuideCCD.FrameTypeSP->name);
-            deleteProperty(GuideCCD.GuideStarNP->name);
+            deleteProperty(GuideCCD.RapidGuideDataNP->name);
+            deleteProperty(GuideCCD.RapidGuideSP->name);
+            if (GuiderRapidGuideEnabled) {
+              deleteProperty(GuideCCD.RapidGuideSetupSP->name);
+              deleteProperty(GuideCCD.RapidGuideDataNP->name);
+            }
         }
         if(HasSt4Port)
         {
             deleteProperty(GuideNSNP.name);
             deleteProperty(GuideWENP.name);
-
         }
         deleteProperty(PrimaryCCD.FrameTypeSP->name);
         deleteProperty(ActiveDeviceTP->name);
@@ -433,7 +493,6 @@ bool INDI::CCD::ISSnoopDevice (XMLEle *root)
             //IDLog("RA %4.2f  Dec %4.2f Snooped RA %4.2f  Dec %4.2f\n",RA,Dec,newra,newdec);
             RA=newra;
             Dec=newdec;
-
         }
      }
      else
@@ -501,7 +560,7 @@ bool INDI::CCD::ISNewNumber (const char *dev, const char *name, double values[],
             //  Tell the clients we are busy with this exposure
 
             //  And now call the physical hardware layer to start the exposure
-            rc=StartExposure(n);
+            rc=StartExposure(ExposureTime = n);
             switch(rc)
             {
                 case 0: //  normal case, exposure running on timers, callbacks when it's finished
@@ -533,7 +592,7 @@ bool INDI::CCD::ISNewNumber (const char *dev, const char *name, double values[],
             //  And now call the physical hardware layer to start the exposure
             //  change of plans, this is just changing exposure time
             //  the start/stop stream buttons do the rest
-            rc=StartGuideExposure(n);
+            rc=StartGuideExposure(GuiderExposureTime = n);
             //rc=1;   //  set it to ok
             switch(rc) {
                 case 0: //  normal case, exposure running on timers, callbacks when it's finished
@@ -618,17 +677,17 @@ bool INDI::CCD::ISNewNumber (const char *dev, const char *name, double values[],
 
         if(strcmp(name,"CCD_GUIDESTAR")==0)
         {
-            PrimaryCCD.GuideStarNP->s=IPS_OK;
-            IUUpdateNumber(PrimaryCCD.GuideStarNP,values,names,n);
-            IDSetNumber(PrimaryCCD.GuideStarNP, NULL);
+            PrimaryCCD.RapidGuideDataNP->s=IPS_OK;
+            IUUpdateNumber(PrimaryCCD.RapidGuideDataNP,values,names,n);
+            IDSetNumber(PrimaryCCD.RapidGuideDataNP, NULL);
             return true;
         }
 
         if(strcmp(name,"GUIDER_GUIDESTAR")==0)
         {
-            GuideCCD.GuideStarNP->s=IPS_OK;
-            IUUpdateNumber(GuideCCD.GuideStarNP,values,names,n);
-            IDSetNumber(GuideCCD.GuideStarNP, NULL);
+            GuideCCD.RapidGuideDataNP->s=IPS_OK;
+            IUUpdateNumber(GuideCCD.RapidGuideDataNP,values,names,n);
+            IDSetNumber(GuideCCD.RapidGuideDataNP, NULL);
             return true;
         }
 
@@ -649,8 +708,6 @@ bool INDI::CCD::ISNewSwitch (const char *dev, const char *name, ISState *states,
 
     if(strcmp(dev,getDeviceName())==0)
     {
-
-
         if(strcmp(name,PrimaryCCD.AbortExposureSP->name)==0)
         {
             IUResetSwitch(PrimaryCCD.AbortExposureSP);
@@ -673,7 +730,6 @@ bool INDI::CCD::ISNewSwitch (const char *dev, const char *name, ISState *states,
             return true;
         }
 
-
         if(strcmp(name,GuideCCD.AbortExposureSP->name)==0)
         {
             IUResetSwitch(GuideCCD.AbortExposureSP);
@@ -695,7 +751,6 @@ bool INDI::CCD::ISNewSwitch (const char *dev, const char *name, ISState *states,
 
             return true;
         }
-
 
         if(strcmp(name,PrimaryCCD.CompressSP->name)==0)
         {
@@ -738,7 +793,6 @@ bool INDI::CCD::ISNewSwitch (const char *dev, const char *name, ISState *states,
             else if(PrimaryCCD.FrameTypeS[1].s==ISS_ON) PrimaryCCD.setFrameType(CCDChip::BIAS_FRAME);
             else if(PrimaryCCD.FrameTypeS[2].s==ISS_ON) PrimaryCCD.setFrameType(CCDChip::DARK_FRAME);
             else if(PrimaryCCD.FrameTypeS[3].s==ISS_ON) PrimaryCCD.setFrameType(CCDChip::FLAT_FRAME);
-            else if(PrimaryCCD.FrameTypeS[4].s==ISS_ON) PrimaryCCD.setFrameType(CCDChip::GUIDE_FRAME);
 
             if (updateCCDFrameType(PrimaryCCD.getFrameType()) == false)
                 PrimaryCCD.FrameTypeSP->s = IPS_ALERT;
@@ -757,7 +811,6 @@ bool INDI::CCD::ISNewSwitch (const char *dev, const char *name, ISState *states,
             else if(GuideCCD.FrameTypeS[1].s==ISS_ON) GuideCCD.setFrameType(CCDChip::BIAS_FRAME);
             else if(GuideCCD.FrameTypeS[2].s==ISS_ON) GuideCCD.setFrameType(CCDChip::DARK_FRAME);
             else if(GuideCCD.FrameTypeS[3].s==ISS_ON) GuideCCD.setFrameType(CCDChip::FLAT_FRAME);
-            else if(GuideCCD.FrameTypeS[4].s==ISS_ON) GuideCCD.setFrameType(CCDChip::GUIDE_FRAME);
 
             if (updateGuideFrameType(GuideCCD.getFrameType()) == false)
                 GuideCCD.FrameTypeSP->s = IPS_ALERT;
@@ -766,13 +819,76 @@ bool INDI::CCD::ISNewSwitch (const char *dev, const char *name, ISState *states,
 
             return true;
         }
-    }
+        
+        
+        if (strcmp(name, PrimaryCCD.RapidGuideSP->name)==0)
+        {
+            IUUpdateSwitch(PrimaryCCD.RapidGuideSP, states, names, n);
+            PrimaryCCD.RapidGuideSP->s=IPS_OK;
+            RapidGuideEnabled=(PrimaryCCD.RapidGuideS[0].s==ISS_ON);
+            
+            if (RapidGuideEnabled) {
+              defineSwitch(PrimaryCCD.RapidGuideSetupSP);
+              defineNumber(PrimaryCCD.RapidGuideDataNP);
+            }
+            else {
+              deleteProperty(PrimaryCCD.RapidGuideSetupSP->name);
+              deleteProperty(PrimaryCCD.RapidGuideDataNP->name);
+            }
+            
+            IDSetSwitch(PrimaryCCD.RapidGuideSP,NULL);
+            return true;
+        }
 
+        if (strcmp(name, GuideCCD.RapidGuideSP->name)==0)
+        {
+            IUUpdateSwitch(GuideCCD.RapidGuideSP, states, names, n);
+            GuideCCD.RapidGuideSP->s=IPS_OK;
+            GuiderRapidGuideEnabled=(GuideCCD.RapidGuideS[0].s==ISS_ON);
+            
+            if (GuiderRapidGuideEnabled) {
+              defineSwitch(GuideCCD.RapidGuideSetupSP);
+              defineNumber(GuideCCD.RapidGuideDataNP);
+            }
+            else {
+              deleteProperty(GuideCCD.RapidGuideSetupSP->name);
+              deleteProperty(GuideCCD.RapidGuideDataNP->name);
+            }
+
+            IDSetSwitch(GuideCCD.RapidGuideSP,NULL);
+            return true;
+        }
+
+        if (strcmp(name, PrimaryCCD.RapidGuideSetupSP->name)==0)
+        {
+            IUUpdateSwitch(PrimaryCCD.RapidGuideSetupSP, states, names, n);
+            PrimaryCCD.RapidGuideSetupSP->s=IPS_OK;
+
+            AutoLoop=(PrimaryCCD.RapidGuideSetupS[0].s==ISS_ON);
+            SendImage=(PrimaryCCD.RapidGuideSetupS[1].s==ISS_ON);
+            ShowMarker=(PrimaryCCD.RapidGuideSetupS[2].s==ISS_ON);
+            
+            IDSetSwitch(PrimaryCCD.RapidGuideSetupSP,NULL);
+            return true;
+        }
+
+        if (strcmp(name, GuideCCD.RapidGuideSetupSP->name)==0)
+        {
+            IUUpdateSwitch(GuideCCD.RapidGuideSetupSP, states, names, n);
+            GuideCCD.RapidGuideSetupSP->s=IPS_OK;
+
+            GuiderAutoLoop=(GuideCCD.RapidGuideSetupS[0].s==ISS_ON);
+            GuiderSendImage=(GuideCCD.RapidGuideSetupS[1].s==ISS_ON);
+            GuiderShowMarker=(GuideCCD.RapidGuideSetupS[2].s==ISS_ON);
+            
+            IDSetSwitch(GuideCCD.RapidGuideSetupSP,NULL);
+            return true;
+        }
+    }
 
     // let the default driver have a crack at it
     return DefaultDevice::ISNewSwitch(dev, name, states, names, n);
 }
-
 
 int INDI::CCD::StartExposure(float duration)
 {
@@ -811,7 +927,6 @@ bool INDI::CCD::updateCCDBin(int hor, int ver)
     PrimaryCCD.setBin(hor, ver);
     return true;
 }
-
 
 bool INDI::CCD::updateGuideBin(int hor, int ver)
 {
@@ -899,36 +1014,55 @@ void INDI::CCD::fits_update_key_s(fitsfile* fptr, int type, std::string name, vo
 
 bool INDI::CCD::ExposureComplete(CCDChip *targetChip)
 {
-
-    if (targetChip->getFrameType() == CCDChip::GUIDE_FRAME)
+    bool sendImage = true;
+    bool showMarker = false;
+    bool autoLoop = false;
+    bool sendData = false;
+    
+    if (RapidGuideEnabled && targetChip == &PrimaryCCD)
+    {
+      autoLoop = AutoLoop;
+      sendImage = SendImage;
+      showMarker = ShowMarker;
+      sendData = true;
+    }
+    
+    if (GuiderRapidGuideEnabled && targetChip == &GuideCCD)
+    {
+      autoLoop = GuiderAutoLoop;
+      sendImage = GuiderSendImage;
+      showMarker = GuiderShowMarker;
+      sendData = true;
+    }
+    
+    if (sendData)
     {
       static double P0 = 0.906, P1 = 0.584, P2 = 0.365, P3 = 0.117, P4 = 0.049, P5 = -0.05, P6 = -0.064, P7 = -0.074, P8 = -0.094;
 
-      targetChip->GuideStarNP->s=IPS_BUSY;
+      targetChip->RapidGuideDataNP->s=IPS_BUSY;
 
       int width = targetChip->getSubW() / targetChip->getBinX();
       int height = targetChip->getSubH() / targetChip->getBinY();
       unsigned short *src = (unsigned short *) targetChip->getFrameBuffer();
       int i0, i1, i2, i3, i4, i5, i6, i7, i8;
       int ix = 0, iy = 0;
-      int xM4, yM4, yM3, yM2, yM1, yP0, yP1, yP2, yP3, yP4;
+      int xM4;
       unsigned short *p;
       double average, fit, bestFit = 0;
       for (int x = 4; x < width - 4; x++)
         for (int y = 4; y < height - 4; y++)
         {
           i0 = i1 = i2 = i3 = i4 = i5 = i6 = i7 = i8 = 0;
-          yM4 = (y - 4) * width; yM3 = (y - 3) * width; yM2 = (y - 2) * width; yM1 = (y - 1) * width; yP0 = y * width; yP1 =(y + 4) * width; yP2 =(y + 4) * width; yP3 =(y + 4) * width; yP4 =(y + 4) * width;
           xM4 = x - 4; 
-          p = src + yM4 + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
-          p = src + yM3 + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i7 += *p++; i6 += *p++; i7 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
-          p = src + yM2 + xM4; i8 += *p++; i8 += *p++; i5 += *p++; i4 += *p++; i3 += *p++; i4 += *p++; i5 += *p++; i8 += *p++; i8 += *p++;
-          p = src + yM1 + xM4; i8 += *p++; i7 += *p++; i4 += *p++; i2 += *p++; i1 += *p++; i2 += *p++; i4 += *p++; i8 += *p++; i8 += *p++;
-          p = src + yP0 + xM4; i8 += *p++; i6 += *p++; i3 += *p++; i1 += *p++; i0 += *p++; i1 += *p++; i3 += *p++; i6 += *p++; i8 += *p++;
-          p = src + yP1 + xM4; i8 += *p++; i7 += *p++; i4 += *p++; i2 += *p++; i1 += *p++; i2 += *p++; i4 += *p++; i8 += *p++; i8 += *p++;
-          p = src + yP2 + xM4; i8 += *p++; i8 += *p++; i5 += *p++; i4 += *p++; i3 += *p++; i4 += *p++; i5 += *p++; i8 += *p++; i8 += *p++;
-          p = src + yP3 + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i7 += *p++; i6 += *p++; i7 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
-          p = src + yP4 + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
+          p = src + (y - 4) * width + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
+          p = src + (y - 3) * width + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i7 += *p++; i6 += *p++; i7 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
+          p = src + (y - 2) * width + xM4; i8 += *p++; i8 += *p++; i5 += *p++; i4 += *p++; i3 += *p++; i4 += *p++; i5 += *p++; i8 += *p++; i8 += *p++;
+          p = src + (y - 1) * width + xM4; i8 += *p++; i7 += *p++; i4 += *p++; i2 += *p++; i1 += *p++; i2 += *p++; i4 += *p++; i8 += *p++; i8 += *p++;
+          p = src + (y + 0) * width + xM4; i8 += *p++; i6 += *p++; i3 += *p++; i1 += *p++; i0 += *p++; i1 += *p++; i3 += *p++; i6 += *p++; i8 += *p++;
+          p = src + (y + 1) * width + xM4; i8 += *p++; i7 += *p++; i4 += *p++; i2 += *p++; i1 += *p++; i2 += *p++; i4 += *p++; i8 += *p++; i8 += *p++;
+          p = src + (y + 2) * width + xM4; i8 += *p++; i8 += *p++; i5 += *p++; i4 += *p++; i3 += *p++; i4 += *p++; i5 += *p++; i8 += *p++; i8 += *p++;
+          p = src + (y + 3) * width + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i7 += *p++; i6 += *p++; i7 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
+          p = src + (y + 4) * width + xM4; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++; i8 += *p++;
           average = (i0 + i1 + i2 + i3 + i4 + i5 + i6 + i7 + i8) / 85.0;
           fit = P0 * (i0 - average) + P1 * (i1 - 4 * average) + P2 * (i2 - 4 * average) + P3 * (i3 - 4 * average) + P4 * (i4 - 8 * average) + P5 * (i5 - 4 * average) + P6 * (i6 - 4 * average) + P7 * (i7 - 8 * average) + P8 * (i8 - 48 * average);
           if (bestFit < fit)
@@ -939,9 +1073,9 @@ bool INDI::CCD::ExposureComplete(CCDChip *targetChip)
           }
         }
 
-      targetChip->GuideStarN[0].value = ix;
-      targetChip->GuideStarN[1].value = iy;
-      targetChip->GuideStarN[2].value = bestFit;
+      targetChip->RapidGuideDataN[0].value = ix;
+      targetChip->RapidGuideDataN[1].value = iy;
+      targetChip->RapidGuideDataN[2].value = bestFit;
       if (bestFit > 50)
       {        
         double sumX = 0;
@@ -958,18 +1092,59 @@ bool INDI::CCD::ExposureComplete(CCDChip *targetChip)
         }
         if (total > 0)
         {    
-          targetChip->GuideStarN[0].value = sumX/total;
-          targetChip->GuideStarN[1].value = sumY/total;
-          targetChip->GuideStarNP->s=IPS_OK;
+          targetChip->RapidGuideDataN[0].value = sumX/total;
+          targetChip->RapidGuideDataN[1].value = sumY/total;
+          targetChip->RapidGuideDataNP->s=IPS_OK;
         }
         else
-          targetChip->GuideStarNP->s=IPS_ALERT;
+          targetChip->RapidGuideDataNP->s=IPS_ALERT;
       }
       else
-        targetChip->GuideStarNP->s=IPS_ALERT;
-      IDSetNumber(targetChip->GuideStarNP,NULL);
+        targetChip->RapidGuideDataNP->s=IPS_ALERT;
+      IDSetNumber(targetChip->RapidGuideDataNP,NULL);
+      
+      if (showMarker)
+      {
+        int xmin = std::max(ix - 10, 0);
+        int xmax = std::min(ix + 10, width - 1);
+        int ymin = std::max(iy - 10, 0);
+        int ymax = std::min(iy + 10, height - 1);
+        
+        fprintf(stderr, "%d %d %d %d\n", xmin, xmax, ymin, ymax);
+        
+        if (ymin > 0)
+        {
+          p = src + ymin * width + xmin;
+          for (int x = xmin; x <= xmax; x++)
+            *p++ = 50000;
+        }
+        
+        if (xmin > 0)
+        {
+          for (int y = ymin; y<= ymax; y++)
+          {
+            *(src + y * width + xmin) = 50000;
+          }
+        }
+        
+        if (xmax < width - 1)
+        {
+          for (int y = ymin; y<= ymax; y++)
+          {
+            *(src + y * width + xmax) = 50000;
+          }
+        }
+
+        if (ymax < height -1)
+        {
+          p = src + ymax * width + xmin;
+          for (int x = xmin; x <= xmax; x++)
+            *p++ = 50000;
+        }
+      }
     }
-    else
+
+    if (sendImage)    
     {
       void *memptr;
       size_t memsize;
@@ -1066,11 +1241,15 @@ bool INDI::CCD::ExposureComplete(CCDChip *targetChip)
       IDSetBLOB(targetChip->FitsBP,NULL);
 
       free(memptr);
-      
     } 
 
     targetChip->ImageExposureNP->s=IPS_OK;
     IDSetNumber(targetChip->ImageExposureNP,NULL);
+    
+    if (autoLoop)
+    {
+      // TODO...
+    }
 
     return true;
 }
@@ -1112,14 +1291,17 @@ bool INDI::CCD::GuideNorth(float ms)
 {
     return false;
 }
+
 bool INDI::CCD::GuideSouth(float ms)
 {
     return false;
 }
+
 bool INDI::CCD::GuideEast(float ms)
 {
     return false;
 }
+
 bool INDI::CCD::GuideWest(float ms)
 {
     return false;

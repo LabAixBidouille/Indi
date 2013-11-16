@@ -1,5 +1,11 @@
 /*******************************************************************************
-  Copyright(c) 2010, 2011 Gerry Rozema, Jasem Mutlaq. All rights reserved.
+ Copyright(c) 2010, 2011 Gerry Rozema, Jasem Mutlaq. All rights reserved.
+
+ Rapid Guide support added by CloudMakers, s. r. o.
+ Copyright(c) 2013 CloudMakers, s. r. o. All rights reserved.
+  
+ Star detection algorithm is based on PHD Guiding by Craig Stark
+ Copyright (c) 2006-2010 Craig Stark. All rights reserved.
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -29,7 +35,7 @@
 extern const char *IMAGE_SETTINGS_TAB;
 extern const char *IMAGE_INFO_TAB;
 extern const char *GUIDE_HEAD_TAB;
-extern const char *IMAGE_GUIDESTAR_TAB;
+extern const char *RAPIDGUIDE_TAB;
 
 /**
  * @brief The CCDChip class provides functionality of a CCD Chip within a CCD.
@@ -42,7 +48,7 @@ public:
     CCDChip();
     ~CCDChip();
 
-    typedef enum { LIGHT_FRAME=0, BIAS_FRAME, DARK_FRAME, FLAT_FRAME, GUIDE_FRAME } CCD_FRAME;
+    typedef enum { LIGHT_FRAME=0, BIAS_FRAME, DARK_FRAME, FLAT_FRAME } CCD_FRAME;
     typedef enum { FRAME_X, FRAME_Y, FRAME_W, FRAME_H} CCD_FRAME_INDEX;
     typedef enum { BIN_W, BIN_H} CCD_BIN_INDEX;
     typedef enum { CCD_MAX_X, CCD_MAX_Y, CCD_PIXEL_SIZE, CCD_PIXEL_SIZE_X, CCD_PIXEL_SIZE_Y, CCD_BITSPERPIXEL} CCD_INFO_INDEX;
@@ -294,8 +300,14 @@ private:
     IBLOB FitsB;
     IBLOBVectorProperty *FitsBP;
 
-    INumberVectorProperty *GuideStarNP;
-    INumber GuideStarN[3];
+    ISwitch RapidGuideS[2];
+    ISwitchVectorProperty *RapidGuideSP;
+
+    ISwitch RapidGuideSetupS[3];
+    ISwitchVectorProperty *RapidGuideSetupSP;
+
+    INumber RapidGuideDataN[3];
+    INumberVectorProperty *RapidGuideDataNP;
 
     friend class INDI::CCD;
 };
@@ -496,6 +508,18 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
         bool HasSt4Port;
         bool InExposure;
         bool InGuideExposure;
+        bool RapidGuideEnabled;
+        bool GuiderRapidGuideEnabled;
+
+        bool AutoLoop;
+        bool GuiderAutoLoop;
+        bool SendImage;
+        bool GuiderSendImage;
+        bool ShowMarker;
+        bool GuiderShowMarker;
+        
+        float ExposureTime;
+        float GuiderExposureTime;
 
         CCDChip PrimaryCCD;
         CCDChip GuideCCD;
