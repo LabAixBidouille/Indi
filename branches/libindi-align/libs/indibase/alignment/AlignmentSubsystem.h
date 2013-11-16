@@ -68,7 +68,8 @@ public:
  * \brief Provides functions to manage the loading and initialisation of Alignment Subsystem plugin database and math modules. Also provides
  * helper functions for telescope drivers using the the Alignment Subsystem.
  *
- * This is the long descriptipon.
+ * TODO see if we can detect if this class is being used by a client or a driver from RTTI
+ * so that we can access INDI properties appropriately
  *
  * \note It is intended that this class should be included in the INDI::Telescope object
  * in some way, either as a direct class member of by multiple inheritance.
@@ -76,10 +77,15 @@ public:
 class AlignmentSubsystem
 {
 public:
-    /*! @name Plugin Management
+    /*! @name Plugin management
      *  These functions are used to enumerate, load, and utilise math plugins.
-     *  They are intended to be used solely in driver modules and therefore are
-     *  non static.
+     *  They are intended to be used solely in driver modules.
+     *  The following INDI properties should be used to communicate the plugin details to the client if required.
+     *  - ALIGNMENT_SUBSYSTEM_MATH_PLUGINS\n
+     *    A list of available plugins (switch)
+     *  - ALIGNMENT_SUBSYSYSTEM_CURRENT_MATH_PLUGIN\n
+     *    The current selected math plugin. Read/write if required (text)
+     *  .
      */
     ///@{
 
@@ -105,7 +111,7 @@ public:
 
     ///@}
 
-    /*! @name TelescopeDirectionVector Helper Functions
+    /*! @name Telescope direction vector helper functions
      *  These functions are used to convert different coordinate systems to and from the
      *  telescope direction vectors (normalised vector/direction cosines) used for telescope coordinates in the
      *  alignment susbsystem.
@@ -155,26 +161,78 @@ public:
      */
     static const TelescopeDirectionVector& TelescopeDirectionVectorFromEquatorialCoordinates(struct ln_equ_posn EquatorialCoordinates)
     {
-        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
     };
 
     /*! \brief Calculates a telescope direction vector from the supplied equatorial coordinates.
-     * \param[in] EquatorialCoordinates The equatorial cordinates in hour minutes seconds and degrees minutes seconds
+     * \param[in] EquatorialCoordinates The equatorial cordinates in hours minutes seconds and degrees minutes seconds
      * \return A TelescopeDirectionVector
      * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
      */
     static const TelescopeDirectionVector& TelescopeDirectionVectorFromEquatorialCoordinates(struct lnh_equ_posn EquatorialCoordinates)
     {
-        return TelescopeDirectionVectorFromSphericalCoordinate(ln_hms_to_rad(&EquatorialCoordinates.ra), CLOCKWISE, ln_dms_to_rad(&EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_hms_to_rad(&EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_dms_to_rad(&EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
     };
 
     /*! \brief Calculates equatorial coordinates from the supplied telescope direction vector
      * and declination.
      * \param[in] TelescopeDirectionVector
-     * \param[out] EquatorialCoordinates The equatorial cordinates in decimal degrees
+     * \param[out] EquatorialCoordinates The equatorial coordinates in decimal degrees
      * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
      */
     static void EquatorialCoordinatesFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+                                                                struct ln_equ_posn& EquatorialCoordinates)
+    {
+        double AzimuthAngle;
+        double PolarAngle;
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
+        EquatorialCoordinates.ra = ln_rad_to_deg(AzimuthAngle);
+        EquatorialCoordinates.dec = ln_rad_to_deg(PolarAngle);
+    };
+
+    /*! \brief Calculates equatorial coordinates from the supplied telescope direction vector
+     * and declination.
+     * \param[in] TelescopeDirectionVector
+     * \param[out] EquatorialCoordinates The equatorial coordinates in hours minutes seconds and degrees minutes seconds
+     * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
+     */
+    static void EquatorialCoordinatesFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+                                                                struct lnh_equ_posn& EquatorialCoordinates)
+    {
+        double AzimuthAngle;
+        double PolarAngle;
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
+        ln_rad_to_hms(AzimuthAngle, &EquatorialCoordinates.ra);
+        ln_rad_to_dms(PolarAngle, &EquatorialCoordinates.dec);
+    };
+
+    /*! \brief Calculates a telescope direction vector from the supplied local hour angle and declination.
+     * \param[in] EquatorialCoordinates The local hour angle and declination in decimal degrees
+     * \return A TelescopeDirectionVector
+     * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
+     */
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromLocalHourAngleDeclination(struct ln_equ_posn EquatorialCoordinates)
+    {
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
+    };
+
+    /*! \brief Calculates a telescope direction vector from the supplied local hour angle and declination.
+     * \param[in] EquatorialCoordinates The local hour angle and declination in hours minutes seconds and degrees minutes seconds
+     * \return A TelescopeDirectionVector
+     * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
+     */
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromLocalHourAngleDeclination(struct lnh_equ_posn EquatorialCoordinates)
+    {
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_hms_to_rad(&EquatorialCoordinates.ra), CLOCKWISE, ln_dms_to_rad(&EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
+    };
+
+    /*! \brief Calculates a local hour angle and declination from the supplied telescope direction vector
+     * and declination.
+     * \param[in] TelescopeDirectionVector
+     * \param[out] EquatorialCoordinates The local hour angle and declination in decimal degrees
+     * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
+     */
+    static void LocalHourAngleDeclinationFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
                                                                 struct ln_equ_posn& EquatorialCoordinates)
     {
         double AzimuthAngle;
@@ -184,13 +242,13 @@ public:
         EquatorialCoordinates.dec = ln_rad_to_deg(PolarAngle);
     };
 
-    /*! \brief Calculates equatorial coordinates from the supplied telescope direction vector
+    /*! \brief Calculates a local hour angle and declination from the supplied telescope direction vector
      * and declination.
      * \param[in] TelescopeDirectionVector
-     * \param[out] EquatorialCoordinates The equatorial cordinates in hour minutes seconds and degrees minutes seconds
-     * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
+     * \param[out] EquatorialCoordinates The local hour angle and declination in hours minutes seconds and degrees minutes seconds
+     * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
      */
-    static void EquatorialCoordinatesFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+    static void LocalHourAngleDeclinationFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
                                                                 struct lnh_equ_posn& EquatorialCoordinates)
     {
         double AzimuthAngle;
@@ -200,51 +258,97 @@ public:
         ln_rad_to_dms(PolarAngle, &EquatorialCoordinates.dec);
     };
 
-    /*! \brief Calculates a telescope direction vector from the supplied local hour angle
-     * and declination.
-     * \param[in] LocalHourAngle
-     * \param[in] Declination
+    /*! \brief Calculates a normalised direction vector from the supplied altitude and azimuth.
+     * \param[in] HorizontalCoordinates Altitude and Azimuth in decimal degrees
      * \return A TelescopeDirectionVector
-     * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
-     */
-    static const TelescopeDirectionVector& TelescopeDirectionVectorFromLocalHourAngleDeclination(const double LocalHourAngle, const double Declination);
-
-    /*! \brief Calculates a local hour angle and declination from the supplied telescope direction vector
-     * and declination.
-     * \param[in] TelescopeDirectionVector
-     * \param[out] LocalHourAngle
-     * \param[out] Declination
-     * \note This assumes a right handed coordinate system for the direction vector with the hour angle being in the XY plane.
-     */
-    static void LocalHourAngleDeclinationFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
-                                                                double LocalHourAngle,
-                                                                double Declination);
-
-    /*! \brief Calculates a normalised direction vector from the supplied altitude
-     * and azimuth.
-     * \param[in] Altitude
-     * \param[in] Azimuth
-     * \return A TelescopeDirectionVector
-     * \note This assumes a right handed coordinate syste for the telescope direction vector with XY being the azimuthal plane,
+     * \note This assumes a right handed coordinate system for the telescope direction vector with XY being the azimuthal plane,
      * and azimuth being measured in a clockwise direction.
      */
-    static const TelescopeDirectionVector& TelescopeDirectionVectorFromAltitudeAzimuth(const double Altitude, const double Azimuth);
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromAltitudeAzimuth(ln_hrz_posn HorizontalCoordinates)
+    {
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(HorizontalCoordinates.az), CLOCKWISE, ln_deg_to_rad(HorizontalCoordinates.alt), FROM_AZIMUTHAL_PLANE);
+    };
+
+    /*! \brief Calculates a normalised direction vector from the supplied altitude and azimuth.
+     * \param[in] HorizontalCoordinates Altitude and Azimuth in degrees minutes seconds
+     * \return A TelescopeDirectionVector
+     * \note This assumes a right handed coordinate system for the telescope direction vector with XY being the azimuthal plane,
+     * and azimuth being measured in a clockwise direction.
+     */
+    static const TelescopeDirectionVector& TelescopeDirectionVectorFromAltitudeAzimuth(lnh_hrz_posn HorizontalCoordinates)
+    {
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_dms_to_rad(&HorizontalCoordinates.az), CLOCKWISE, ln_dms_to_rad(&HorizontalCoordinates.alt), FROM_AZIMUTHAL_PLANE);
+    };
 
     /*! \brief Calculates an altitude and azimuth from the supplied normalised direction vector
      * and declination.
      * \param[in] TelescopeDirectionVector
-     * \param[out] Altitude
-     * \param[out] Azimuth
+     * \param[out] HorizontalCoordinates Altitude and Azimuth in decimal degrees
      * \note This assumes a right handed coordinate system for the telescope direction vector with XY being the azimuthal plane,
      * and azimuth being measured in a clockwise direction.
      */
-    static void AltitudeAzimuthFromNormalisedDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
-                                                                double Altitude,
-                                                                double Azimuth);
+    static void AltitudeAzimuthFromNormalisedDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector, ln_hrz_posn& HorizontalCoordinates)
+    {
+        double AzimuthAngle;
+        double AltitudeAngle;
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, AltitudeAngle, FROM_AZIMUTHAL_PLANE);
+        HorizontalCoordinates.az = ln_rad_to_deg(AzimuthAngle);
+        HorizontalCoordinates.alt = ln_rad_to_deg(AltitudeAngle);
+    };
+
+    /*! \brief Calculates an altitude and azimuth from the supplied normalised direction vector
+     * and declination.
+     * \param[in] TelescopeDirectionVector
+     * \param[out] HorizontalCoordinates Altitude and Azimuth in degrees minutes seconds
+     * \note This assumes a right handed coordinate system for the telescope direction vector with XY being the azimuthal plane,
+     * and azimuth being measured in a clockwise direction.
+     */
+    static void AltitudeAzimuthFromNormalisedDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector, lnh_hrz_posn& HorizontalCoordinates)
+    {
+        double AzimuthAngle;
+        double AltitudeAngle;
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, AltitudeAngle, FROM_AZIMUTHAL_PLANE);
+        ln_rad_to_dms(AzimuthAngle, &HorizontalCoordinates.az);
+        ln_rad_to_dms(AltitudeAngle, &HorizontalCoordinates.alt);
+    };
 
     ///@}
 
-    /*! @name Database Helper Functions
+    /*! @name Database helper functions
+     * The an entry in the sync point database is defined by the following INDI properties
+     * - ALIGNMENT_POINT_ENTRY_OBSERVATION_DATE\n
+     *   The date of the sync point observation (number)
+     * - ALIGNMENT_POINT_ENTRY_TIME\n
+     *   The time of the sync point observation (number)
+     * - ALIGNMENT_POINT_ENTRY_RA\n
+     *   The right ascension of the sync point (number)
+     * - ALIGNMENT_POINT_ENTRY_DEC\n
+     *   The declination of the sync point (number)
+     * - ALIGNMENT_POINT_ENTRY_VECTOR_X\n
+     *   The x component of the telescope direction vector of the sync point (number)
+     * - ALIGNMENT_POINT_ENTRY_VECTOR_Y\n
+     *   The y component of the telescope direction vector of the sync point (number)
+     * - ALIGNMENT_POINT_ENTRY_VECTOR_Z\n
+     *   The z component of the telescope direction vector of the sync point (number)
+     * - ALIGNMENT_POINT_ENTRY_PRIVATE
+     *   An optional binary blob for communication between the client and the math plugin
+     * .
+     * THe database is accessed using the following proerties
+     * - ALIGNMENT_POINT_SET_SIZE\n
+     *   The count of the number of sync points in the set (number)
+     * - ALIGNMENT_POINT_SET_POINTER\n
+     *   A zero based number that sets/shows the current entry (number)
+     * - ALIGNMENT_POINT_SET_ACTION\n
+     *   Whenever this switch is written to one of the following actions is taken: -
+     *   - APPEND\n
+     *     Append a new entry to the set.
+     *   - EDIT\n
+     *     Overwrites the entry at the pointer.
+     *   - DELETE\n
+     *     Delete the entry at the pointer.
+     *   - CLEAR\n
+     *     Delete all entries.
+     * .
      */
     ///@{
 
