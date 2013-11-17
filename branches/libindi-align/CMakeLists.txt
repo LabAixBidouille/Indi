@@ -62,6 +62,7 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_SOURCE_DIR})
 include_directories( ${CMAKE_SOURCE_DIR}/libs)
 include_directories( ${CMAKE_SOURCE_DIR}/libs/indibase)
+include_directories( ${CMAKE_SOURCE_DIR}/libs/indibase/alignment)
 include_directories( ${CMAKE_SOURCE_DIR}/libs/webcam)
 
 if (CFITSIO_FOUND)
@@ -110,6 +111,7 @@ set (indidriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/indifilterinterface.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indilogger.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indicontroller.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystem.cpp
     )
 
 ######################################
