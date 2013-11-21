@@ -20,8 +20,10 @@
 namespace INDI
 {
     class TelescopeDirectionVector;
-    class MathPlugin;
-    class AlignmentSubsystem;
+    class AlignmentSubsystemClient;
+    class AlignmentSubsystemDriver;
+    class AlignmentSubsystemMathPlugin;
+    class AlignmentSubsystemBase;
 }
 
 /*!
@@ -40,85 +42,13 @@ public:
 };
 
 /*!
- * \class INDI::MathPlugin
- * \brief Provides functions for transforming celestial coordinates into telescope coordinates.
+ * \class INDI::AlignmentSubsystemBase
+ * \brief Provides common alignment subsystem functions that are used in clients, drivers, and math pluigins
  *
- *
- * \note This class is intended to be implemented as a dynamic shared object. If the
- * implementation of this class uses a standard 3 by 3 transformation matrix to convert between coordinate systems
- * then it will not normally need to know the handedness of either the celestial or telescope coordinate systems, as the
- * necessary rotations and scaling will be handled in the derivation of the matrix coefficients. This will normally
- * be done using the three reference (sync) points method. Knowledge of the handedness of the coordinate systems is needed
- * when only two reference points are available and a third reference point has to artificially generated in order to
- * derive the matrix coefficients.
  */
-class INDI::MathPlugin
+class INDI::AlignmentSubsystemBase
 {
 public:
-    /** \brief Get the alignment corrected telescope pointing direction for the supplied celestial coordinates
-        \param[in] RightAscension Right Ascension (Decimal Hours).
-        \param[in] Declination Declination (Decimal Degrees).
-        \param[out] TelescopeDirectionVector Parameter to receive the corrected telescope direction
-        \return True if successful
-    */
-    virtual bool TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector) = 0;
-
-    /** \brief Get the true celestial coordinates for the supplied telescope pointing direction
-        \param[in] TelescopeDirectionVector the telescope direction
-        \param[out] RightAscension Parameter to receive the Right Ascension (Decimal Hours).
-        \param[out] Declination Parameter to receive the Declination (Decimal Degrees).
-        \return True if successful
-    */
-    virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination) = 0;
-};
-
-/*!
- * \class INDI::AlignmentSubsystem
- * \brief Provides functions to manage the loading and initialisation of Alignment Subsystem plugin database and math modules. Also provides
- * helper functions for telescope drivers using the the Alignment Subsystem.
- *
- * TODO see if we can detect if this class is being used by a client or a driver from RTTI
- * so that we can access INDI properties appropriately
- *
- * \note It is intended that this class should be included as a base class alongside INDI::Telescope in derived
- * telescope driver classes. In the same way the INDI::GuiderInterface class is used.
- */
-class INDI::AlignmentSubsystem
-{
-public:
-    /*! @name Plugin management
-     *  These functions are used to enumerate, load, and utilise math plugins.
-     *  They are intended to be used solely in driver modules.
-     *  The following INDI properties are used to communicate the plugin details to the client if required.
-     *  - ALIGNMENT_SUBSYSTEM_MATH_PLUGINS\n
-     *    A list of available plugins (switch)
-     *  - ALIGNMENT_SUBSYSYSTEM_CURRENT_MATH_PLUGIN\n
-     *    The current selected math plugin. Read/write if required (text)
-     */
-
-    ///@{
-
-    /*!
-     * \brief Return a list of the names of the available math plugins.
-     * \param[out] MathPlugins Reference to a list of the names of the available math plugins.
-     * \return False on failure
-     */
-    bool EnumerateMathPlugins(const std::vector<std::string>& MathPlugins);
-
-    /*!
-     * \brief Selects, loads and initialises the named math plugin.
-     * \param[in] MathPluginName The name of the required math plugin.
-     * \return False on failure.
-     */
-    bool SelectMathPlugin(const std::string& MathPluginName);
-
-    /*!
-     * \brief Get a pointer to the current math plugin.
-     * \return NULL on failure.
-     */
-    const MathPlugin* GetMathPluginPointer(void);
-
-    ///@}
 
     /*! @name Telescope direction vector helper functions
      *  These functions are used to convert different coordinate systems to and from the
@@ -342,7 +272,7 @@ public:
      * - ALIGNMENT_POINT_ENTRY_PRIVATE\n
      *   An optional binary blob for communication between the client and the math plugin
      * .
-     * THe database is accessed using the following properties
+     * The database is accessed using the following properties
      * - ALIGNMENT_POINT_SET_SIZE\n
      *   The count of the number of sync points in the set (number)
      * - ALIGNMENT_POINT_SET_POINTER\n
@@ -351,31 +281,163 @@ public:
      *   Whenever this switch is written to one of the following actions is taken
      *   - APPEND\n
      *     Append a new entry to the set.
+     *   - INSERT\n
+     *     Insert a new entry at the pointer.
      *   - EDIT\n
      *     Overwrites the entry at the pointer.
      *   - DELETE\n
      *     Delete the entry at the pointer.
      *   - CLEAR\n
      *     Delete all entries.
-     * .
+     *   - READ\n
+     *     read the entry at the pointer.
+     *
+     *  The following pure virtual functions must be implemented in derived classes
      */
 
     ///@{
 
-    /** \brief Add a sync point to the database.
+    /** \brief Apend a sync point to the database.
         \param[in] ObservationTime The time the observation was made.
         \param[in] RightAscension Right Ascension (Decimal Hours).
         \param[in] Declination Declination of the observed object (Decimal Degrees).
         \param[in] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
         \return True if successful
-        \note This is just here as a placeholder at the moment
     */
-    bool AddSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
+    virtual bool AppendSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector) = 0;
 
-    ///@}
+    /** \brief Insert a sync point in the database.
+        \param[in] Offset Pointer to where to make then insertion.
+        \param[in] ObservationTime The time the observation was made.
+        \param[in] RightAscension Right Ascension (Decimal Hours).
+        \param[in] Declination Declination of the observed object (Decimal Degrees).
+        \param[in] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+        \return True if successful
+    */
+    virtual bool InsertSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+
+    /** \brief Edit a sync point in the database.
+        \param[in] Offset Pointer to where to make then edit.
+        \param[in] ObservationTime The time the observation was made.
+        \param[in] RightAscension Right Ascension (Decimal Hours).
+        \param[in] Declination Declination of the observed object (Decimal Degrees).
+        \param[in] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+        \return True if successful
+    */
+    virtual bool EditSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+
+    /** \brief Delete a sync point from the database.
+        \param[in] Offset Pointer to where to make then insertion
+        \return True if successful
+    */
+    virtual bool DeleteSyncPoint(unsigned int Offset) = 0;
+
+    /** \brief Delete all sync points from the database.
+        \return True if successful
+    */
+    virtual bool ClearSyncPoints() = 0;
+
+    /** \brief Read a sync point from the database.
+        \param[in] Offset Pointer to where to read from.
+        \param[in] ObservationTime The time the observation was made.
+        \param[in] RightAscension Right Ascension (Decimal Hours).
+        \param[in] Declination Declination of the observed object (Decimal Degrees).
+        \param[in] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+        \return True if successful
+    */
+    virtual bool ReadSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+
+    /** \brief Read the next sync point from the database.
+        \param[in] ObservationTime The time the observation was made.
+        \param[in] RightAscension Right Ascension (Decimal Hours).
+        \param[in] Declination Declination of the observed object (Decimal Degrees).
+        \param[in] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+        \return True if successful
+    */
+    virtual bool ReadNextSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+///@}
 
 protected:
+};
+
+/*!
+ * \class INDI::AlignmentSubsystemClient
+ * \brief Provides alignment subsystem functions to INDI clients
+ *
+ */
+class INDI::AlignmentSubsystemClient : public INDI::AlignmentSubsystemBase
+{
+public:
+    /*! @name Database helper function implementations
+     */
+
+    ///@{
+
+    bool AppendSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool InsertSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool EditSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool DeleteSyncPoint(unsigned int Offset);
+
+    bool ClearSyncPoints();
+
+    bool ReadSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool ReadNextSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+    ///@}
+};
+
+/*!
+ * \class INDI::AlignmentSubsystemDriver
+ * \brief Provides alignment subsystem functions to INDI telescope drivers
+ *
+ */
+class INDI::AlignmentSubsystemDriver : public INDI::AlignmentSubsystemBase
+{
+public:
+    /*! @name Plugin management
+     *  These functions are used to enumerate, load, and utilise math plugins.
+     *  They are intended to be used solely in driver modules.
+     *  The following INDI properties are used to communicate the plugin details to the client if required.
+     *  - ALIGNMENT_SUBSYSTEM_MATH_PLUGINS\n
+     *    A list of available plugins (switch)
+     *  - ALIGNMENT_SUBSYSYSTEM_CURRENT_MATH_PLUGIN\n
+     *    The current selected math plugin. Read/write if required (text)
+     */
+    ///@{
+    /*!
+     * \brief Return a list of the names of the available math plugins.
+     * \param[out] MathPlugins Reference to a list of the names of the available math plugins.
+     * \return False on failure
+     */
+    bool EnumerateMathPlugins(const std::vector<std::string>& MathPlugins);
+
+    /*!
+     * \brief Selects, loads and initialises the named math plugin.
+     * \param[in] MathPluginName The name of the required math plugin.
+     * \return False on failure.
+     */
+    bool SelectMathPlugin(const std::string& MathPluginName);
+
+    /*!
+     * \brief Get a pointer to the current math plugin.
+     * \return NULL on failure.
+     */
+    const AlignmentSubsystemMathPlugin* GetMathPluginPointer(void);
+    ///@}
+
     /** \brief Initilize alignment properties. It is recommended to call this function within initProperties() of your primary device
         \param[in] deviceName Name of the primary device
         \param[in] groupName Group or tab name to be used to define guider properties.
@@ -391,11 +453,94 @@ protected:
     */
     void ProcessAlignmentProperties(const char *name, double values[], char *names[], int n);
 
+    /*! @name Database helper function implementations
+     */
+
+    ///@{
+
+    bool AppendSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool InsertSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool EditSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool DeleteSyncPoint(unsigned int Offset);
+
+    bool ClearSyncPoints();
+
+    bool ReadSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool ReadNextSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+    ///@}
+
+protected:
     // Property values
     INumber SyncDatabaseEntry[7];
     INumberVectorProperty SyncDataBaseNumbers;
     IBLOB SyncDatabasePrivateBinaryData;
     IBLOBVectorProperty SyncDatabaseBlobs;
+};
+
+/*!
+ * \class INDI::AlignmentSubsystemMathPlugin
+ * \brief Provides alignment subsystem functions to INDI alignment math plugins
+ *
+ * \note This class is intended to be implemented within adynamic shared object. If the
+ * implementation of this class uses a standard 3 by 3 transformation matrix to convert between coordinate systems
+ * then it will not normally need to know the handedness of either the celestial or telescope coordinate systems, as the
+ * necessary rotations and scaling will be handled in the derivation of the matrix coefficients. This will normally
+ * be done using the three reference (sync) points method. Knowledge of the handedness of the coordinate systems is needed
+ * when only two reference points are available and a third reference point has to artificially generated in order to
+ * derive the matrix coefficients.
+ */
+class INDI::AlignmentSubsystemMathPlugin : public INDI::AlignmentSubsystemBase
+{
+public:
+    /** \brief Get the alignment corrected telescope pointing direction for the supplied celestial coordinates
+        \param[in] RightAscension Right Ascension (Decimal Hours).
+        \param[in] Declination Declination (Decimal Degrees).
+        \param[out] TelescopeDirectionVector Parameter to receive the corrected telescope direction
+        \return True if successful
+    */
+    virtual bool TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+
+    /** \brief Get the true celestial coordinates for the supplied telescope pointing direction
+        \param[in] TelescopeDirectionVector the telescope direction
+        \param[out] RightAscension Parameter to receive the Right Ascension (Decimal Hours).
+        \param[out] Declination Parameter to receive the Declination (Decimal Degrees).
+        \return True if successful
+    */
+    virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination) = 0;
+
+    /*! @name Database helper function implementations
+     */
+
+    ///@{
+
+    bool AppendSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool InsertSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool EditSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool DeleteSyncPoint(unsigned int Offset);
+
+    bool ClearSyncPoints();
+
+    bool ReadSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+
+    bool ReadNextSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector);
+    ///@}
 };
 
 #endif // ALIGNMENTSUBSYSTEM_H

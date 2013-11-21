@@ -9,7 +9,7 @@
 
 #include "AlignmentSubsystem.h"
 
-void INDI::AlignmentSubsystem::InitAlignmentProperties(const char *deviceName, const char* groupName)
+void INDI::AlignmentSubsystemDriver::InitAlignmentProperties(const char *deviceName, const char* groupName)
 {
 
     IUFillNumber(&SyncDatabaseEntry[0],"ALIGNMENT_POINT_ENTRY_OBSERVATION_DATE","Observation date (dd:mm:yy)","%010.6m",0,60000,0,0);
@@ -27,6 +27,6 @@ void INDI::AlignmentSubsystem::InitAlignmentProperties(const char *deviceName, c
                     "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB","Optional sync point binary data",groupName,IP_RW,60,IPS_IDLE);
 }
 
-void INDI::AlignmentSubsystem::ProcessAlignmentProperties(const char *name, double values[], char *names[], int n)
+void INDI::AlignmentSubsystemDriver::ProcessAlignmentProperties(const char *name, double values[], char *names[], int n)
 {
 }
