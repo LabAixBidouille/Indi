@@ -42,6 +42,8 @@ private:
     int skywatcher_tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read);
     int skywatcher_tty_write(int fd, const char * buffer, int nbytes, int *nbytes_written);
 
+    // Custom debug level
+    unsigned int DBG_SCOPE;
 };
 
 #endif // SKYWATCHERAPIMOUNT_H

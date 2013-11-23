@@ -19,7 +19,7 @@
 #include <memory>
 #include <cmath>
 
-// We declare an auto pointer to Synscan.
+// We declare an auto pointer to SkywatcherAPIMount.
 std::auto_ptr<SkywatcherAPIMount> SkywatcherAPIMountPtr(0);
 
 void ISPoll(void *p);
@@ -79,6 +79,8 @@ void ISSnoopDevice (XMLEle *root)
 
 SkywatcherAPIMount::SkywatcherAPIMount()
 {
+    // We add an additional debug level so we can log verbose scope status
+    DBG_SCOPE = INDI::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
 }
 
 SkywatcherAPIMount::~SkywatcherAPIMount()
@@ -88,7 +90,7 @@ SkywatcherAPIMount::~SkywatcherAPIMount()
 
 const char * SkywatcherAPIMount::getDefaultName()
 {
-    IDLog("SkywatcherAPIMount::getDefaultName\n");
+    //DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::getDefaultName\n");
     return "skywatcherAPIMount";
 }
 
@@ -98,6 +100,7 @@ bool SkywatcherAPIMount::initProperties()
 
     INDI::Telescope::initProperties();
 
+    addDebugControl();
     return true;
 }
 void SkywatcherAPIMount::ISGetProperties (const char *dev)
@@ -109,7 +112,11 @@ void SkywatcherAPIMount::ISGetProperties (const char *dev)
 
 bool SkywatcherAPIMount::ReadScopeStatus()
 {
-    IDLog("SkywatcherAPIMount::ReadScopeStatus\n");
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::ReadScopeStatus");
+
+    // Horrible hack to get over the fact that the base class calls ReadScopeStatus from inside Connect
+    // before I have a chanced to set up tth serial port
+    SetSerialPort(PortFD);
 
     // Quick check of the mount
     if (!InquireMotorBoardVersion(AXIS1))
@@ -134,7 +141,7 @@ bool SkywatcherAPIMount::ReadScopeStatus()
         memset(str,0,20);
         tty_write(PortFD,"Z",1, &bytesWritten);
         numread=tty_read(PortFD,str,10,2, &bytesRead);
-        //IDLog("PARK READ %s\n",str);
+        //DEBUG(INDI::Logger::DBG_SESSION, "PARK READ %s\n",str);
         if(strncmp((char *)str,"0000,4000",9)==0)
         {
             TrackState=SCOPE_PARKED;
@@ -160,18 +167,21 @@ bool SkywatcherAPIMount::ReadScopeStatus()
 
 bool  SkywatcherAPIMount::Connect()
 {
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Connect");
+
 	if (!INDI::Telescope::Connect())
 		return false;
 
     // Tell SkywatcherAPI about the serial port
     SetSerialPort(PortFD);
 
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Connect - Call MCInit");
 	return MCInit();
 }
 
 bool SkywatcherAPIMount::Goto(double ra,double dec)
 {
-    IDLog("SkywatcherAPIMount::Goto\n");
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Goto");
     char str[20];
     int n1,n2;
     int numread, bytesWritten, bytesRead;
@@ -197,7 +207,7 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
     if (bytesRead!=1||str[0]!='#')
     {
         if (isDebug())
-            IDLog("Timeout waiting for scope to complete slewing.");
+            DEBUG(INDI::Logger::DBG_SESSION, "Timeout waiting for scope to complete slewing.");
         return false;
     }
 
@@ -206,7 +216,7 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
 
 bool SkywatcherAPIMount::Park()
 {
-    IDLog("SkywatcherAPIMount::Park\n");
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Park");
     char str[20];
     int numread, bytesWritten, bytesRead;
 
@@ -226,7 +236,7 @@ bool SkywatcherAPIMount::Park()
     if (bytesRead!=1||str[0]!='#')
     {
         if (isDebug())
-            IDLog("Timeout waiting for scope to stop tracking.");
+            DEBUG(INDI::Logger::DBG_SESSION, "Timeout waiting for scope to stop tracking.");
         return false;
     }
 
@@ -236,7 +246,7 @@ bool SkywatcherAPIMount::Park()
     if (bytesRead!=1||str[0]!='#')
     {
         if (isDebug())
-            IDLog("Timeout waiting for scope to respond to park.");
+            DEBUG(INDI::Logger::DBG_SESSION, "Timeout waiting for scope to respond to park.");
         return false;
     }
 
@@ -247,7 +257,7 @@ bool SkywatcherAPIMount::Park()
 
 bool  SkywatcherAPIMount::Abort()
 {
-    IDLog("SkywatcherAPIMount::Abort\n");
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Abort");
     char str[20];
     int bytesWritten, bytesRead;
 
