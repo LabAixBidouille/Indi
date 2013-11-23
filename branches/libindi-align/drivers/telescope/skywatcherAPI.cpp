@@ -13,6 +13,11 @@
  * The synscanmount driver by Gerry Rozema.
  */
 
+#define INDI_DEBUG_LOGGING
+#ifdef INDI_DEBUG_LOGGING
+#include "indibase/inditelescope.h"
+#endif
+
 #include "skywatcherAPI.h"
 
 #include <memory>
@@ -58,6 +63,9 @@ SkywatcherAPI::~SkywatcherAPI()
 
 bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr)
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGFDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "TalkWithAxis Command %c Data (%s)", Command, cmdDataStr.c_str());
+#endif
 
     std::string SendBuffer;
     int bytesWritten;
@@ -89,6 +97,9 @@ bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdData
         if ((c == '\r') && StartReading)
             EndReading = true;
     }
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGFDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "TalkWithAxis - good return Response (%s)", responseStr.c_str());
+#endif
     return true;
 }
 
@@ -125,6 +136,9 @@ long SkywatcherAPI::RadSpeedToInt(AXISID Axis, double RateInRad)
 
 bool SkywatcherAPI::CheckIfDCMotor()
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "CheckIfDCMotor");
+#endif
 	// Flush the tty read buffer
 	char input[20];
 	int rc;
@@ -160,6 +174,10 @@ bool SkywatcherAPI::CheckIfDCMotor()
 
 bool SkywatcherAPI::MCInit()
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "MCInit");
+#endif
+
 	if (!CheckIfDCMotor())
 		return false;
 
@@ -218,6 +236,9 @@ bool SkywatcherAPI::MCInit()
 
 bool SkywatcherAPI::MCGetAxisPosition(AXISID Axis)
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "MCGetAxisPosition");
+#endif
     std::string Parameters, Response;
     if (!TalkWithAxis(Axis, 'j', Parameters, Response))
     	return false;
@@ -231,6 +252,9 @@ bool SkywatcherAPI::MCGetAxisPosition(AXISID Axis)
 
 bool SkywatcherAPI::MCGetAxisStatus(AXISID Axis)
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "MCGetAxisStatus");
+#endif
     std::string Parameters, Response;
 
     if(!TalkWithAxis(Axis, 'f', Parameters, Response))
@@ -282,6 +306,9 @@ bool SkywatcherAPI::MCGetAxisStatus(AXISID Axis)
 // Inquire Motor Board Version ":e(*1)", where *1: '1'= CH1, '2'= CH2, '3'= Both.
 bool SkywatcherAPI::InquireMotorBoardVersion(AXISID Axis)
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "InquireMotorBoardVersion");
+#endif
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'e', Parameters, Response))
@@ -297,6 +324,9 @@ bool SkywatcherAPI::InquireMotorBoardVersion(AXISID Axis)
 // Inquire Grid Per Revolution ":a(*2)", where *2: '1'= CH1, '2' = CH2.
 bool SkywatcherAPI::InquireGridPerRevolution(AXISID Axis)
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "InquireGridPerRevolution");
+#endif
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'a', Parameters, Response))
@@ -321,6 +351,9 @@ bool SkywatcherAPI::InquireGridPerRevolution(AXISID Axis)
 // Inquire Timer Interrupt Freq ":b1".
 bool SkywatcherAPI::InquireTimerInterruptFreq(AXISID Axis)
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "InquireTimerInterruptFreq");
+#endif
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'b', Parameters, Response))
@@ -337,6 +370,9 @@ bool SkywatcherAPI::InquireTimerInterruptFreq(AXISID Axis)
 // Inquire high speed ratio ":g(*2)", where *2: '1'= CH1, '2' = CH2.
 bool SkywatcherAPI::InquireHighSpeedRatio(AXISID Axis)
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "InquireHighSpeedRatio");
+#endif
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'g', Parameters, Response))
@@ -351,6 +387,9 @@ bool SkywatcherAPI::InquireHighSpeedRatio(AXISID Axis)
 // Inquire PEC Period ":s(*1)", where *1: '1'= CH1, '2'= CH2, '3'= Both.
 bool SkywatcherAPI::InquirePECPeriod(AXISID Axis)
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "InquirePECPeriod");
+#endif
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 's', Parameters, Response))
@@ -365,6 +404,9 @@ bool SkywatcherAPI::InquirePECPeriod(AXISID Axis)
 // Set initialization done ":F3", where '3'= Both CH1 and CH2.
 bool SkywatcherAPI::InitializeMC()
 {
+#ifdef INDI_DEBUG_LOGGING
+    DEBUGDEVICE("SkywatcherAPI", INDI::Logger::DBG_SESSION, "InitializeMC");
+#endif
     std::string Parameters, Response;
 
     if (!TalkWithAxis(AXIS1, 'F', Parameters, Response))
