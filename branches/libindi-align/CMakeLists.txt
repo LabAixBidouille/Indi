@@ -302,6 +302,16 @@ target_link_libraries(indi_synscan indidriver m z)
 
 install(TARGETS indi_synscan RUNTIME DESTINATION bin )
 
+########### Skywatcher API Mount ###############
+set(skywatcherAPIMount_SRCS
+   ${CMAKE_SOURCE_DIR}/drivers/telescope/skywatcherAPIMount.cpp
+   ${CMAKE_SOURCE_DIR}/drivers/telescope/skywatcherAPI.cpp )
+
+add_executable(indi_skywatcherAPIMount ${skywatcherAPIMount_SRCS})
+target_link_libraries(indi_skywatcherAPIMount indidriver m z)
+
+install(TARGETS indi_skywatcherAPIMount RUNTIME DESTINATION bin )
+
 ########### Magellan I #############
 set(magellan_SRCS
    ${indimain_SRCS}
