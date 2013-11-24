@@ -81,6 +81,8 @@ SkywatcherAPIMount::SkywatcherAPIMount()
 {
     // We add an additional debug level so we can log verbose scope status
     DBG_SCOPE = INDI::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
+    // Set up the logging pointer in SkyWatcherAPI
+    pChildTelescope = this;
 }
 
 SkywatcherAPIMount::~SkywatcherAPIMount()
@@ -100,7 +102,10 @@ bool SkywatcherAPIMount::initProperties()
 
     INDI::Telescope::initProperties();
 
+    // Add default properties
     addDebugControl();
+    addConfigurationControl();
+
     return true;
 }
 void SkywatcherAPIMount::ISGetProperties (const char *dev)

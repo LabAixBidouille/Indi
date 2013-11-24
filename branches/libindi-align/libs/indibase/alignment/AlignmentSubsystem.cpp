@@ -30,3 +30,44 @@ void INDI::AlignmentSubsystemDriver::InitAlignmentProperties(const char *deviceN
 void INDI::AlignmentSubsystemDriver::ProcessAlignmentProperties(const char *name, double values[], char *names[], int n)
 {
 }
+
+bool INDI::AlignmentSubsystemDriver::AppendSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                    const TelescopeDirectionVector& TelescopeDirectionVector)
+{
+    return false;
+}
+
+bool INDI::AlignmentSubsystemDriver::InsertSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                    const TelescopeDirectionVector& TelescopeDirectionVector)
+{
+    return false;
+}
+
+bool INDI::AlignmentSubsystemDriver::EditSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                    const TelescopeDirectionVector& TelescopeDirectionVector)
+{
+    return false;
+}
+
+bool INDI::AlignmentSubsystemDriver::DeleteSyncPoint(unsigned int Offset)
+{
+    return false;
+}
+
+bool INDI::AlignmentSubsystemDriver::ClearSyncPoints()
+{
+    return false;
+}
+
+bool INDI::AlignmentSubsystemDriver::ReadSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
+                    const TelescopeDirectionVector& TelescopeDirectionVector)
+{
+    return false;
+}
+
+bool INDI::AlignmentSubsystemDriver::ReadNextSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
+                    const TelescopeDirectionVector& TelescopeDirectionVector)
+{
+    return false;
+}
+
