@@ -17,11 +17,11 @@
 #define SKYWATCHERAPIMOUNT_H
 
 #include "indibase/inditelescope.h"
+#include "indibase/alignment/AlignmentSubsystem.h"
 
 #include "skywatcherAPI.h"
-#include <cmath>
 
-class SkywatcherAPIMount : public INDI::Telescope, public SkywatcherAPI
+class SkywatcherAPIMount : public INDI::Telescope, public SkywatcherAPI, public INDI::AlignmentSubsystemDriver
 {
 public:
     SkywatcherAPIMount();
@@ -36,11 +36,15 @@ public:
     virtual bool Goto(double,double);
     virtual bool Park();
     virtual bool Abort();
+    // For the time being stop the timer path being used
+    virtual void TimerHit() {}
 
 private:
     // Overrides for the pure virtual functions in SkyWatcherAPI
     int skywatcher_tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read);
     int skywatcher_tty_write(int fd, const char * buffer, int nbytes, int *nbytes_written);
+
+    // Ovverides for the pure virtual functions in
 
     // Custom debug level
     unsigned int DBG_SCOPE;

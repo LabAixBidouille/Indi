@@ -49,7 +49,6 @@ public:
 class INDI::AlignmentSubsystemBase
 {
 public:
-
     /*! @name Telescope direction vector helper functions
      *  These functions are used to convert different coordinate systems to and from the
      *  telescope direction vectors (normalised vector/direction cosines) used for telescope coordinates in the

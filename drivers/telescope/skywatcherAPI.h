@@ -19,6 +19,16 @@
 #include <cmath>
 #include <string>
 
+#define INDI_DEBUG_LOGGING
+#ifdef INDI_DEBUG_LOGGING
+#include "indibase/inditelescope.h"
+#define MYDEBUG(priority, msg) INDI::Logger::getInstance().print(pChildTelescope->getDeviceName(), priority, __FILE__, __LINE__, msg)
+#define MYDEBUGF(priority, msg, ...) INDI::Logger::getInstance().print(pChildTelescope->getDeviceName(), priority, __FILE__, __LINE__,  msg, __VA_ARGS__)
+#else
+#define MYDEBUG(priority, msg)
+#define MYDEBUGF(priority, msg, ...)
+#endif
+
 class CONSTANT
 {
     public:
@@ -90,6 +100,11 @@ private:
 //    virtual void skywatcher_tty_error_msg(int err_code, char *err_msg, int err_msg_len) = 0;
 //    virtual int skywatcher_tty_timeout(int fd, int timeout) = 0;*/
     int MyPortFD;
+
+#ifdef INDI_DEBUG_LOGGING
+public:
+    INDI::Telescope *pChildTelescope;
+#endif
 };
 
 #endif // SKYWATCHERAPI_H
