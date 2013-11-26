@@ -15,7 +15,7 @@
 
 #include <libnova.h>
 
-#include "basedevice.h"
+#include "inditelescope.h"
 
 namespace INDI
 {
@@ -272,11 +272,12 @@ public:
      *   An optional binary blob for communication between the client and the math plugin
      * .
      * The database is accessed using the following properties
-     * - ALIGNMENT_POINT_SET_SIZE\n
+     * - ALIGNMENT_POINTSET_SIZE\n
      *   The count of the number of sync points in the set (number)
-     * - ALIGNMENT_POINT_SET_POINTER\n
+     * - ALIGNMENT_POINTSET_CURRENT_ENTRY\n
      *   A zero based number that sets/shows the current entry (number)
-     * - ALIGNMENT_POINT_SET_ACTION\n
+     *   Only valid if ALIGNMENT_POINTSET_SIZE is greater than zero
+     * - ALIGNMENT_POINTSET_ACTION\n
      *   Whenever this switch is written to one of the following actions is taken
      *   - APPEND\n
      *     Append a new entry to the set.
@@ -290,6 +291,8 @@ public:
      *     Delete all entries.
      *   - READ\n
      *     read the entry at the pointer.
+     *   - READ INCREMENT\n
+     *     increment the pointer after reading the entry.
      *
      *  The following pure virtual functions must be implemented in derived classes
      */
@@ -439,18 +442,35 @@ public:
 
     /** \brief Initilize alignment properties. It is recommended to call this function within initProperties() of your primary device
         \param[in] deviceName Name of the primary device
-        \param[in] groupName Group or tab name to be used to define guider properties.
     */
-    void InitAlignmentProperties(const char *deviceName, const char* groupName);
+    void InitAlignmentProperties(Telescope* pTelescope);
 
-    /** \brief Call this function whenever client updates a number, text, or blob property. The function
-     * will handle any alignment related properties
-     * \param[in] name device name
+    /** \brief Call this function whenever client updates a number property. The function will
+     * handle any alignment related properties.
+     * \param[in] name vector property name
      * \param[in] values value as passed by the client
      * \param[in] names names as passed by the client
      * \param[in] n number of values and names pair to process.
     */
-    void ProcessAlignmentProperties(const char *name, double values[], char *names[], int n);
+    void ProcessAlignmentNumberProperties(Telescope* pTelescope, const char *name, double values[], char *names[], int n);
+
+    /** \brief Call this function whenever client updates a switch property. The function will
+     * handle any alignment related properties.
+     * \param[in] name vector property name
+     * \param[in] values value as passed by the client
+     * \param[in] names names as passed by the client
+     * \param[in] n number of values and names pair to process.
+    */
+    void ProcessAlignmentSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
+
+    /** \brief Call this function whenever client updates a blob property. The function will
+     * handle any alignment related properties.
+     * \param[in] name vector property name
+     * \param[in] values value as passed by the client
+     * \param[in] names names as passed by the client
+     * \param[in] n number of values and names pair to process.
+    */
+    void ProcessAlignmentBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
     /*! @name Database helper function implementations
      */
@@ -479,17 +499,25 @@ public:
 
 protected:
     // Property values
-    INumber SyncDatabaseEntry[7];
-    INumberVectorProperty SyncDataBaseNumbers;
-    IBLOB SyncDatabasePrivateBinaryData;
-    IBLOBVectorProperty SyncDatabaseBlobs;
+    INumber AlignmentPointSetEntry[7];
+    INumberVectorProperty AlignmentPointSetEntryV;
+    IBLOB AlignmentPointSetPrivateBinaryData;
+    IBLOBVectorProperty AlignmentPointSetPrivateBinaryDataV;
+    INumber AlignmentPointSetSize;
+    INumberVectorProperty AlignmentPointSetSizeV;
+    INumber AlignmentPointSetPointer;
+    INumberVectorProperty AlignmentPointSetPointerV;
+    ISwitch AlignmentPointSetAction[7];
+    ISwitchVectorProperty AlignmentPointSetActionV;
+    ISwitch AlignmentPointSetCommit;
+    ISwitchVectorProperty AlignmentPointSetCommitV;
 };
 
 /*!
  * \class INDI::AlignmentSubsystemMathPlugin
  * \brief Provides alignment subsystem functions to INDI alignment math plugins
  *
- * \note This class is intended to be implemented within adynamic shared object. If the
+ * \note This class is intended to be implemented within a dynamic shared object. If the
  * implementation of this class uses a standard 3 by 3 transformation matrix to convert between coordinate systems
  * then it will not normally need to know the handedness of either the celestial or telescope coordinate systems, as the
  * necessary rotations and scaling will be handled in the derivation of the matrix coefficients. This will normally

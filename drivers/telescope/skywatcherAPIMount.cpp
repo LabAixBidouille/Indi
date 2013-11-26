@@ -90,6 +90,39 @@ SkywatcherAPIMount::~SkywatcherAPIMount()
     //dtor
 }
 
+bool SkywatcherAPIMount::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
+{
+    if(strcmp(dev,getDeviceName())==0)
+    {
+        // It is for us
+        ProcessAlignmentNumberProperties(this, name, values, names, n);
+    }
+    // Pass it up the chain
+    return INDI::Telescope::ISNewNumber(dev,name,values,names,n);
+}
+
+bool SkywatcherAPIMount::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    if(strcmp(dev,getDeviceName())==0)
+    {
+        // It is for us
+        ProcessAlignmentSwitchProperties(this, name, states, names, n);
+    }
+    // Pass it up the chain
+    return INDI::Telescope::ISNewSwitch(dev, name, states, names, n);
+}
+
+bool SkywatcherAPIMount::ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+{
+    if(strcmp(dev,getDeviceName())==0)
+    {
+        // It is for us
+        ProcessAlignmentBlobProperties(this, name, sizes, blobsizes, blobs, formats, names, n);
+    }
+    // Pass it up the chain
+    return INDI::Telescope::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+}
+
 const char * SkywatcherAPIMount::getDefaultName()
 {
     //DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::getDefaultName\n");
@@ -100,16 +133,24 @@ bool SkywatcherAPIMount::initProperties()
 {
     IDLog("SkywatcherAPIMount::initProperties\n");
 
+    // Allow the base class to initialise its visible before connection properties
     INDI::Telescope::initProperties();
 
     // Add default properties
     addDebugControl();
     addConfigurationControl();
 
+    // Add alignment properties
+    InitAlignmentProperties(this);
+
+    // Add my visible before connection properties if any
+
+
     return true;
 }
 void SkywatcherAPIMount::ISGetProperties (const char *dev)
 {
+    // This iverride is currently here for debugging purposes only
     IDLog("SkywatcherAPIMount::ISGetProperties\n");
     INDI::Telescope::ISGetProperties(dev);
     return;
@@ -122,6 +163,8 @@ bool SkywatcherAPIMount::ReadScopeStatus()
     // Horrible hack to get over the fact that the base class calls ReadScopeStatus from inside Connect
     // before I have a chanced to set up tth serial port
     SetSerialPort(PortFD);
+
+    // leave the following stuff in for the time being it is mostly harmless
 
     // Quick check of the mount
     if (!InquireMotorBoardVersion(AXIS1))
@@ -138,35 +181,13 @@ bool SkywatcherAPIMount::ReadScopeStatus()
         if ((AxesStatus[AXIS1].FullStop) && (AxesStatus[AXIS2].FullStop))
             TrackState = SCOPE_IDLE;
     }
-/*
-    if(TrackState==SCOPE_PARKING)
-    {
-        //  ok, lets try read where we are
-        //  and see if we have reached the park position
-        memset(str,0,20);
-        tty_write(PortFD,"Z",1, &bytesWritten);
-        numread=tty_read(PortFD,str,10,2, &bytesRead);
-        //DEBUG(INDI::Logger::DBG_SESSION, "PARK READ %s\n",str);
-        if(strncmp((char *)str,"0000,4000",9)==0)
-        {
-            TrackState=SCOPE_PARKED;
-            ParkSV.s=IPS_OK;
-            IDSetSwitch(&ParkSV,NULL);
-            IDMessage(getDeviceName(),"Telescope is Parked.");
-        }
 
-    }
-*/
     // Update Axis Position
     if (!MCGetAxisPosition(AXIS1))
         return false;
     if (!MCGetAxisPosition(AXIS2))
         return false;
 
-
-/*    ra=(double)n1/0x100000000*24.0;
-    dec=(double)n2/0x100000000*360.0;
-    NewRaDec(ra,dec);*/
     return true;
 }
 
@@ -178,7 +199,7 @@ bool  SkywatcherAPIMount::Connect()
 		return false;
 
     // Tell SkywatcherAPI about the serial port
-    SetSerialPort(PortFD);
+    //SetSerialPort(PortFD); Hacked in ReadScopeStatus
 
     DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Connect - Call MCInit");
 	return MCInit();
@@ -187,94 +208,19 @@ bool  SkywatcherAPIMount::Connect()
 bool SkywatcherAPIMount::Goto(double ra,double dec)
 {
     DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Goto");
-    char str[20];
-    int n1,n2;
-    int numread, bytesWritten, bytesRead;
-
-    //  not fleshed in yet
-    tty_write(PortFD,"Ka",2, &bytesWritten);  //  test for an echo
-    tty_read(PortFD,str,2,2, &bytesRead);  //  Read 2 bytes of response
-    if(str[1] != '#') {
-        //  this is not a correct echo
-        //  so we are not talking to a mount properly
-        return false;
-    }
-    //  Ok, mount is alive and well
-    //  so, lets format up a goto command
-    n1=ra*0x1000000/24;
-    n2=dec*0x1000000/360;
-    n1=n1<<8;
-    n2=n2<<8;
-    sprintf((char *)str,"r%08X,%08X",n1,n2);
-    tty_write(PortFD,str,18, &bytesWritten);
-    TrackState=SCOPE_SLEWING;
-    numread=tty_read(PortFD,str,1,60, &bytesRead);
-    if (bytesRead!=1||str[0]!='#')
-    {
-        if (isDebug())
-            DEBUG(INDI::Logger::DBG_SESSION, "Timeout waiting for scope to complete slewing.");
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 bool SkywatcherAPIMount::Park()
 {
     DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Park");
-    char str[20];
-    int numread, bytesWritten, bytesRead;
-
-
-    memset(str,0,3);
-    tty_write(PortFD,"Ka",2, &bytesWritten);  //  test for an echo
-    tty_read(PortFD,str,2,2, &bytesRead);  //  Read 2 bytes of response
-    if(str[1] != '#')
-    {
-        //  this is not a correct echo
-        //  so we are not talking to a mount properly
-        return false;
-    }
-    //  Now we stop tracking
-    tty_write(PortFD,"T0",2, &bytesWritten);
-    numread=tty_read(PortFD,str,1,60, &bytesRead);
-    if (bytesRead!=1||str[0]!='#')
-    {
-        if (isDebug())
-            DEBUG(INDI::Logger::DBG_SESSION, "Timeout waiting for scope to stop tracking.");
-        return false;
-    }
-
-    //sprintf((char *)str,"b%08X,%08X",0x0,0x40000000);
-    tty_write(PortFD,"B0000,4000",10, &bytesWritten);
-    numread=tty_read(PortFD,str,1,60, &bytesRead);
-    if (bytesRead!=1||str[0]!='#')
-    {
-        if (isDebug())
-            DEBUG(INDI::Logger::DBG_SESSION, "Timeout waiting for scope to respond to park.");
-        return false;
-    }
-
-    TrackState=SCOPE_PARKING;
-    IDMessage(getDeviceName(),"Parking Telescope...");
-    return true;
+    return false;
 }
 
 bool  SkywatcherAPIMount::Abort()
 {
     DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Abort");
-    char str[20];
-    int bytesWritten, bytesRead;
-
-    // Hmmm twice only stops it
-    tty_write(PortFD,"M",1, &bytesWritten);
-    tty_read(PortFD,str,1,1, &bytesRead);  //  Read 1 bytes of response
-
-
-    tty_write(PortFD,"M",1, &bytesWritten);
-    tty_read(PortFD,str,1,1, &bytesRead);  //  Read 1 bytes of response
-
-    return true;
+    return false;
 }
 
 int SkywatcherAPIMount::skywatcher_tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read)
@@ -286,5 +232,3 @@ int SkywatcherAPIMount::skywatcher_tty_write(int fd, const char * buffer, int nb
 {
     return tty_write(fd, buffer, nbytes, nbytes_written);
 }
-
-

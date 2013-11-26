@@ -16,18 +16,20 @@
 #ifndef SKYWATCHERAPIMOUNT_H
 #define SKYWATCHERAPIMOUNT_H
 
-#include "indibase/inditelescope.h"
 #include "indibase/alignment/AlignmentSubsystem.h"
 
 #include "skywatcherAPI.h"
 
-class SkywatcherAPIMount : public INDI::Telescope, public SkywatcherAPI, public INDI::AlignmentSubsystemDriver
+class SkywatcherAPIMount : public SkywatcherAPI, public INDI::Telescope, public INDI::AlignmentSubsystemDriver
 {
 public:
     SkywatcherAPIMount();
     virtual ~SkywatcherAPIMount();
 
     //  overrides of base class virtual functions
+    virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
+    virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
+    virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     virtual bool initProperties();
     virtual void ISGetProperties (const char *dev);
     virtual const char *getDefaultName();
