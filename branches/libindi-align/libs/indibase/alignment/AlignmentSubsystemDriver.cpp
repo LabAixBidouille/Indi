@@ -144,8 +144,8 @@ void INDI::AlignmentSubsystemDriver::ProcessAlignmentSwitchProperties(Telescope*
         CurrentValues.RightAscension = AlignmentPointSetEntry[ENTRY_RA].value;
         CurrentValues.ObservationTime = AlignmentPointSetEntry[ENTRY_DEC].value;
         CurrentValues.TelescopeDirection.x = AlignmentPointSetEntry[ENTRY_VECTOR_X].value;
-        CurrentValues.TelescopeDirection.y = AlignmentPointSetEntry[ENTRY_VECTOR_X].value;
-        CurrentValues.TelescopeDirection.z = AlignmentPointSetEntry[ENTRY_VECTOR_X].value;
+        CurrentValues.TelescopeDirection.y = AlignmentPointSetEntry[ENTRY_VECTOR_Y].value;
+        CurrentValues.TelescopeDirection.z = AlignmentPointSetEntry[ENTRY_VECTOR_Z].value;
 
         if (AlignmentPointSetAction[APPEND].s == ISS_ON)
         {
@@ -153,25 +153,60 @@ void INDI::AlignmentSubsystemDriver::ProcessAlignmentSwitchProperties(Telescope*
             AlignmentPointSetSize.value = SyncPoints.size();
             //  Update client display
             IDSetNumber(&AlignmentPointSetSizeV, NULL);
-
         }
         else if (AlignmentPointSetAction[INSERT].s == ISS_ON)
         {
+            SyncPoints.insert(SyncPoints.begin() + int(AlignmentPointSetPointer.value), CurrentValues);
+            AlignmentPointSetSize.value = SyncPoints.size();
+            //  Update client display
+            IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
         else if (AlignmentPointSetAction[EDIT].s == ISS_ON)
         {
+            SyncPoints.at(int(AlignmentPointSetPointer.value)) = CurrentValues;
         }
         else if (AlignmentPointSetAction[DELETE].s == ISS_ON)
         {
+            SyncPoints.erase(SyncPoints.begin() + int(AlignmentPointSetPointer.value));
+            AlignmentPointSetSize.value = SyncPoints.size();
+            //  Update client display
+            IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
         else if (AlignmentPointSetAction[CLEAR].s == ISS_ON)
         {
+            // SyncPointsType().swap(SyncPoints); // Do it this wasy to force a reallocation
+            SyncPoints.clear();
+            AlignmentPointSetSize.value = 0;
+            //  Update client display
+            IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
         else if (AlignmentPointSetAction[READ].s == ISS_ON)
         {
+            AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationDate;
+            AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
+            AlignmentPointSetEntry[ENTRY_RA].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).RightAscension;
+            AlignmentPointSetEntry[ENTRY_DEC].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
+            AlignmentPointSetEntry[ENTRY_VECTOR_X].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.x;
+            AlignmentPointSetEntry[ENTRY_VECTOR_Y].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.y;
+            AlignmentPointSetEntry[ENTRY_VECTOR_Z].value= SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.z;
+
+            //  Update client display
+            IDSetNumber(&AlignmentPointSetEntryV, NULL);
         }
         else if (AlignmentPointSetAction[READ_INCREMENT].s == ISS_ON)
         {
+            AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationDate;
+            AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
+            AlignmentPointSetEntry[ENTRY_RA].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).RightAscension;
+            AlignmentPointSetEntry[ENTRY_DEC].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
+            AlignmentPointSetEntry[ENTRY_VECTOR_X].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.x;
+            AlignmentPointSetEntry[ENTRY_VECTOR_Y].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.y;
+            AlignmentPointSetEntry[ENTRY_VECTOR_Z].value= SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.z;
+            AlignmentPointSetPointer.value++;
+
+            //  Update client display
+            IDSetNumber(&AlignmentPointSetEntryV, NULL);
+            IDSetNumber(&AlignmentPointSetPointerV, NULL);
         }
         else if (AlignmentPointSetAction[LOAD_DATABASE].s == ISS_ON)
         {
@@ -314,16 +349,16 @@ bool INDI::AlignmentSubsystemDriver::SaveDatabase(const char* DeviceName)
         char SexaString[12]; // Long enough to hold xx:xx:xx.xx
         fprintf(fp, "   <INDIAlignmentDatabaseEntry>\n");
 
-        fprintf(fp, "      <ObservationDate %g/>\n", (*Itr).ObservationDate);
+        fprintf(fp, "      <ObservationDate>%g</ObservationDate>\n", (*Itr).ObservationDate);
         fs_sexa(SexaString, (*Itr).ObservationTime, 2, 360000);
-        fprintf(fp, "      <ObservationTime %s/>\n", SexaString);
+        fprintf(fp, "      <ObservationTime>%s</ObservationTime>\n", SexaString);
         fs_sexa(SexaString, (*Itr).RightAscension, 2, 3600);
-        fprintf(fp, "      <RightAscension %s/>\n", SexaString);
+        fprintf(fp, "      <RightAscension>%s</RightAscension>\n", SexaString);
         fs_sexa(SexaString, (*Itr).Declination, 2, 3600);
-        fprintf(fp, "      <Declination %s/>\n", SexaString);
-        fprintf(fp, "      <TelescopeDirectionVectorX %f/>\n", (*Itr).TelescopeDirection.x);
-        fprintf(fp, "      <TelescopeDirectionVectorY %f/>\n", (*Itr).TelescopeDirection.y);
-        fprintf(fp, "      <TelescopeDirectionVectorZ %f/>\n", (*Itr).TelescopeDirection.z);
+        fprintf(fp, "      <Declination>%s</Declination>\n", SexaString);
+        fprintf(fp, "      <TelescopeDirectionVectorX>%f</TelescopeDirectionVectorX>\n", (*Itr).TelescopeDirection.x);
+        fprintf(fp, "      <TelescopeDirectionVectorY<%f</TelescopeDirectionVectorY>\n", (*Itr).TelescopeDirection.y);
+        fprintf(fp, "      <TelescopeDirectionVectorZ>%f</TelescopeDirectionVectorZ>\n", (*Itr).TelescopeDirection.z);
 
         fprintf(fp, "   </INDIAlignmentDatabaseEntry>\n");
     }
