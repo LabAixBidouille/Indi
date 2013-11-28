@@ -1,0 +1,9 @@
+TODO list, open questions and ideas.
+====================================
+
+Anyone feel free to edit this.
+If you cannot commit an edit then send ypur version to me and I will commit it.
+
+Roger.
+
+1. Pass in a reference to the in memory database when calling the math module along with a dirty flag. However this will stop the math module working on a client without extra work. Do we need the math module to work on a client?
