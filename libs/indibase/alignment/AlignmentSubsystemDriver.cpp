@@ -7,9 +7,14 @@
  * This file contains implementations of functions for the alignment subsystem.
  */
 
- #include <unistd.h>
-
 #include "AlignmentSubsystem.h"
+
+#include "indicom.h"
+
+#include <cstdio>
+#include <cerrno>
+#include <cstdlib>
+#include <sys/stat.h>
 
 bool INDI::AlignmentSubsystemDriver::EnumerateMathPlugins(std::vector<std::string>& MathPlugins)
 {
@@ -44,8 +49,8 @@ void INDI::AlignmentSubsystemDriver::InitAlignmentProperties(Telescope* ChildTel
     IUFillTextVector(&AlignmentSubsystemCurrentMathPluginV, &AlignmentSubsystemCurrentMathPlugin, 1, ChildTelescope->getDeviceName(),
                 "ALIGNMENT_SUBSYSTEM_CURRENT_MATH_PLUGIN", "Current Math Plugin", ALIGNMENT_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillNumber(&AlignmentPointSetEntry[0], "ALIGNMENT_POINT_ENTRY_OBSERVATION_DATE", "Observation date (dd:mm:yy)", "%010.6m", 0, 60000, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[1], "ALIGNMENT_POINT_ENTRY_OBSERVATION_TIME", "Observation time (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[0], "ALIGNMENT_POINT_ENTRY_OBSERVATION_JULIAN_DATE", "Observation Julian date", "%g", 0, 60000, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[1], "ALIGNMENT_POINT_ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME", "Observation local sidereal time (hh:mm:ss.ss)", "%010.9m", 0, 24, 0, 0);
     IUFillNumber(&AlignmentPointSetEntry[2], "ALIGNMENT_POINT_ENTRY_RA", "Right Ascension (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
     IUFillNumber(&AlignmentPointSetEntry[3]," ALIGNMENT_POINT_ENTRY_DEC", "Declination (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
     IUFillNumber(&AlignmentPointSetEntry[4], "ALIGNMENT_POINT_ENTRY_VECTOR_X", "Telescope direction vector x", "%g", 0, 0, 0, 0);
@@ -140,25 +145,25 @@ void INDI::AlignmentSubsystemDriver::ProcessAlignmentBlobProperties(Telescope* p
     DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessAlignmentBlobProperties - name(%s)", name);
 }
 
-bool INDI::AlignmentSubsystemDriver::AppendSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
-                    const TelescopeDirectionVector& TelescopeDirectionVector)
-{
-    return false;
-}
-
 void INDI::AlignmentSubsystemDriver::SaveAlignmentConfigProperties(FILE *fp)
 {
     IUSaveConfigText(fp, &AlignmentSubsystemCurrentMathPluginV);
 }
 
-bool INDI::AlignmentSubsystemDriver::InsertSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
-                    const TelescopeDirectionVector& TelescopeDirectionVector)
+bool INDI::AlignmentSubsystemDriver::AppendSyncPoint(const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector)
 {
     return false;
 }
 
-bool INDI::AlignmentSubsystemDriver::EditSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
-                    const TelescopeDirectionVector& TelescopeDirectionVector)
+bool INDI::AlignmentSubsystemDriver::InsertSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector)
+{
+    return false;
+}
+
+bool INDI::AlignmentSubsystemDriver::EditSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
+                        const TelescopeDirectionVector& TelescopeDirectionVector)
 {
     return false;
 }
@@ -173,15 +178,110 @@ bool INDI::AlignmentSubsystemDriver::ClearSyncPoints()
     return false;
 }
 
-bool INDI::AlignmentSubsystemDriver::ReadSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,
-                    const TelescopeDirectionVector& TelescopeDirectionVector)
+bool INDI::AlignmentSubsystemDriver::ReadSyncPoint(unsigned int Offset, double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
+                        TelescopeDirectionVector& TelescopeDirectionVector)
 {
     return false;
 }
 
-bool INDI::AlignmentSubsystemDriver::ReadNextSyncPoint(const double ObservationTime, const double RightAscension, const double Declination,
-                    const TelescopeDirectionVector& TelescopeDirectionVector)
+bool INDI::AlignmentSubsystemDriver::ReadNextSyncPoint(double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
+                        TelescopeDirectionVector& TelescopeDirectionVector)
 {
     return false;
+}
+
+bool INDI::AlignmentSubsystemDriver::LoadDatabase(const char* DeviceName)
+{
+    char DatabaseFileName[MAXRBUF];
+    char Errmsg[MAXRBUF];
+    XMLEle *ElementRoot = NULL, *FileRoot = NULL;
+    LilXML *Parser = newLilXML();
+
+    FILE *fp = NULL;
+
+    snprintf(DatabaseFileName, MAXRBUF, "%s/.indi/%s_alignment_database.xml", getenv("HOME"), DeviceName);
+
+
+    fp = fopen(DatabaseFileName, "r");
+    if (fp == NULL)
+    {
+         snprintf(Errmsg, MAXRBUF, "Unable to read alignment database file. Error loading file %s: %s\n", DatabaseFileName, strerror(errno));
+         return false;
+    }
+
+    FileRoot = readXMLFile(fp, Parser, Errmsg);
+
+    if (FileRoot == NULL)
+    {
+        snprintf(Errmsg, MAXRBUF, "Unable to parse database XML: %s", Errmsg);
+        return -1;
+    }
+
+    for (ElementRoot = nextXMLEle (FileRoot, 1); ElementRoot != NULL; ElementRoot = nextXMLEle (FileRoot, 0))
+    {
+    }
+
+    fclose(fp);
+    delXMLEle(FileRoot);
+    delXMLEle(ElementRoot);
+    delLilXML(Parser);
+
+    return true;
+
+}
+
+bool INDI::AlignmentSubsystemDriver::SaveDatabase(const char* DeviceName)
+{
+    char ConfigDir[MAXRBUF];
+    char DatabaseFileName[MAXRBUF];
+    char Errmsg[MAXRBUF];
+    struct stat Status;
+    FILE* fp;
+
+    snprintf(ConfigDir, MAXRBUF, "%s/.indi/", getenv("HOME"));
+    snprintf(DatabaseFileName, MAXRBUF, "%s%s_config.xml", ConfigDir, DeviceName);
+
+    if(stat(ConfigDir, &Status) != 0)
+    {
+        if (mkdir(ConfigDir, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) < 0)
+        {
+            snprintf(Errmsg, MAXRBUF, "Unable to create config directory. Error %s: %s\n", ConfigDir, strerror(errno));
+            return false;
+        }
+    }
+
+    fp = fopen(DatabaseFileName, "w");
+    if (fp == NULL)
+    {
+        snprintf(Errmsg, MAXRBUF, "Unable to open config file. Error loading file %s: %s\n", DatabaseFileName, strerror(errno));
+        return false;
+    }
+
+    fprintf(fp, "<INDIAlignmentDatabase>\n");
+
+    for (SyncPointsType::const_iterator Itr = SyncPoints.begin(); Itr != SyncPoints.end(); Itr++)
+    {
+        char SexaString[12]; // Long enough to hold xx:xx:xx.xx
+        fprintf(fp, "   <INDIAlignmentDatabaseEntry>\n");
+
+        fprintf(fp, "      <ObservationDate %g/>\n", (*Itr).ObservationDate);
+        fs_sexa(SexaString, (*Itr).ObservationTime, 2, 360000);
+        fprintf(fp, "      <ObservationTime %s/>\n", SexaString);
+        fs_sexa(SexaString, (*Itr).RightAscension, 2, 3600);
+        fprintf(fp, "      <RightAscension %s/>\n", SexaString);
+        fs_sexa(SexaString, (*Itr).Declination, 2, 3600);
+        fprintf(fp, "      <Declination %s/>\n", SexaString);
+        fprintf(fp, "      <TelescopeDirectionVectorX %f/>\n", (*Itr).TelescopeDirection.x);
+        fprintf(fp, "      <TelescopeDirectionVectorY %f/>\n", (*Itr).TelescopeDirection.y);
+        fprintf(fp, "      <TelescopeDirectionVectorZ %f/>\n", (*Itr).TelescopeDirection.z);
+
+        fprintf(fp, "   </INDIAlignmentDatabaseEntry>\n");
+    }
+
+    fprintf(fp, "</INDIAlignmentDatabase>\n");
+
+    fclose(fp);
+
+    return true;
 }
 
