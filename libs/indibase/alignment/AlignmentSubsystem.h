@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <string>
+#include <memory>
 
 #include <libnova.h>
 
@@ -43,7 +44,7 @@ public:
 
 /*!
  * \class INDI::AlignmentSubsystemBase
- * \brief Provides common alignment subsystem functions that are used in clients, drivers, and math pluigins
+ * \brief Provides common alignment subsystem functions that are used in clients, drivers, and math plugins
  *
  */
 class INDI::AlignmentSubsystemBase
@@ -409,14 +410,16 @@ public:
 class INDI::AlignmentSubsystemDriver : public INDI::AlignmentSubsystemBase
 {
 public:
+    AlignmentSubsystemDriver() : CurrentMathPlugin(NULL) {}
     /*! @name Plugin management
      *  These functions are used to enumerate, load, and utilise math plugins.
      *  They are intended to be used solely in driver modules.
      *  The following INDI properties are used to communicate the plugin details to the client if required.
      *  - ALIGNMENT_SUBSYSTEM_MATH_PLUGINS\n
-     *    A list of available plugins (switch)
-     *  - ALIGNMENT_SUBSYSYSTEM_CURRENT_MATH_PLUGIN\n
-     *    The current selected math plugin. Read/write if required (text)
+     *  A list of available plugins (switch). This also indicates the currently
+     *  selected plugin.
+     *  - ALIGNMENT_SUBSYSTEM_CURRENT_MATH_PLUGIN\n
+     *  A read only persistent property giving the name of the currently selected plugin.
      */
     ///@{
     /*!
@@ -424,7 +427,7 @@ public:
      * \param[out] MathPlugins Reference to a list of the names of the available math plugins.
      * \return False on failure
      */
-    bool EnumerateMathPlugins(const std::vector<std::string>& MathPlugins);
+    bool EnumerateMathPlugins(std::vector<std::string>& MathPlugins);
 
     /*!
      * \brief Selects, loads and initialises the named math plugin.
@@ -445,7 +448,16 @@ public:
     */
     void InitAlignmentProperties(Telescope* pTelescope);
 
-    /** \brief Call this function whenever client updates a number property. The function will
+    /** \brief Call this function whenever a client updates a text property. The function will
+     * handle any alignment related properties.
+     * \param[in] name vector property name
+     * \param[in] values value as passed by the client
+     * \param[in] names names as passed by the client
+     * \param[in] n number of values and names pair to process.
+    */
+    void ProcessAlignmentTextProperties(Telescope* pTelescope, const char *name, char *texts[], char *names[], int n);
+
+    /** \brief Call this function whenever a client updates a number property. The function will
      * handle any alignment related properties.
      * \param[in] name vector property name
      * \param[in] values value as passed by the client
@@ -454,7 +466,7 @@ public:
     */
     void ProcessAlignmentNumberProperties(Telescope* pTelescope, const char *name, double values[], char *names[], int n);
 
-    /** \brief Call this function whenever client updates a switch property. The function will
+    /** \brief Call this function whenever a client updates a switch property. The function will
      * handle any alignment related properties.
      * \param[in] name vector property name
      * \param[in] values value as passed by the client
@@ -463,7 +475,7 @@ public:
     */
     void ProcessAlignmentSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
 
-    /** \brief Call this function whenever client updates a blob property. The function will
+    /** \brief Call this function whenever a client updates a blob property. The function will
      * handle any alignment related properties.
      * \param[in] name vector property name
      * \param[in] values value as passed by the client
@@ -471,6 +483,12 @@ public:
      * \param[in] n number of values and names pair to process.
     */
     void ProcessAlignmentBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
+
+    /** \brief Call this function to save persistent alignment subsytem properties.
+     * This function should be called from within the saveConfigItems function of your driver.
+     * \param[in] fp File pointer passed into saveConfigItems
+    */
+    void SaveAlignmentConfigProperties(FILE *fp);
 
     /*! @name Database helper function implementations
      */
@@ -499,6 +517,8 @@ public:
 
 protected:
     // Property values
+    std::auto_ptr<ISwitch> AlignmentSubsystemMathPlugins;
+    ISwitchVectorProperty AlignmentSubsystemMathPluginsV;
     INumber AlignmentPointSetEntry[7];
     INumberVectorProperty AlignmentPointSetEntryV;
     IBLOB AlignmentPointSetPrivateBinaryData;
@@ -511,6 +531,11 @@ protected:
     ISwitchVectorProperty AlignmentPointSetActionV;
     ISwitch AlignmentPointSetCommit;
     ISwitchVectorProperty AlignmentPointSetCommitV;
+    AlignmentSubsystemMathPlugin* CurrentMathPlugin;
+
+    // The following property is used for configuration purposes only and is not propagated to the client
+    IText AlignmentSubsystemCurrentMathPlugin;
+    ITextVectorProperty AlignmentSubsystemCurrentMathPluginV;
 };
 
 /*!

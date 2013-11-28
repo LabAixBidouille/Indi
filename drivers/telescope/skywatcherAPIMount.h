@@ -27,6 +27,7 @@ public:
     virtual ~SkywatcherAPIMount();
 
     //  overrides of base class virtual functions
+    virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
     virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
     virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
     virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
@@ -38,6 +39,7 @@ public:
     virtual bool Goto(double,double);
     virtual bool Park();
     virtual bool Abort();
+    virtual bool saveConfigItems(FILE *fp);
     // For the time being stop the timer path being used
     virtual void TimerHit() {}
 
