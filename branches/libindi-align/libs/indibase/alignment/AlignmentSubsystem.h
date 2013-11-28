@@ -304,6 +304,9 @@ public:
 
     ///@{
 
+    enum AlignmentDatabaseActions { APPEND, INSERT, EDIT, DELETE, CLEAR, READ, READ_INCREMENT, LOAD_DATABASE, SAVE_DATABASE };
+
+
     /** \brief Apend a sync point to the database.
         \param[in] ObservationDate The Julian date the observation was made.
         \param[in] ObservationTime The local sidereal time the observation was made.
@@ -529,6 +532,8 @@ protected:
     // Property values
     std::auto_ptr<ISwitch> AlignmentSubsystemMathPlugins;
     ISwitchVectorProperty AlignmentSubsystemMathPluginsV;
+    enum AlignmentPointSetEnum {ENTRY_OBSERVATION_JULIAN_DATE, ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME,
+                                ENTRY_RA, ENTRY_DEC, ENTRY_VECTOR_X, ENTRY_VECTOR_Y, ENTRY_VECTOR_Z};
     INumber AlignmentPointSetEntry[7];
     INumberVectorProperty AlignmentPointSetEntryV;
     IBLOB AlignmentPointSetPrivateBinaryData;
@@ -537,7 +542,7 @@ protected:
     INumberVectorProperty AlignmentPointSetSizeV;
     INumber AlignmentPointSetPointer;
     INumberVectorProperty AlignmentPointSetPointerV;
-    ISwitch AlignmentPointSetAction[7];
+    ISwitch AlignmentPointSetAction[9];
     ISwitchVectorProperty AlignmentPointSetActionV;
     ISwitch AlignmentPointSetCommit;
     ISwitchVectorProperty AlignmentPointSetCommitV;

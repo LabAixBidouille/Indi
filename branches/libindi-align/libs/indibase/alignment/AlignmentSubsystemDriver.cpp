@@ -15,6 +15,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <sys/stat.h>
+#include <cfloat>
 
 bool INDI::AlignmentSubsystemDriver::EnumerateMathPlugins(std::vector<std::string>& MathPlugins)
 {
@@ -53,9 +54,9 @@ void INDI::AlignmentSubsystemDriver::InitAlignmentProperties(Telescope* ChildTel
     IUFillNumber(&AlignmentPointSetEntry[1], "ALIGNMENT_POINT_ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME", "Observation local sidereal time (hh:mm:ss.ss)", "%010.9m", 0, 24, 0, 0);
     IUFillNumber(&AlignmentPointSetEntry[2], "ALIGNMENT_POINT_ENTRY_RA", "Right Ascension (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
     IUFillNumber(&AlignmentPointSetEntry[3]," ALIGNMENT_POINT_ENTRY_DEC", "Declination (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[4], "ALIGNMENT_POINT_ENTRY_VECTOR_X", "Telescope direction vector x", "%g", 0, 0, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[5]," ALIGNMENT_POINT_ENTRY_VECTOR_Y", "Telescope direction vector y", "%g", 0, 0, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[6]," ALIGNMENT_POINT_ENTRY_VECTOR_Z", "Telescope direction vector z", "%g", 0, 0, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[4], "ALIGNMENT_POINT_ENTRY_VECTOR_X", "Telescope direction vector x", "%g", -FLT_MAX, FLT_MAX, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[5]," ALIGNMENT_POINT_ENTRY_VECTOR_Y", "Telescope direction vector y", "%g", -FLT_MAX, FLT_MAX, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[6]," ALIGNMENT_POINT_ENTRY_VECTOR_Z", "Telescope direction vector z", "%g", -FLT_MAX, FLT_MAX, 0, 0);
     IUFillNumberVector(&AlignmentPointSetEntryV, AlignmentPointSetEntry, 7, ChildTelescope->getDeviceName(),
                     "ALIGNMENT_POINT_MANDATORY_NUMBERS", "Mandatory sync point numeric fields", ALIGNMENT_TAB, IP_RW, 60, IPS_IDLE);
     ChildTelescope->registerProperty(&AlignmentPointSetEntryV, INDI_NUMBER);
@@ -82,7 +83,9 @@ void INDI::AlignmentSubsystemDriver::InitAlignmentProperties(Telescope* ChildTel
     IUFillSwitch(&AlignmentPointSetAction[4], "CLEAR","Delete all the entries in the set", ISS_OFF);
     IUFillSwitch(&AlignmentPointSetAction[5], "READ", "Read the entry at the current pointer", ISS_OFF);
     IUFillSwitch(&AlignmentPointSetAction[6], "READ INCREMENT", "Increment the pointer after reading the entry", ISS_OFF);
-    IUFillSwitchVector(&AlignmentPointSetActionV, AlignmentPointSetAction, 7, ChildTelescope->getDeviceName(),
+    IUFillSwitch(&AlignmentPointSetAction[7], "LOAD DATABASE", "Load the alignment database from local storage", ISS_OFF);
+    IUFillSwitch(&AlignmentPointSetAction[8], "SAVE DATABASE", "Save the alignment database to local storage", ISS_OFF);
+    IUFillSwitchVector(&AlignmentPointSetActionV, AlignmentPointSetAction, 9, ChildTelescope->getDeviceName(),
                     "ALIGNMENT_POINTSET_ACTION", "Action to take", ALIGNMENT_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     ChildTelescope->registerProperty(&AlignmentPointSetActionV, INDI_SWITCH);
 
@@ -131,10 +134,57 @@ void INDI::AlignmentSubsystemDriver::ProcessAlignmentSwitchProperties(Telescope*
         IDSetSwitch(&AlignmentPointSetActionV, NULL);
     } else if (strcmp(name, AlignmentPointSetCommitV.name) == 0)
     {
-        // Perform the databse action
-
         AlignmentPointSetCommitV.s=IPS_OK;
         IUUpdateSwitch(&AlignmentPointSetCommitV, states, names, n);
+
+        // Perform the database action
+        DatabaseEntry CurrentValues;
+        CurrentValues.ObservationDate = AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value;
+        CurrentValues.ObservationTime = AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value;
+        CurrentValues.RightAscension = AlignmentPointSetEntry[ENTRY_RA].value;
+        CurrentValues.ObservationTime = AlignmentPointSetEntry[ENTRY_DEC].value;
+        CurrentValues.TelescopeDirection.x = AlignmentPointSetEntry[ENTRY_VECTOR_X].value;
+        CurrentValues.TelescopeDirection.y = AlignmentPointSetEntry[ENTRY_VECTOR_X].value;
+        CurrentValues.TelescopeDirection.z = AlignmentPointSetEntry[ENTRY_VECTOR_X].value;
+
+        if (AlignmentPointSetAction[APPEND].s == ISS_ON)
+        {
+            SyncPoints.push_back(CurrentValues);
+            AlignmentPointSetSize.value = SyncPoints.size();
+            //  Update client display
+            IDSetNumber(&AlignmentPointSetSizeV, NULL);
+
+        }
+        else if (AlignmentPointSetAction[INSERT].s == ISS_ON)
+        {
+        }
+        else if (AlignmentPointSetAction[EDIT].s == ISS_ON)
+        {
+        }
+        else if (AlignmentPointSetAction[DELETE].s == ISS_ON)
+        {
+        }
+        else if (AlignmentPointSetAction[CLEAR].s == ISS_ON)
+        {
+        }
+        else if (AlignmentPointSetAction[READ].s == ISS_ON)
+        {
+        }
+        else if (AlignmentPointSetAction[READ_INCREMENT].s == ISS_ON)
+        {
+        }
+        else if (AlignmentPointSetAction[LOAD_DATABASE].s == ISS_ON)
+        {
+            LoadDatabase(pTelescope->getDeviceName());
+            AlignmentPointSetSize.value = SyncPoints.size();
+            //  Update client display
+            IDSetNumber(&AlignmentPointSetSizeV, NULL);
+        }
+        else if (AlignmentPointSetAction[SAVE_DATABASE].s == ISS_ON)
+        {
+            SaveDatabase(pTelescope->getDeviceName());
+        }
+
         //  Update client display
         IDSetSwitch(&AlignmentPointSetCommitV, NULL);
     }
@@ -239,7 +289,7 @@ bool INDI::AlignmentSubsystemDriver::SaveDatabase(const char* DeviceName)
     FILE* fp;
 
     snprintf(ConfigDir, MAXRBUF, "%s/.indi/", getenv("HOME"));
-    snprintf(DatabaseFileName, MAXRBUF, "%s%s_config.xml", ConfigDir, DeviceName);
+    snprintf(DatabaseFileName, MAXRBUF, "%s%s_alignment_database.xml", ConfigDir, DeviceName);
 
     if(stat(ConfigDir, &Status) != 0)
     {
@@ -253,7 +303,7 @@ bool INDI::AlignmentSubsystemDriver::SaveDatabase(const char* DeviceName)
     fp = fopen(DatabaseFileName, "w");
     if (fp == NULL)
     {
-        snprintf(Errmsg, MAXRBUF, "Unable to open config file. Error loading file %s: %s\n", DatabaseFileName, strerror(errno));
+        snprintf(Errmsg, MAXRBUF, "Unable to open database file. Error loading file %s: %s\n", DatabaseFileName, strerror(errno));
         return false;
     }
 
