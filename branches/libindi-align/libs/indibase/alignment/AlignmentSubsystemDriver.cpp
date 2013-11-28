@@ -7,10 +7,42 @@
  * This file contains implementations of functions for the alignment subsystem.
  */
 
+ #include <unistd.h>
+
 #include "AlignmentSubsystem.h"
+
+bool INDI::AlignmentSubsystemDriver::EnumerateMathPlugins(std::vector<std::string>& MathPlugins)
+{
+    MathPlugins.clear();
+    MathPlugins.push_back("Builtin Math Plugin");
+    return true;
+}
+
+bool INDI::AlignmentSubsystemDriver::SelectMathPlugin(const std::string& MathPluginName)
+{
+    return true;
+}
+
+const INDI::AlignmentSubsystemMathPlugin* INDI::AlignmentSubsystemDriver::GetMathPluginPointer(void)
+{
+    return CurrentMathPlugin;
+}
 
 void INDI::AlignmentSubsystemDriver::InitAlignmentProperties(Telescope* ChildTelescope)
 {
+    // TODO Find out the available math plugins and populate the array
+    // Just use the default built in plugin for the time being
+    AlignmentSubsystemMathPlugins.reset(new ISwitch[1]);
+    IUFillSwitch(AlignmentSubsystemMathPlugins.get(), "INBUILT_MATH_PLUGIN", "Inbuilt Math Plugin", ISS_ON);
+    IUFillSwitchVector(&AlignmentSubsystemMathPluginsV, AlignmentSubsystemMathPlugins.get(), 1, ChildTelescope->getDeviceName(),
+                    "ALIGNMENT_SUBSYSTEM_MATH_PLUGINS", "Math Plugins", ALIGNMENT_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    ChildTelescope->registerProperty(&AlignmentSubsystemMathPluginsV, INDI_SWITCH);
+
+    // The following property is used for configuration purposes only and is not exposed to the client.
+    IUFillText(&AlignmentSubsystemCurrentMathPlugin, "ALIGNMENT_SUBSYSTEM_CURRENT_MATH_PLUGIN", "Current Math Plugin",
+        AlignmentSubsystemMathPlugins.get()[0].label);
+    IUFillTextVector(&AlignmentSubsystemCurrentMathPluginV, &AlignmentSubsystemCurrentMathPlugin, 1, ChildTelescope->getDeviceName(),
+                "ALIGNMENT_SUBSYSTEM_CURRENT_MATH_PLUGIN", "Current Math Plugin", ALIGNMENT_TAB, IP_RO, 60, IPS_IDLE);
 
     IUFillNumber(&AlignmentPointSetEntry[0], "ALIGNMENT_POINT_ENTRY_OBSERVATION_DATE", "Observation date (dd:mm:yy)", "%010.6m", 0, 60000, 0, 0);
     IUFillNumber(&AlignmentPointSetEntry[1], "ALIGNMENT_POINT_ENTRY_OBSERVATION_TIME", "Observation time (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
@@ -55,18 +87,28 @@ void INDI::AlignmentSubsystemDriver::InitAlignmentProperties(Telescope* ChildTel
     ChildTelescope->registerProperty(&AlignmentPointSetCommitV, INDI_SWITCH);
 }
 
+void INDI::AlignmentSubsystemDriver::ProcessAlignmentTextProperties(Telescope* pTelescope, const char *name, char *texts[], char *names[], int n)
+{
+    DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessAlignmentTextProperties - name(%s)", name);
+    if (strcmp(name, AlignmentSubsystemCurrentMathPluginV.name) == 0)
+    {
+        AlignmentSubsystemCurrentMathPluginV.s = IPS_OK;
+        IUUpdateText(&AlignmentSubsystemCurrentMathPluginV, texts, names, n);
+    }
+}
+
 void INDI::AlignmentSubsystemDriver::ProcessAlignmentNumberProperties(Telescope* pTelescope, const char *name, double values[], char *names[], int n)
 {
     DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessAlignmentNumberProperties - name(%s)", name);
     if (strcmp(name, AlignmentPointSetEntryV.name) == 0)
     {
-        AlignmentPointSetEntryV.s=IPS_OK;
+        AlignmentPointSetEntryV.s = IPS_OK;
         IUUpdateNumber(&AlignmentPointSetEntryV, values, names, n);
         //  Update client display
         IDSetNumber(&AlignmentPointSetEntryV, NULL);
     } else if (strcmp(name, AlignmentPointSetPointerV.name) == 0)
     {
-        AlignmentPointSetPointerV.s=IPS_OK;
+        AlignmentPointSetPointerV.s = IPS_OK;
         IUUpdateNumber(&AlignmentPointSetPointerV, values, names, n);
         //  Update client display
         IDSetNumber(&AlignmentPointSetPointerV, NULL);
@@ -102,6 +144,11 @@ bool INDI::AlignmentSubsystemDriver::AppendSyncPoint(const double ObservationTim
                     const TelescopeDirectionVector& TelescopeDirectionVector)
 {
     return false;
+}
+
+void INDI::AlignmentSubsystemDriver::SaveAlignmentConfigProperties(FILE *fp)
+{
+    IUSaveConfigText(fp, &AlignmentSubsystemCurrentMathPluginV);
 }
 
 bool INDI::AlignmentSubsystemDriver::InsertSyncPoint(unsigned int Offset, const double ObservationTime, const double RightAscension, const double Declination,

@@ -90,6 +90,17 @@ SkywatcherAPIMount::~SkywatcherAPIMount()
     //dtor
 }
 
+bool SkywatcherAPIMount::ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    if(strcmp(dev,getDeviceName())==0)
+    {
+        // It is for us
+        ProcessAlignmentTextProperties(this, name, texts, names, n);
+    }
+    // Pass it up the chain
+    return INDI::Telescope::ISNewText(dev, name, texts, names, n);
+}
+
 bool SkywatcherAPIMount::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
 {
     if(strcmp(dev,getDeviceName())==0)
@@ -98,7 +109,7 @@ bool SkywatcherAPIMount::ISNewNumber (const char *dev, const char *name, double 
         ProcessAlignmentNumberProperties(this, name, values, names, n);
     }
     // Pass it up the chain
-    return INDI::Telescope::ISNewNumber(dev,name,values,names,n);
+    return INDI::Telescope::ISNewNumber(dev, name, values, names, n);
 }
 
 bool SkywatcherAPIMount::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -221,6 +232,13 @@ bool  SkywatcherAPIMount::Abort()
 {
     DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Abort");
     return false;
+}
+
+bool SkywatcherAPIMount::saveConfigItems(FILE *fp)
+{
+    SaveAlignmentConfigProperties(fp);
+
+    return INDI::Telescope::saveConfigItems(fp);
 }
 
 int SkywatcherAPIMount::skywatcher_tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read)
