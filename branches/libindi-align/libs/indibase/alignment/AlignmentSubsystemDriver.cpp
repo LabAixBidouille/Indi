@@ -182,6 +182,8 @@ void INDI::AlignmentSubsystemDriver::ProcessAlignmentSwitchProperties(Telescope*
         }
         else if (AlignmentPointSetAction[READ].s == ISS_ON)
         {
+            if ((int(AlignmentPointSetPointer.value) >= SyncPoints.size()) || (int(AlignmentPointSetPointer.value) < 0))
+                return;
             AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationDate;
             AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
             AlignmentPointSetEntry[ENTRY_RA].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).RightAscension;
@@ -195,6 +197,8 @@ void INDI::AlignmentSubsystemDriver::ProcessAlignmentSwitchProperties(Telescope*
         }
         else if (AlignmentPointSetAction[READ_INCREMENT].s == ISS_ON)
         {
+            if ((int(AlignmentPointSetPointer.value) >= SyncPoints.size()) || (int(AlignmentPointSetPointer.value) < 0))
+                return;
             AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationDate;
             AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
             AlignmentPointSetEntry[ENTRY_RA].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).RightAscension;
@@ -279,7 +283,9 @@ bool INDI::AlignmentSubsystemDriver::LoadDatabase(const char* DeviceName)
 {
     char DatabaseFileName[MAXRBUF];
     char Errmsg[MAXRBUF];
-    XMLEle *ElementRoot = NULL, *FileRoot = NULL;
+    XMLEle *FileRoot = NULL;
+    XMLEle *EntryRoot = NULL;
+    XMLEle *Element = NULL;
     LilXML *Parser = newLilXML();
 
     FILE *fp = NULL;
@@ -299,16 +305,63 @@ bool INDI::AlignmentSubsystemDriver::LoadDatabase(const char* DeviceName)
     if (FileRoot == NULL)
     {
         snprintf(Errmsg, MAXRBUF, "Unable to parse database XML: %s", Errmsg);
-        return -1;
+        return false;
     }
 
-    for (ElementRoot = nextXMLEle (FileRoot, 1); ElementRoot != NULL; ElementRoot = nextXMLEle (FileRoot, 0))
+    if (strcmp(tagXMLEle(FileRoot), "INDIAlignmentDatabase") != 0)
     {
+        return false;
+    }
+
+    SyncPoints.clear();
+
+    for (EntryRoot = nextXMLEle (FileRoot, 1); EntryRoot != NULL; EntryRoot = nextXMLEle (FileRoot, 0))
+    {
+        DatabaseEntry CurrentValues;
+        if (strcmp(tagXMLEle(EntryRoot), "INDIAlignmentDatabaseEntry") != 0)
+        {
+            return false;
+        }
+        for (Element = nextXMLEle (EntryRoot, 1); Element != NULL; Element = nextXMLEle (EntryRoot, 0))
+        {
+            if (strcmp(tagXMLEle(Element), "ObservationDate") == 0)
+            {
+                sscanf(pcdataXMLEle(Element), "%d", &CurrentValues.ObservationDate);
+            }
+            else if (strcmp(tagXMLEle(Element), "ObservationTime") == 0)
+            {
+                f_scansexa(pcdataXMLEle(Element), &CurrentValues.ObservationTime);
+            }
+            else if (strcmp(tagXMLEle(Element), "RightAscension") == 0)
+            {
+                f_scansexa(pcdataXMLEle(Element), &CurrentValues.RightAscension);
+            }
+            else if (strcmp(tagXMLEle(Element), "Declination") == 0)
+            {
+                f_scansexa(pcdataXMLEle(Element), &CurrentValues.Declination);
+            }
+            else if (strcmp(tagXMLEle(Element), "TelescopeDirectionVectorX") == 0)
+            {
+                sscanf(pcdataXMLEle(Element), "%lf", &CurrentValues.TelescopeDirection.x);
+            }
+            else if (strcmp(tagXMLEle(Element), "TelescopeDirectionVectorY") == 0)
+            {
+                sscanf(pcdataXMLEle(Element), "%lf", &CurrentValues.TelescopeDirection.y);
+            }
+            else if (strcmp(tagXMLEle(Element), "TelescopeDirectionVectorZ") == 0)
+            {
+                sscanf(pcdataXMLEle(Element), "%lf", &CurrentValues.TelescopeDirection.z);
+            }
+            else
+                return false;
+        }
+        SyncPoints.push_back(CurrentValues);
     }
 
     fclose(fp);
     delXMLEle(FileRoot);
-    delXMLEle(ElementRoot);
+    delXMLEle(EntryRoot);
+    delXMLEle(Element);
     delLilXML(Parser);
 
     return true;
@@ -338,7 +391,7 @@ bool INDI::AlignmentSubsystemDriver::SaveDatabase(const char* DeviceName)
     fp = fopen(DatabaseFileName, "w");
     if (fp == NULL)
     {
-        snprintf(Errmsg, MAXRBUF, "Unable to open database file. Error loading file %s: %s\n", DatabaseFileName, strerror(errno));
+        snprintf(Errmsg, MAXRBUF, "Unable to open database file. Error opening file %s: %s\n", DatabaseFileName, strerror(errno));
         return false;
     }
 
@@ -349,16 +402,16 @@ bool INDI::AlignmentSubsystemDriver::SaveDatabase(const char* DeviceName)
         char SexaString[12]; // Long enough to hold xx:xx:xx.xx
         fprintf(fp, "   <INDIAlignmentDatabaseEntry>\n");
 
-        fprintf(fp, "      <ObservationDate>%g</ObservationDate>\n", (*Itr).ObservationDate);
+        fprintf(fp, "      <ObservationDate>%d</ObservationDate>\n", (*Itr).ObservationDate);
         fs_sexa(SexaString, (*Itr).ObservationTime, 2, 360000);
         fprintf(fp, "      <ObservationTime>%s</ObservationTime>\n", SexaString);
         fs_sexa(SexaString, (*Itr).RightAscension, 2, 3600);
         fprintf(fp, "      <RightAscension>%s</RightAscension>\n", SexaString);
         fs_sexa(SexaString, (*Itr).Declination, 2, 3600);
         fprintf(fp, "      <Declination>%s</Declination>\n", SexaString);
-        fprintf(fp, "      <TelescopeDirectionVectorX>%f</TelescopeDirectionVectorX>\n", (*Itr).TelescopeDirection.x);
-        fprintf(fp, "      <TelescopeDirectionVectorY<%f</TelescopeDirectionVectorY>\n", (*Itr).TelescopeDirection.y);
-        fprintf(fp, "      <TelescopeDirectionVectorZ>%f</TelescopeDirectionVectorZ>\n", (*Itr).TelescopeDirection.z);
+        fprintf(fp, "      <TelescopeDirectionVectorX>%lf</TelescopeDirectionVectorX>\n", (*Itr).TelescopeDirection.x);
+        fprintf(fp, "      <TelescopeDirectionVectorY>%lf</TelescopeDirectionVectorY>\n", (*Itr).TelescopeDirection.y);
+        fprintf(fp, "      <TelescopeDirectionVectorZ>%lf</TelescopeDirectionVectorZ>\n", (*Itr).TelescopeDirection.z);
 
         fprintf(fp, "   </INDIAlignmentDatabaseEntry>\n");
     }

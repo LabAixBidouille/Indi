@@ -560,7 +560,7 @@ private:
     // Data
     struct DatabaseEntry
     {
-        double ObservationDate;
+        int ObservationDate;
         double ObservationTime;
         double RightAscension;
         double Declination;
