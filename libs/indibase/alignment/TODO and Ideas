@@ -2,8 +2,23 @@ TODO list, open questions and ideas.
 ====================================
 
 Anyone feel free to edit this.
-If you cannot commit an edit then send ypur version to me and I will commit it.
+If you cannot commit an edit then send your version to me and I will commit it.
 
 Roger.
 
-1. Pass in a reference to the in memory database when calling the math module along with a dirty flag. However this will stop the math module working on a client without extra work. Do we need the math module to work on a client?
+1. Pass in a reference to the in memory database when calling the math module along with a dirty flag.
+However this will stop the math module working on a client without extra work. Do we need the math module to work on a client?
+
+2. Finish off work on plugin management in AlignmentSubsystemDirver.
+
+3. Finish implementation of database helper functions in AlignmentSubsystemDriver.
+
+4. Implement AlignmentSubsystemClient.
+
+5. Implement AlignmentSubsystemMathPlugin.
+
+6. Implement the "Builtin Math Plugin".
+
+7. Implement enough of SkyWatcherAPIMount to do basic testing.
+
+8. Modify my coordinate conversion layer driver to use the new architecture.
