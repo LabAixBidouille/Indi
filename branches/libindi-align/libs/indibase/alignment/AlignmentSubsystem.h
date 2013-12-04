@@ -7,6 +7,7 @@
  * This file contains a declarations of the functionality for an alignment subsystem to be used
  * alongside the INDI::Telescope class in drivers and directly in clients.
  */
+
 #ifndef ALIGNMENTSUBSYSTEM_H
 #define ALIGNMENTSUBSYSTEM_H
 
@@ -253,6 +254,24 @@ public:
 
     ///@}
 
+public:
+    /*!
+     * \struct AlignmentDatabaseEntry
+     * \brief Entry in the in memory alignment database
+     *
+     */
+    struct AlignmentDatabaseEntry
+    {
+        int ObservationDate;
+        double ObservationTime;
+        double RightAscension;
+        double Declination;
+        TelescopeDirectionVector TelescopeDirection;
+        std::auto_ptr<void> PrivateData;
+    };
+
+    typedef std::vector<AlignmentDatabaseEntry> SyncPointsType;
+
     /*! @name Database helper functions
      * An entry in the sync point database is defined by the following INDI properties
      * - ALIGNMENT_POINT_ENTRY_OBSERVATION_JULIAN_DATE\n
@@ -307,78 +326,72 @@ public:
     enum AlignmentDatabaseActions { APPEND, INSERT, EDIT, DELETE, CLEAR, READ, READ_INCREMENT, LOAD_DATABASE, SAVE_DATABASE };
 
 
-    /** \brief Apend a sync point to the database.
-        \param[in] ObservationDate The Julian date the observation was made.
-        \param[in] ObservationTime The local sidereal time the observation was made.
-        \param[in] RightAscension Right Ascension (Decimal Hours).
-        \param[in] Declination Declination of the observed object (Decimal Degrees).
-        \param[in] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+    /** \brief Append a sync point to the database.
+        \param[in] CurrentValues The entry to append.
         \return True if successful
     */
-    virtual bool AppendSyncPoint(const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector) = 0;
-
+    virtual bool AppendSyncPoint(const AlignmentDatabaseEntry& CurrentValues);
     /** \brief Insert a sync point in the database.
         \param[in] Offset Pointer to where to make then insertion.
-        \param[in] ObservationDate The Julian date the observation was made.
-        \param[in] ObservationTime The local sidereal time the observation was made.
-        \param[in] RightAscension Right Ascension (Decimal Hours).
-        \param[in] Declination Declination of the observed object (Decimal Degrees).
-        \param[in] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+        \param[in] CurrentValues The entry to insert.
         \return True if successful
     */
-    virtual bool InsertSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+    virtual bool InsertSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues);
 
     /** \brief Edit a sync point in the database.
         \param[in] Offset Pointer to where to make then edit.
-        \param[in] ObservationDate The Julian date the observation was made.
-        \param[in] ObservationTime The local sidereal time the observation was made.
-        \param[in] RightAscension Right Ascension (Decimal Hours).
-        \param[in] Declination Declination of the observed object (Decimal Degrees).
-        \param[in] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+        \param[in] CurrentValues The entry to insert.
         \return True if successful
     */
-    virtual bool EditSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+    virtual bool EditSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues);
 
     /** \brief Delete a sync point from the database.
-        \param[in] Offset Pointer to where to make then insertion
+        \param[in] Offset Pointer to the entry to delete
         \return True if successful
     */
-    virtual bool DeleteSyncPoint(unsigned int Offset) = 0;
+    virtual bool DeleteSyncPoint(unsigned int Offset);
 
     /** \brief Delete all sync points from the database.
         \return True if successful
     */
-    virtual bool ClearSyncPoints() = 0;
+    virtual bool ClearSyncPoints();
 
     /** \brief Read a sync point from the database.
         \param[in] Offset Pointer to where to read from.
-        \param[out] ObservationDate The Julian date the observation was made.
-        \param[out] ObservationTime The local sidereal time the observation was made.
-        \param[out] RightAscension Right Ascension (Decimal Hours).
-        \param[out] Declination Declination of the observed object (Decimal Degrees).
-        \param[out] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+        \param[Out] CurrentValues The entry read.
+        \note Unlike the property based database access methods a read next function is not provided. The caller is
+        expected to manage any position pointers (carets).
         \return True if successful
     */
-    virtual bool ReadSyncPoint(unsigned int Offset, double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+    virtual bool ReadSyncPoint(unsigned int Offset, AlignmentDatabaseEntry& CurrentValues);
 
-    /** \brief Read the next sync point from the database.
-        \param[out] ObservationDate The Julian date the observation was made.
-        \param[out] ObservationTime The local sidereal time the observation was made.
-        \param[out] RightAscension Right Ascension (Decimal Hours).
-        \param[out] Declination Declination of the observed object (Decimal Degrees).
-        \param[out] TelescopeDirectionVector - The direction vector returned from one of the alignment subsystem helper functions
+    /** \brief Load the database form persistent storage
+        \param[in] DeviceName The name of the current device.
         \return True if successful
     */
-    virtual bool ReadNextSyncPoint(double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+    virtual bool LoadDatabase(const char* DeviceName) = 0;
+
+    /** \brief Save the database to persistent storage
+        \param[in] DeviceName The name of the current device.
+        \return True if successful
+    */
+    virtual bool SaveDatabase(const char* DeviceName) = 0;
+
+    /** \brief Return the number of entries in the database.
+        \return The number of entries in the database
+    */
+    virtual const int GetDatabaseSize();
 ///@}
 
 protected:
+    // Data
+    //static SyncPointsType SyncPoints;
+    static SyncPointsType SyncPoints;
+
 };
+
+
+//INDI::AlignmentSubsystemBase::SyncPointsType INDI::AlignmentSubsystemBase::SyncPoints;
 
 /*!
  * \class INDI::AlignmentSubsystemClient
@@ -389,28 +402,16 @@ class INDI::AlignmentSubsystemClient : public INDI::AlignmentSubsystemBase
 {
 public:
     /*! @name Database helper function implementations
+     *  In the client the load and save functions are normally disabled
+     *  unless overidden.
      */
 
     ///@{
 
-    bool AppendSyncPoint(const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
+    virtual bool LoadDatabase(const char* DeviceName);
 
-    bool InsertSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
+    virtual bool SaveDatabase(const char* DeviceName);
 
-    bool EditSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
-
-    bool DeleteSyncPoint(unsigned int Offset);
-
-    bool ClearSyncPoints();
-
-    bool ReadSyncPoint(unsigned int Offset, double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector);
-
-    bool ReadNextSyncPoint(double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector);
     ///@}
 };
 
@@ -507,24 +508,10 @@ public:
 
     ///@{
 
-    bool AppendSyncPoint(const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
+    virtual bool LoadDatabase(const char* DeviceName);
 
-    bool InsertSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
+    virtual bool SaveDatabase(const char* DeviceName);
 
-    bool EditSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
-
-    bool DeleteSyncPoint(unsigned int Offset);
-
-    bool ClearSyncPoints();
-
-    bool ReadSyncPoint(unsigned int Offset, double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector);
-
-    bool ReadNextSyncPoint(double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector);
     ///@}
 
 protected:
@@ -552,23 +539,6 @@ protected:
     IText AlignmentSubsystemCurrentMathPlugin;
     ITextVectorProperty AlignmentSubsystemCurrentMathPluginV;
 
-private:
-    // Functions
-    bool LoadDatabase(const char* DeviceName);
-    bool SaveDatabase(const char* DeviceName);
-
-    // Data
-    struct DatabaseEntry
-    {
-        int ObservationDate;
-        double ObservationTime;
-        double RightAscension;
-        double Declination;
-        TelescopeDirectionVector TelescopeDirection;
-        std::auto_ptr<void> PrivateData;
-    };
-    typedef std::vector<DatabaseEntry> SyncPointsType;
-    SyncPointsType SyncPoints;
 };
 
 /*!
@@ -603,28 +573,15 @@ public:
     virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination) = 0;
 
     /*! @name Database helper function implementations
+     *  In math plugins the load and save functions are normally disabled
+     *  unless overidden.
      */
 
     ///@{
 
-    bool AppendSyncPoint(const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
+    virtual bool LoadDatabase(const char* DeviceName) { return false; }
 
-    bool InsertSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
-
-    bool EditSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector);
-
-    bool DeleteSyncPoint(unsigned int Offset);
-
-    bool ClearSyncPoints();
-
-    bool ReadSyncPoint(unsigned int Offset, double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector);
-
-    bool ReadNextSyncPoint(double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector);
+    virtual bool SaveDatabase(const char* DeviceName) { return false; }
     ///@}
 };
 

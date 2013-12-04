@@ -111,7 +111,9 @@ set (indidriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/indifilterinterface.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indilogger.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indicontroller.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemBase.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemDriver.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemBuiltInMathPlugin.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystem.h
     )
 

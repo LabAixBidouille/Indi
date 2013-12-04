@@ -138,7 +138,7 @@ void INDI::AlignmentSubsystemDriver::ProcessAlignmentSwitchProperties(Telescope*
         IUUpdateSwitch(&AlignmentPointSetCommitV, states, names, n);
 
         // Perform the database action
-        DatabaseEntry CurrentValues;
+        AlignmentDatabaseEntry CurrentValues;
         CurrentValues.ObservationDate = AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value;
         CurrentValues.ObservationTime = AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value;
         CurrentValues.RightAscension = AlignmentPointSetEntry[ENTRY_RA].value;
@@ -149,68 +149,55 @@ void INDI::AlignmentSubsystemDriver::ProcessAlignmentSwitchProperties(Telescope*
 
         if (AlignmentPointSetAction[APPEND].s == ISS_ON)
         {
-            SyncPoints.push_back(CurrentValues);
-            AlignmentPointSetSize.value = SyncPoints.size();
+            AppendSyncPoint(CurrentValues);
+            AlignmentPointSetSize.value = GetDatabaseSize();
             //  Update client display
             IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
         else if (AlignmentPointSetAction[INSERT].s == ISS_ON)
         {
-            SyncPoints.insert(SyncPoints.begin() + int(AlignmentPointSetPointer.value), CurrentValues);
-            AlignmentPointSetSize.value = SyncPoints.size();
+            InsertSyncPoint(int(AlignmentPointSetPointer.value), CurrentValues);
+            AlignmentPointSetSize.value = GetDatabaseSize();
             //  Update client display
             IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
         else if (AlignmentPointSetAction[EDIT].s == ISS_ON)
         {
-            SyncPoints.at(int(AlignmentPointSetPointer.value)) = CurrentValues;
+            EditSyncPoint(int(AlignmentPointSetPointer.value), CurrentValues);
         }
         else if (AlignmentPointSetAction[DELETE].s == ISS_ON)
         {
-            SyncPoints.erase(SyncPoints.begin() + int(AlignmentPointSetPointer.value));
-            AlignmentPointSetSize.value = SyncPoints.size();
+            DeleteSyncPoint(int(AlignmentPointSetPointer.value));
+            AlignmentPointSetSize.value = GetDatabaseSize();
             //  Update client display
             IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
         else if (AlignmentPointSetAction[CLEAR].s == ISS_ON)
         {
             // SyncPointsType().swap(SyncPoints); // Do it this wasy to force a reallocation
-            SyncPoints.clear();
-            AlignmentPointSetSize.value = 0;
+            ClearSyncPoints();
+            AlignmentPointSetSize.value = GetDatabaseSize();
             //  Update client display
             IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
-        else if (AlignmentPointSetAction[READ].s == ISS_ON)
+        else if ((AlignmentPointSetAction[READ].s == ISS_ON) || (AlignmentPointSetAction[READ_INCREMENT].s == ISS_ON))
         {
-            if ((int(AlignmentPointSetPointer.value) >= SyncPoints.size()) || (int(AlignmentPointSetPointer.value) < 0))
-                return;
-            AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationDate;
-            AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
-            AlignmentPointSetEntry[ENTRY_RA].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).RightAscension;
-            AlignmentPointSetEntry[ENTRY_DEC].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
-            AlignmentPointSetEntry[ENTRY_VECTOR_X].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.x;
-            AlignmentPointSetEntry[ENTRY_VECTOR_Y].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.y;
-            AlignmentPointSetEntry[ENTRY_VECTOR_Z].value= SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.z;
+            ReadSyncPoint(int(AlignmentPointSetPointer.value), CurrentValues);
+            AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
+            AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value = CurrentValues.ObservationTime;
+            AlignmentPointSetEntry[ENTRY_RA].value = CurrentValues.RightAscension;
+            AlignmentPointSetEntry[ENTRY_DEC].value = CurrentValues.ObservationTime;
+            AlignmentPointSetEntry[ENTRY_VECTOR_X].value = CurrentValues.TelescopeDirection.x;
+            AlignmentPointSetEntry[ENTRY_VECTOR_Y].value = CurrentValues.TelescopeDirection.y;
+            AlignmentPointSetEntry[ENTRY_VECTOR_Z].value= CurrentValues.TelescopeDirection.z;
 
             //  Update client display
             IDSetNumber(&AlignmentPointSetEntryV, NULL);
-        }
-        else if (AlignmentPointSetAction[READ_INCREMENT].s == ISS_ON)
-        {
-            if ((int(AlignmentPointSetPointer.value) >= SyncPoints.size()) || (int(AlignmentPointSetPointer.value) < 0))
-                return;
-            AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationDate;
-            AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
-            AlignmentPointSetEntry[ENTRY_RA].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).RightAscension;
-            AlignmentPointSetEntry[ENTRY_DEC].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).ObservationTime;
-            AlignmentPointSetEntry[ENTRY_VECTOR_X].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.x;
-            AlignmentPointSetEntry[ENTRY_VECTOR_Y].value = SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.y;
-            AlignmentPointSetEntry[ENTRY_VECTOR_Z].value= SyncPoints.at(int(AlignmentPointSetPointer.value)).TelescopeDirection.z;
-            AlignmentPointSetPointer.value++;
-
-            //  Update client display
-            IDSetNumber(&AlignmentPointSetEntryV, NULL);
-            IDSetNumber(&AlignmentPointSetPointerV, NULL);
+            if (AlignmentPointSetAction[READ_INCREMENT].s == ISS_ON)
+            {
+                AlignmentPointSetPointer.value++;
+                IDSetNumber(&AlignmentPointSetPointerV, NULL);
+            }
         }
         else if (AlignmentPointSetAction[LOAD_DATABASE].s == ISS_ON)
         {
@@ -237,46 +224,6 @@ void INDI::AlignmentSubsystemDriver::ProcessAlignmentBlobProperties(Telescope* p
 void INDI::AlignmentSubsystemDriver::SaveAlignmentConfigProperties(FILE *fp)
 {
     IUSaveConfigText(fp, &AlignmentSubsystemCurrentMathPluginV);
-}
-
-bool INDI::AlignmentSubsystemDriver::AppendSyncPoint(const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector)
-{
-    return false;
-}
-
-bool INDI::AlignmentSubsystemDriver::InsertSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector)
-{
-    return false;
-}
-
-bool INDI::AlignmentSubsystemDriver::EditSyncPoint(unsigned int Offset, const double ObservationDate, const double ObservationTime, const double RightAscension, const double Declination,
-                        const TelescopeDirectionVector& TelescopeDirectionVector)
-{
-    return false;
-}
-
-bool INDI::AlignmentSubsystemDriver::DeleteSyncPoint(unsigned int Offset)
-{
-    return false;
-}
-
-bool INDI::AlignmentSubsystemDriver::ClearSyncPoints()
-{
-    return false;
-}
-
-bool INDI::AlignmentSubsystemDriver::ReadSyncPoint(unsigned int Offset, double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector)
-{
-    return false;
-}
-
-bool INDI::AlignmentSubsystemDriver::ReadNextSyncPoint(double& ObservationDate, double& ObservationTime, double& RightAscension, double& Declination,
-                        TelescopeDirectionVector& TelescopeDirectionVector)
-{
-    return false;
 }
 
 bool INDI::AlignmentSubsystemDriver::LoadDatabase(const char* DeviceName)
@@ -317,7 +264,7 @@ bool INDI::AlignmentSubsystemDriver::LoadDatabase(const char* DeviceName)
 
     for (EntryRoot = nextXMLEle (FileRoot, 1); EntryRoot != NULL; EntryRoot = nextXMLEle (FileRoot, 0))
     {
-        DatabaseEntry CurrentValues;
+        AlignmentDatabaseEntry CurrentValues;
         if (strcmp(tagXMLEle(EntryRoot), "INDIAlignmentDatabaseEntry") != 0)
         {
             return false;
