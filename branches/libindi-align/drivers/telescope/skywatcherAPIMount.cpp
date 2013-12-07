@@ -95,7 +95,6 @@ bool SkywatcherAPIMount::ISNewText (const char *dev, const char *name, char *tex
     if(strcmp(dev,getDeviceName())==0)
     {
         // It is for us
-        ProcessAlignmentTextProperties(this, name, texts, names, n);
     }
     // Pass it up the chain
     return INDI::Telescope::ISNewText(dev, name, texts, names, n);
@@ -106,7 +105,7 @@ bool SkywatcherAPIMount::ISNewNumber (const char *dev, const char *name, double 
     if(strcmp(dev,getDeviceName())==0)
     {
         // It is for us
-        ProcessAlignmentNumberProperties(this, name, values, names, n);
+        ProcessNumberProperties(this, name, values, names, n);
     }
     // Pass it up the chain
     return INDI::Telescope::ISNewNumber(dev, name, values, names, n);
@@ -117,7 +116,7 @@ bool SkywatcherAPIMount::ISNewSwitch (const char *dev, const char *name, ISState
     if(strcmp(dev,getDeviceName())==0)
     {
         // It is for us
-        ProcessAlignmentSwitchProperties(this, name, states, names, n);
+        ProcessSwitchProperties(this, name, states, names, n);
     }
     // Pass it up the chain
     return INDI::Telescope::ISNewSwitch(dev, name, states, names, n);
@@ -128,7 +127,7 @@ bool SkywatcherAPIMount::ISNewBLOB (const char *dev, const char *name, int sizes
     if(strcmp(dev,getDeviceName())==0)
     {
         // It is for us
-        ProcessAlignmentBlobProperties(this, name, sizes, blobsizes, blobs, formats, names, n);
+        ProcessBlobProperties(this, name, sizes, blobsizes, blobs, formats, names, n);
     }
     // Pass it up the chain
     return INDI::Telescope::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
@@ -152,7 +151,7 @@ bool SkywatcherAPIMount::initProperties()
     addConfigurationControl();
 
     // Add alignment properties
-    InitAlignmentProperties(this);
+    InitProperties(this);
 
     // Add my visible before connection properties if any
 
@@ -236,7 +235,7 @@ bool  SkywatcherAPIMount::Abort()
 
 bool SkywatcherAPIMount::saveConfigItems(FILE *fp)
 {
-    SaveAlignmentConfigProperties(fp);
+    SaveConfigProperties(fp);
 
     return INDI::Telescope::saveConfigItems(fp);
 }

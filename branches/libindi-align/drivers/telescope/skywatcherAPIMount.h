@@ -16,11 +16,11 @@
 #ifndef SKYWATCHERAPIMOUNT_H
 #define SKYWATCHERAPIMOUNT_H
 
-#include "indibase/alignment/AlignmentSubsystem.h"
+#include "indibase/alignment/AlignmentSubsystemForDrivers.h"
 
 #include "skywatcherAPI.h"
 
-class SkywatcherAPIMount : public SkywatcherAPI, public INDI::Telescope, public INDI::AlignmentSubsystemDriver
+class SkywatcherAPIMount : public SkywatcherAPI, public INDI::Telescope, public INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 {
 public:
     SkywatcherAPIMount();

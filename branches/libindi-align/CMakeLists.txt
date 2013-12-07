@@ -111,10 +111,16 @@ set (indidriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/indifilterinterface.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indilogger.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indicontroller.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemBase.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemDriver.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemBuiltInMathPlugin.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystem.h
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForClients.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForDrivers.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForAlignmentDatabase.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForMathPluginManagement.cpp
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/Common.h
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/InMemoryDatabase.cpp
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MapPropertiesToInMemoryDatabase.cpp
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPlugin.cpp
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPluginManagement.cpp
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/TelescopeDirectionVectorSupportFunctions.cpp
     )
 
 ######################################
