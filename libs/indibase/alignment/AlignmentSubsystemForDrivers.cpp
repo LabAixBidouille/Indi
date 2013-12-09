@@ -24,6 +24,11 @@ void AlignmentSubsystemForDrivers::ProcessNumberProperties(Telescope* pTelescope
     MapPropertiesToInMemoryDatabase::ProcessNumberProperties(pTelescope, name, values, names, n);
 }
 
+void AlignmentSubsystemForDrivers::ProcessTextProperties(Telescope* pTelescope, const char *name, char *texts[], char *names[], int n)
+{
+    MathPluginManagement::ProcessTextProperties(pTelescope, name, texts, names, n);
+}
+
 void AlignmentSubsystemForDrivers::ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n)
 {
     MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(pTelescope, name, states, names, n);

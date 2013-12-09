@@ -94,7 +94,7 @@ bool SkywatcherAPIMount::ISNewText (const char *dev, const char *name, char *tex
 {
     if(strcmp(dev,getDeviceName())==0)
     {
-        // It is for us
+        ProcessTextProperties(this, name, texts, names, n);
     }
     // Pass it up the chain
     return INDI::Telescope::ISNewText(dev, name, texts, names, n);

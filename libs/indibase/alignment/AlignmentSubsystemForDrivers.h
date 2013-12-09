@@ -35,7 +35,7 @@ public:
     */
     void InitProperties(Telescope* pTelescope);
 
-    /** \brief Call this function whenever a client updates a number property. The function will
+    /** \brief Call this function from within the ISNewNumber processing path. The function will
      * handle any alignment subsystem related properties.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
@@ -45,7 +45,18 @@ public:
     */
     void ProcessNumberProperties(Telescope* pTelescope, const char *name, double values[], char *names[], int n);
 
-    /** \brief Call this function whenever a client updates a switch property. The function will
+    /** \brief Call this function from within the ISNewText processing path. The function will
+     * handle any alignment subsystem related properties. This only text property at the moment is contained in the
+     * config file so this will normally only have work to do when the config file is loaded.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
+     * \param[in] name vector property name
+     * \param[in] texts texts as passed by the client
+     * \param[in] names names as passed by the client
+     * \param[in] n number of values and names pair to process.
+    */
+    void ProcessTextProperties(Telescope* pTelescope, const char *name, char *texts[], char *names[], int n);
+
+    /** \brief Call this function from within the ISNewSwitch processing path. The function will
      * handle any alignment subsystem related properties.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
@@ -55,7 +66,7 @@ public:
     */
     void ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
 
-    /** \brief Call this function whenever a client updates a blob property. The function will
+    /** \brief Call this function from within the ISNewBlob processing path. The function will
      * handle any alignment subsystem related properties.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name

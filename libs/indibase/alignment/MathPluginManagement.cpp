@@ -28,6 +28,19 @@ void MathPluginManagement::InitProperties(Telescope* ChildTelescope)
                 "ALIGNMENT_SUBSYSTEM_CURRENT_MATH_PLUGIN", "Current Math Plugin", ALIGNMENT_TAB, IP_RO, 60, IPS_IDLE);
 }
 
+void MathPluginManagement::ProcessTextProperties(Telescope* pTelescope, const char *name, char *texts[], char *names[], int n)
+{
+    DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessTextProperties - name(%s)", name);
+    if (strcmp(name, AlignmentSubsystemCurrentMathPluginV.name) == 0)
+    {
+        AlignmentSubsystemCurrentMathPluginV.s=IPS_OK;
+        IUUpdateText(&AlignmentSubsystemCurrentMathPluginV, texts, names, n);
+
+        // The saved current plugin has just been read in from the config file
+        // TODO load requested plugin and update the client display
+    }
+}
+
 void MathPluginManagement::ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n)
 {
     DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessSwitchProperties - name(%s)", name);
