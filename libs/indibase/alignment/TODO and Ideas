@@ -6,19 +6,16 @@ If you cannot commit an edit then send your version to me and I will commit it.
 
 Roger.
 
-1. Pass in a reference to the in memory database when calling the math module along with a dirty flag.
-However this will stop the math module working on a client without extra work. Do we need the math module to work on a client?
+1. Finish implementation of ClientAPIForAlignmentDatabase.
 
-2. Finish off work on plugin management in AlignmentSubsystemDirver.
+2. Finish implementation of ClientAPIForMathPluginManagement.
 
-3. Finish implementation of database helper functions in AlignmentSubsystemDriver.
+3. Design and implementation reread database notifications for math plugins.
 
-4. Implement AlignmentSubsystemClient.
+4. Finish off math plugin load unload etc.
 
-5. Implement AlignmentSubsystemMathPlugin.
+5. Implement the "Builtin Math Plugin".
 
-6. Implement the "Builtin Math Plugin".
+6. Implement enough of SkyWatcherAPIMount to do basic testing.
 
-7. Implement enough of SkyWatcherAPIMount to do basic testing.
-
-8. Modify my coordinate conversion layer driver to use the new architecture.
+7. Modify my coordinate conversion layer driver to use the new architecture.
