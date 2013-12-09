@@ -19,6 +19,11 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+/*!
+ * \class AlignmentSubsystemForClients
+ * \brief This class encapsulates all the alignment subsystem classes that are useful to client implementations.
+ * Clients should inherit from this class.
+ */
 class AlignmentSubsystemForClients : public ClientAPIForMathPluginManagement, public ClientAPIForAlignmentDatabase,
                                     public TelescopeDirectionVectorSupportFunctions
 {

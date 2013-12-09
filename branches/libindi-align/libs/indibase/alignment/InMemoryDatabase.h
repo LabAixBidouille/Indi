@@ -16,6 +16,10 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+/*!
+ * \class InMemoryDatabase
+ * \brief This class provides the driver side API to the in memory alignment database.
+ */
 class InMemoryDatabase
 {
 public:
@@ -23,6 +27,9 @@ public:
 
     typedef std::vector<AlignmentDatabaseEntry> AlignmentDatabaseType;
 
+    /** \brief Get a reference to the in memory database.
+        \return A reference to the in memory database.
+    */
     AlignmentDatabaseType& GetAlignmentDatabase() { return MySyncPoints; }
 
     /** \brief Load the database from persistent storage

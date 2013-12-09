@@ -32,6 +32,10 @@ public:
     enum AzimuthAngleDirection{ CLOCKWISE, /*!< Angle is measured clockwise */
                                 ANTI_CLOCKWISE /*!< Angle is measured anti clockwise */};
 
+    /*!
+     * \enum PolarAngleDirection
+     * The direction of measurement of a polar angle
+     */
     enum PolarAngleDirection{ FROM_POLAR_AXIS, /*!< Angle is measured down from the polar axis */
                             FROM_AZIMUTHAL_PLANE /*!< Angle is measured upwards from the azimuthal plane */};
 
@@ -56,8 +60,8 @@ public:
      * \note TelescopeDirectionVectors are always normalised and right handed.
      */
     void SphericalCoordinateFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
-                                                                const double& AzimuthAngle, AzimuthAngleDirection AzimuthAngleDirection,
-                                                                const double& PolarAngle, PolarAngleDirection PolarAngleDirection);
+                                                                double& AzimuthAngle, AzimuthAngleDirection AzimuthAngleDirection,
+                                                                double& PolarAngle, PolarAngleDirection PolarAngleDirection);
 
 
     /*! \brief Calculates a telescope direction vector from the supplied equatorial coordinates.
