@@ -73,7 +73,7 @@ public:
     */
     void InitProperties(Telescope* pTelescope);
 
-    /** \brief Call this function whenever a client updates a number property. The function will
+    /** \brief Call this function from within the ISNewNumber processing path. The function will
      * handle any alignment database related properties.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
@@ -83,7 +83,7 @@ public:
     */
     void ProcessNumberProperties(Telescope* pTelescope, const char *name, double values[], char *names[], int n);
 
-    /** \brief Call this function whenever a client updates a switch property. The function will
+    /** \brief Call this function from within the ISNewSwitch processing path. The function will
      * handle any alignment database related properties.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
@@ -93,7 +93,7 @@ public:
     */
     void ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
 
-    /** \brief Call this function whenever a client updates a blob property. The function will
+    /** \brief Call this function from within the ISNewBLOB processing path. The function will
      * handle any alignment database related properties.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name

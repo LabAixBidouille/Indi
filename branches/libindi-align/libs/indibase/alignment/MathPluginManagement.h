@@ -35,8 +35,8 @@ public:
     */
     void InitProperties(Telescope* pTelescope);
 
-    /** \brief Call this function whenever a client updates a switch property. The function will
-     * handle any math plugin related properties.
+    /** \brief Call this function from within the ISNewSwitch processing path. The function will
+     * handle any math plugin switch properties.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
      * \param[in] states states as passed by the client
@@ -44,6 +44,17 @@ public:
      * \param[in] n number of values and names pair to process.
     */
     void ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
+
+    /** \brief Call this function from within the ISNewText processing path. The function will
+     * handle any math plugin text properties. This only text property at the moment is contained in the
+     * config file so this will normally only have work to do when the config file is loaded.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
+     * \param[in] name vector property name
+     * \param[in] texts texts as passed by the client
+     * \param[in] names names as passed by the client
+     * \param[in] n number of values and names pair to process.
+    */
+    void ProcessTextProperties(Telescope* pTelescope, const char *name, char *texts[], char *names[], int n);
 
     /** \brief Call this function to save persistent math plugin properties.
      * This function should be called from within the saveConfigItems function of your driver.
