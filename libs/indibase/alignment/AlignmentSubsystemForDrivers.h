@@ -19,6 +19,11 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+/*!
+ * \class AlignmentSubsystemForDrivers
+ * \brief This class encapsulates all the alignment subsystem classes that are useful to driver implementations.
+ * Drivers should inherit from this class.
+ */
 class AlignmentSubsystemForDrivers : public MapPropertiesToInMemoryDatabase, public MathPluginManagement,
                                     public TelescopeDirectionVectorSupportFunctions
 {
@@ -26,12 +31,13 @@ public:
     virtual ~AlignmentSubsystemForDrivers() {}
 
     /** \brief Initilize alignment subsystem properties. It is recommended to call this function within initProperties() of your primary device
-        \param[in] deviceName Name of the primary device
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
     */
     void InitProperties(Telescope* pTelescope);
 
     /** \brief Call this function whenever a client updates a number property. The function will
-     * handle any alignment database related properties.
+     * handle any alignment subsystem related properties.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
      * \param[in] values value as passed by the client
      * \param[in] names names as passed by the client
@@ -40,24 +46,29 @@ public:
     void ProcessNumberProperties(Telescope* pTelescope, const char *name, double values[], char *names[], int n);
 
     /** \brief Call this function whenever a client updates a switch property. The function will
-     * handle any alignment database related properties.
+     * handle any alignment subsystem related properties.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
-     * \param[in] values value as passed by the client
+     * \param[in] states states as passed by the client
      * \param[in] names names as passed by the client
      * \param[in] n number of values and names pair to process.
     */
     void ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
 
     /** \brief Call this function whenever a client updates a blob property. The function will
-     * handle any alignment database related properties.
+     * handle any alignment subsystem related properties.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
-     * \param[in] values value as passed by the client
-     * \param[in] names names as passed by the client
-     * \param[in] n number of values and names pair to process.
+     * \param[in] sizes
+     * \param[in] blobsizes
+     * \param[in] blobs
+     * \param[in] formats
+     * \param[in] names
+     * \param[in] n
     */
     void ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
-    /** \brief Call this function to save persistent math plugin properties.
+    /** \brief Call this function to save persistent alignment related properties.
      * This function should be called from within the saveConfigItems function of your driver.
      * \param[in] fp File pointer passed into saveConfigItems
     */

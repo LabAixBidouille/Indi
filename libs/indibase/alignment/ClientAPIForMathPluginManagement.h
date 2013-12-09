@@ -15,6 +15,11 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+/*!
+ * \class ClientAPIForMathPluginManagement
+ * \brief This class provides the client API for driver side math plugin management. It communicates
+ * with the driver via the INDI properties interface.
+ */
 class ClientAPIForMathPluginManagement
 {
 public:

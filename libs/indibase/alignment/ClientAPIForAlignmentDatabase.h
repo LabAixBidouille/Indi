@@ -14,6 +14,11 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+/*!
+ * \class ClientAPIForAlignmentDatabase
+ * \brief This class provides the client API to the driver side alignment database. It communicates
+ * with the driver via the INDI properties interface.
+ */
 class ClientAPIForAlignmentDatabase
 {
 public:
@@ -24,6 +29,7 @@ public:
         \return True if successful
     */
     bool AppendSyncPoint(const AlignmentDatabaseEntry& CurrentValues);
+
     /** \brief Insert a sync point in the database.
         \param[in] Offset Pointer to where to make then insertion.
         \param[in] CurrentValues The entry to insert.
@@ -51,7 +57,7 @@ public:
 
     /** \brief Read a sync point from the database.
         \param[in] Offset Pointer to where to read from.
-        \param[Out] CurrentValues The entry read.
+        \param[out] CurrentValues The entry read.
         \note Unlike the property based database access methods a read next function is not provided. The caller is
         expected to manage any position pointers (carets).
         \return True if successful
@@ -59,8 +65,7 @@ public:
     bool ReadSyncPoint(unsigned int Offset, AlignmentDatabaseEntry& CurrentValues);
 
     /** \brief Read a sync point from the database at the current offset and increment the caret after reading.
-        \param[in] Offset Pointer to where to read from.
-        \param[Out] CurrentValues The entry read.
+        \param[out] CurrentValues The entry read.
         \note Unlike the property based database access methods a read next function is not provided. The caller is
         expected to manage any position pointers (carets).
         \return True if successful

@@ -8,6 +8,8 @@
 
 #include "TelescopeDirectionVectorSupportFunctions.h"
 
+#include <cmath>
+
 namespace INDI {
 namespace AlignmentSubsystem {
 
@@ -16,15 +18,70 @@ const TelescopeDirectionVector TelescopeDirectionVectorSupportFunctions::Telesco
 {
     TelescopeDirectionVector Vector;
 
-    // TODO
+    if (ANTI_CLOCKWISE == AzimuthAngleDirection)
+    {
+        if (FROM_AZIMUTHAL_PLANE == PolarAngleDirection)
+        {
+            Vector.x = cos(PolarAngle) * cos(AzimuthAngle);
+            Vector.y = cos(PolarAngle) * sin(AzimuthAngle);
+            Vector.z = sin(PolarAngle);
+        }
+        else
+        {
+            Vector.x = sin(PolarAngle) * sin(AzimuthAngle);
+            Vector.y = sin(PolarAngle) * cos(AzimuthAngle);
+            Vector.z = cos(PolarAngle);
+        }
+    }
+    else
+    {
+        if (FROM_AZIMUTHAL_PLANE == PolarAngleDirection)
+        {
+            Vector.x = cos(PolarAngle) * cos(-AzimuthAngle);
+            Vector.y = cos(PolarAngle) * sin(-AzimuthAngle);
+            Vector.z = sin(PolarAngle);
+        }
+        else
+        {
+            Vector.x = sin(PolarAngle) * sin(-AzimuthAngle);
+            Vector.y = sin(PolarAngle) * cos(-AzimuthAngle);
+            Vector.z = cos(PolarAngle);
+        }
+    }
+
     return Vector;
 }
 
 void TelescopeDirectionVectorSupportFunctions::SphericalCoordinateFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
-                                                                const double& AzimuthAngle, AzimuthAngleDirection AzimuthAngleDirection,
-                                                                const double& PolarAngle, PolarAngleDirection PolarAngleDirection)
+                                                                double& AzimuthAngle, AzimuthAngleDirection AzimuthAngleDirection,
+                                                                double& PolarAngle, PolarAngleDirection PolarAngleDirection)
 {
-    // TODO
+    if (ANTI_CLOCKWISE == AzimuthAngleDirection)
+    {
+        if (FROM_AZIMUTHAL_PLANE == PolarAngleDirection)
+        {
+            AzimuthAngle = atan2(TelescopeDirectionVector.y, TelescopeDirectionVector.x);
+            PolarAngle = asin(TelescopeDirectionVector.z);
+        }
+        else
+        {
+            AzimuthAngle = atan2(TelescopeDirectionVector.y, TelescopeDirectionVector.x);
+            PolarAngle = acos(TelescopeDirectionVector.z);
+        }
+    }
+    else
+    {
+        if (FROM_AZIMUTHAL_PLANE == PolarAngleDirection)
+        {
+            AzimuthAngle = atan2(-TelescopeDirectionVector.y, TelescopeDirectionVector.x);
+            PolarAngle = asin(TelescopeDirectionVector.z);
+        }
+        else
+        {
+            AzimuthAngle = atan2(-TelescopeDirectionVector.y, TelescopeDirectionVector.x);
+            PolarAngle = acos(TelescopeDirectionVector.z);
+        }
+    }
 }
 
 } // namespace AlignmentSubsystem

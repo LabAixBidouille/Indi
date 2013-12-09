@@ -18,7 +18,7 @@ namespace AlignmentSubsystem {
 
 /*!
  * \class MathPluginManagement
- * \brief The following INDI properties are used to managr math plugins
+ * \brief The following INDI properties are used to manage math plugins
  *  - ALIGNMENT_SUBSYSTEM_MATH_PLUGINS\n
  *  A list of available plugins (switch). This also allows the client to select a plugin.
  *  - ALIGNMENT_SUBSYSTEM_CURRENT_MATH_PLUGIN\n
@@ -31,14 +31,15 @@ public:
     virtual ~MathPluginManagement() {}
 
     /** \brief Initilize alignment math plugin properties. It is recommended to call this function within initProperties() of your primary device
-        \param[in] deviceName Name of the primary device
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
     */
     void InitProperties(Telescope* pTelescope);
 
     /** \brief Call this function whenever a client updates a switch property. The function will
      * handle any math plugin related properties.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
-     * \param[in] values value as passed by the client
+     * \param[in] states states as passed by the client
      * \param[in] names names as passed by the client
      * \param[in] n number of values and names pair to process.
     */

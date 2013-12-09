@@ -69,12 +69,13 @@ public:
     virtual ~MapPropertiesToInMemoryDatabase() {}
 
     /** \brief Initilize alignment database properties. It is recommended to call this function within initProperties() of your primary device
-        \param[in] deviceName Name of the primary device
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
     */
     void InitProperties(Telescope* pTelescope);
 
     /** \brief Call this function whenever a client updates a number property. The function will
      * handle any alignment database related properties.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
      * \param[in] values value as passed by the client
      * \param[in] names names as passed by the client
@@ -84,8 +85,9 @@ public:
 
     /** \brief Call this function whenever a client updates a switch property. The function will
      * handle any alignment database related properties.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
-     * \param[in] values value as passed by the client
+     * \param[in] states states as passed by the client
      * \param[in] names names as passed by the client
      * \param[in] n number of values and names pair to process.
     */
@@ -93,10 +95,14 @@ public:
 
     /** \brief Call this function whenever a client updates a blob property. The function will
      * handle any alignment database related properties.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
-     * \param[in] values value as passed by the client
-     * \param[in] names names as passed by the client
-     * \param[in] n number of values and names pair to process.
+     * \param[in] sizes
+     * \param[in] blobsizes
+     * \param[in] blobs
+     * \param[in] formats
+     * \param[in] names
+     * \param[in] n
     */
     void ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
