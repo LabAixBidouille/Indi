@@ -104,6 +104,9 @@ bool InMemoryDatabase::LoadDatabase(const char* DeviceName)
     delXMLEle(Element);
     delLilXML(Parser);
 
+    if (NULL != LoadDatabaseCallback)
+        (*LoadDatabaseCallback)(LoadDatabaseCallbackThisPointer);
+
     return true;
 
 }
@@ -162,6 +165,13 @@ bool InMemoryDatabase::SaveDatabase(const char* DeviceName)
 
     return true;
 }
+
+void InMemoryDatabase::SetLoadDatabaseCallback(LoadDatabaseCallbackPointer CallbackPointer, void *ThisPointer)
+{
+    LoadDatabaseCallback = CallbackPointer;
+    LoadDatabaseCallbackThisPointer = ThisPointer;
+}
+
 
 } // namespace AlignmentSubsystem
 } // namespace INDI

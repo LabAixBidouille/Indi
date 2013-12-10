@@ -23,6 +23,8 @@ namespace AlignmentSubsystem {
  * \brief The following INDI properties are used to manage math plugins
  *  - ALIGNMENT_SUBSYSTEM_MATH_PLUGINS\n
  *  A list of available plugins (switch). This also allows the client to select a plugin.
+ *  - ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE\n
+ *  Initialise or re-initialise the current math plugin.
  *  - ALIGNMENT_SUBSYSTEM_CURRENT_MATH_PLUGIN\n
  *  This is not communicated to the client and only used to save the currently selected plugin name
  *  to persistent storage.
@@ -35,7 +37,7 @@ public:
     MathPluginManagement() : pInitialise(&MathPlugin::Initialise),
                             pTransformCelestialToTelescope(&MathPlugin::TransformCelestialToTelescope),
                             pTransformTelescopeToCelestial(&MathPlugin::TransformTelescopeToCelestial),
-                            pLoadedMathPlugin(&BuiltInPlugin){}
+                            pLoadedMathPlugin(&BuiltInPlugin) {}
     virtual ~MathPluginManagement() {}
 
     /** \brief Initilize alignment math plugin properties. It is recommended to call this function within initProperties() of your primary device
