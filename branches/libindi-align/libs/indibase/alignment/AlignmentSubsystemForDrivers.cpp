@@ -13,6 +13,12 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+AlignmentSubsystemForDrivers::AlignmentSubsystemForDrivers()
+{
+    // Fix up the database load callback
+    SetLoadDatabaseCallback(&MyDatabaseLoadCallback, this);
+}
+
 void AlignmentSubsystemForDrivers::InitProperties(Telescope* pTelescope)
 {
     MapPropertiesToInMemoryDatabase::InitProperties(pTelescope);
@@ -43,6 +49,12 @@ void AlignmentSubsystemForDrivers::SaveConfigProperties(FILE *fp)
 {
     MathPluginManagement::SaveConfigProperties(fp);
 }
+
+void AlignmentSubsystemForDrivers::MyDatabaseLoadCallback(void *ThisPointer)
+{
+    ((AlignmentSubsystemForDrivers*)ThisPointer)->Initialise();
+}
+
 
 } // namespace AlignmentSubsystem
 } // namespace INDI

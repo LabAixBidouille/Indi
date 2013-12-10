@@ -10,12 +10,10 @@ Roger.
 
 2. Finish implementation of ClientAPIForMathPluginManagement.
 
-3. Design and implementation reread database notifications for math plugins.
+3. Finish off math plugin load unload etc.
 
-4. Finish off math plugin load unload etc.
+4. Implement the "Builtin Math Plugin".
 
-5. Implement the "Builtin Math Plugin".
+5. Implement enough of SkyWatcherAPIMount to do basic testing.
 
-6. Implement enough of SkyWatcherAPIMount to do basic testing.
-
-7. Modify my coordinate conversion layer driver to use the new architecture.
+6. Modify my coordinate conversion layer driver to use the new architecture.

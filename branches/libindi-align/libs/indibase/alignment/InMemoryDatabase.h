@@ -23,6 +23,7 @@ namespace AlignmentSubsystem {
 class InMemoryDatabase
 {
 public:
+    InMemoryDatabase() : LoadDatabaseCallback(0) {}
     virtual ~InMemoryDatabase() {}
 
     typedef std::vector<AlignmentDatabaseEntry> AlignmentDatabaseType;
@@ -44,8 +45,14 @@ public:
     */
     bool SaveDatabase(const char* DeviceName);
 
+    typedef void (*LoadDatabaseCallbackPointer)(void *);
+
+    void SetLoadDatabaseCallback(LoadDatabaseCallbackPointer CallbackPointer, void *ThisPointer);
+
 private:
     AlignmentDatabaseType MySyncPoints;
+    LoadDatabaseCallbackPointer LoadDatabaseCallback;
+    void *LoadDatabaseCallbackThisPointer;
 };
 
 } // namespace AlignmentSubsystem

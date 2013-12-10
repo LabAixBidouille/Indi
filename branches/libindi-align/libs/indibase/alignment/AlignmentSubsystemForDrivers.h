@@ -28,6 +28,7 @@ class AlignmentSubsystemForDrivers : public MapPropertiesToInMemoryDatabase, pub
                                     public TelescopeDirectionVectorSupportFunctions
 {
 public:
+    AlignmentSubsystemForDrivers();
     virtual ~AlignmentSubsystemForDrivers() {}
 
     /** \brief Initilize alignment subsystem properties. It is recommended to call this function within initProperties() of your primary device
@@ -84,6 +85,9 @@ public:
      * \param[in] fp File pointer passed into saveConfigItems
     */
     void SaveConfigProperties(FILE *fp);
+
+private:
+    static void MyDatabaseLoadCallback(void *ThisPointer);
 };
 
 } // namespace AlignmentSubsystem
