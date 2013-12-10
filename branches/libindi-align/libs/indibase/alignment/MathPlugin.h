@@ -9,8 +9,7 @@
 #ifndef INDI_ALIGNMENTSUBSYSTEM_MATHPLUGIN_H
 #define INDI_ALIGNMENTSUBSYSTEM_MATHPLUGIN_H
 
-#include "InMemoryDatabase.h"
-#include "TelescopeDirectionVectorSupportFunctions.h"
+#include "Common.h"
 
 namespace INDI {
 namespace AlignmentSubsystem {
@@ -27,10 +26,15 @@ namespace AlignmentSubsystem {
  * when only two reference points are available and a third reference point has to artificially generated in order to
  * derive the matrix coefficients.
  */
-class MathPlugin : public InMemoryDatabase, public TelescopeDirectionVectorSupportFunctions
+class MathPlugin
 {
 public:
     virtual ~MathPlugin() {}
+
+    /** \brief Initialise or re-initialise the math plugin. Re-reading the in memory database as necessary.
+        \return True if successful
+    */
+    virtual bool Initialise() = 0;
 
     /** \brief Get the alignment corrected telescope pointing direction for the supplied celestial coordinates
         \param[in] RightAscension Right Ascension (Decimal Hours).

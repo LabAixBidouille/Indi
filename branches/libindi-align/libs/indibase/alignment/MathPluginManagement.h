@@ -11,6 +11,8 @@
 
 #include "indibase/inditelescope.h"
 
+#include "BuiltInMathPlugin.h"
+
 #include <memory>
 
 namespace INDI {
@@ -24,10 +26,16 @@ namespace AlignmentSubsystem {
  *  - ALIGNMENT_SUBSYSTEM_CURRENT_MATH_PLUGIN\n
  *  This is not communicated to the client and only used to save the currently selected plugin name
  *  to persistent storage.
+ *
+ *  This class also provides function links to the currently selected math plugin
  */
-class MathPluginManagement
+class MathPluginManagement : public MathPlugin // Derive from MathPluign to force the function signatures to match
 {
 public:
+    MathPluginManagement() : pInitialise(&MathPlugin::Initialise),
+                            pTransformCelestialToTelescope(&MathPlugin::TransformCelestialToTelescope),
+                            pTransformTelescopeToCelestial(&MathPlugin::TransformTelescopeToCelestial),
+                            pLoadedMathPlugin(&BuiltInPlugin){}
     virtual ~MathPluginManagement() {}
 
     /** \brief Initilize alignment math plugin properties. It is recommended to call this function within initProperties() of your primary device
@@ -62,6 +70,12 @@ public:
     */
     void SaveConfigProperties(FILE *fp);
 
+    // These must match the function signatures in MathPlugin
+    bool Initialise();
+    bool TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector);
+    bool TransformTelescopeToCelestial(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination);
+
+
 private:
 
     std::auto_ptr<ISwitch> AlignmentSubsystemMathPlugins;
@@ -70,6 +84,15 @@ private:
     // The following property is used for configuration purposes only and is not propagated to the client
     IText AlignmentSubsystemCurrentMathPlugin;
     ITextVectorProperty AlignmentSubsystemCurrentMathPluginV;
+
+    // The following hold links to the current loaded math plugin
+    // These must match the function signatures in MathPlugin
+    bool (MathPlugin::*pInitialise)();
+    bool (MathPlugin::*pTransformCelestialToTelescope)(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector);
+    bool (MathPlugin::*pTransformTelescopeToCelestial)(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination);
+    MathPlugin* pLoadedMathPlugin;
+
+    BuiltInMathPlugin BuiltInPlugin;
 };
 
 } // namespace AlignmentSubsystem

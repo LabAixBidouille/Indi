@@ -60,5 +60,20 @@ void MathPluginManagement::SaveConfigProperties(FILE *fp)
     IUSaveConfigText(fp, &AlignmentSubsystemCurrentMathPluginV);
 }
 
+bool MathPluginManagement::Initialise()
+{
+    return (pLoadedMathPlugin->*pInitialise)();
+}
+
+bool MathPluginManagement::TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector)
+{
+    return (pLoadedMathPlugin->*pTransformCelestialToTelescope)(RightAscension, Declination, TelescopeDirectionVector);
+}
+
+bool MathPluginManagement::TransformTelescopeToCelestial(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination)
+{
+    return (pLoadedMathPlugin->*pTransformTelescopeToCelestial)(TelescopeDirectionVector, RightAscension, Declination);
+}
+
 } // namespace AlignmentSubsystem
 } // namespace INDI
