@@ -21,6 +21,11 @@ void MathPluginManagement::InitProperties(Telescope* ChildTelescope)
                     "ALIGNMENT_SUBSYSTEM_MATH_PLUGINS", "Math Plugins", ALIGNMENT_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     ChildTelescope->registerProperty(&AlignmentSubsystemMathPluginsV, INDI_SWITCH);
 
+    IUFillSwitch(&AlignmentSubsystemMathPluginInitialise, "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE", "OK", ISS_OFF);
+    IUFillSwitchVector(&AlignmentSubsystemMathPluginInitialiseV, &AlignmentSubsystemMathPluginInitialise, 1, ChildTelescope->getDeviceName(),
+                    "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE", "(Re)Initialise Plugin", ALIGNMENT_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    ChildTelescope->registerProperty(&AlignmentSubsystemMathPluginInitialiseV, INDI_SWITCH);
+
     // The following property is used for configuration purposes only and is not exposed to the client.
     IUFillText(&AlignmentSubsystemCurrentMathPlugin, "ALIGNMENT_SUBSYSTEM_CURRENT_MATH_PLUGIN", "Current Math Plugin",
         AlignmentSubsystemMathPlugins.get()[0].label);
@@ -46,12 +51,22 @@ void MathPluginManagement::ProcessSwitchProperties(Telescope* pTelescope, const 
     DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessSwitchProperties - name(%s)", name);
     if (strcmp(name, AlignmentSubsystemMathPluginsV.name) == 0)
     {
-        AlignmentSubsystemMathPluginsV.s=IPS_OK;
+        AlignmentSubsystemMathPluginsV.s = IPS_OK;
         IUUpdateSwitch(&AlignmentSubsystemMathPluginsV, states, names, n);
         //  Update client display
         IDSetSwitch(&AlignmentSubsystemMathPluginsV, NULL);
 
-        // TODO Handle loading anf unloading plugins
+        // TODO Handle loading and unloading plugins
+    }
+    else if (strcmp(name, AlignmentSubsystemMathPluginInitialiseV.name) == 0)
+    {
+        AlignmentSubsystemMathPluginInitialiseV.s = IPS_OK;
+        IUResetSwitch(&AlignmentSubsystemMathPluginInitialiseV);
+        //  Update client display
+        IDSetSwitch(&AlignmentSubsystemMathPluginInitialiseV, NULL);
+
+        // Initialise or reinitialise the current math plugin
+        Initialise();
     }
 }
 

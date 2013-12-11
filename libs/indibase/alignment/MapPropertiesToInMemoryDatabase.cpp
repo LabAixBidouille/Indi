@@ -54,9 +54,9 @@ void MapPropertiesToInMemoryDatabase::InitProperties(Telescope* pTelescope)
                     "ALIGNMENT_POINTSET_ACTION", "Action to take", ALIGNMENT_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     pTelescope->registerProperty(&AlignmentPointSetActionV, INDI_SWITCH);
 
-    IUFillSwitch(&AlignmentPointSetCommit, "ALIGNMENT_POINTSET_COMMIT", "Execute the action", ISS_ON);
+    IUFillSwitch(&AlignmentPointSetCommit, "ALIGNMENT_POINTSET_COMMIT", "OK", ISS_OFF);
     IUFillSwitchVector(&AlignmentPointSetCommitV, &AlignmentPointSetCommit, 1, pTelescope->getDeviceName(),
-                    "ALIGNMENT_POINTSET_COMMIT", "Execute", ALIGNMENT_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+                    "ALIGNMENT_POINTSET_COMMIT", "Execute the action", ALIGNMENT_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
     pTelescope->registerProperty(&AlignmentPointSetCommitV, INDI_SWITCH);
 }
 
@@ -187,7 +187,7 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
         }
 
         //  Update client display
-        IUUpdateSwitch(&AlignmentPointSetCommitV, states, names, n);
+        IUResetSwitch(&AlignmentPointSetCommitV);
         IDSetSwitch(&AlignmentPointSetCommitV, NULL);
     }
 }

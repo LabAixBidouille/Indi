@@ -82,6 +82,8 @@ private:
 
     std::auto_ptr<ISwitch> AlignmentSubsystemMathPlugins;
     ISwitchVectorProperty AlignmentSubsystemMathPluginsV;
+    ISwitch AlignmentSubsystemMathPluginInitialise;
+    ISwitchVectorProperty AlignmentSubsystemMathPluginInitialiseV;
 
     // The following property is used for configuration purposes only and is not propagated to the client
     IText AlignmentSubsystemCurrentMathPlugin;
