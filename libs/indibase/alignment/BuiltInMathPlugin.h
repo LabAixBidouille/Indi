@@ -2,11 +2,12 @@
 #define INDI_ALIGNMENTSUBSYSTEM_BUILTINMATHPLUGIN_H
 
 #include "AlignmentSubsystemForMathPlugins.h"
+#include "ConvexHull.h"
 
 namespace INDI {
 namespace AlignmentSubsystem {
 
-class BuiltInMathPlugin : public AlignmentSubsystemForMathPlugins
+class BuiltInMathPlugin : public AlignmentSubsystemForMathPlugins, public ConvexHull
 {
     public:
         BuiltInMathPlugin();

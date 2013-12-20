@@ -17,3 +17,5 @@ Roger.
 5. Implement enough of SkyWatcherAPIMount to do basic testing.
 
 6. Modify my coordinate conversion layer driver to use the new architecture.
+
+7. Implement an example client program to load eqmod format databases into the alignment subsystem.

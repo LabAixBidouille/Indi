@@ -43,6 +43,8 @@ not removed.
 */
 
 #include <cstring> // I like to use NULL
+#include <cmath>
+#include <limits>
 
 namespace INDI {
 namespace AlignmentSubsystem {
@@ -54,7 +56,9 @@ namespace AlignmentSubsystem {
 class ConvexHull
 {
     public:
-        ConvexHull() : vertices(NULL), edges(NULL), faces(NULL), debug(false), check(false) {}
+        ConvexHull() : vertices(NULL), edges(NULL), faces(NULL),
+                        debug(false), check(false),
+                        ScaleFactor(SAFE) {}
         virtual ~ConvexHull() {}
 
     enum { X = 0, Y = 1, Z = 2 };
@@ -169,6 +173,9 @@ class ConvexHull
     */
     void CheckEuler(int V, int E, int F );
 
+    /** \brief Checks the consistency of the hull and prints the results to the
+    standard error output.
+    */
     void Checks( void );
 
     /** \brief CleanEdges runs through the edge list and cleans up the structure.
@@ -233,11 +240,14 @@ class ConvexHull
     */
     void EdgeOrderOnFaces ( void );
 
+    /** \brief Set the floating point to integer scaling factor
+    */
+    const int  GetScaleFactor( void ) const { return ScaleFactor; }
+
     /** \brief MakeCcw puts the vertices in the face structure in counterclock wise
     order.  We want to store the vertices in the same
-    order as in the visible face.  The third vertex is always p.
-
-    Although no specific ordering of the edges of a face are used
+    order as in the visible face.  The third vertex is always p. Although no
+    specific ordering of the edges of a face are used
     by the code, the following condition is maintained for each face f:
     one of the two endpoints of f->edge[i] matches f->vertex[i].
     But note that this does not imply that f->edge[i] is between
@@ -255,6 +265,10 @@ class ConvexHull
     order).  It returns a pointer to the face.
     */
     tFace MakeFace( tVertex v0, tVertex v1, tVertex v2, tFace f );
+
+    /** \brief Makes a vertex from the supplied information and adds it to the vertices list.
+    */
+    void MakeNewVertex( double x, double y, double z, int VertexId );
 
     /** \brief MakeNullEdge creates a new cell and initializes all pointers to NULL
     and sets all flags to off.  It returns a pointer to the empty cell.
@@ -279,16 +293,30 @@ class ConvexHull
     */
     void Print( void );
 
+    /** \brief Prints the edges to the standard error output
+    */
     void PrintEdges( void );
 
+    /** \brief Prints the faces to the standard error output
+    */
     void PrintFaces( void );
 
+    /** \brief Outputs the faces in Lightwave obj format for 3d viewing.
+    The files chull.obj and chull.mtl are written to the current working
+    directory.
+    */
     void PrintObj( void );
 
+    /** \brief Prints vertices, edges and faces to the standard error output
+    */
     void PrintOut( tVertex v );
 
+    /** \brief Prints a single vertex to the standard output.
+    */
     void PrintPoint( tVertex p );
 
+    /** \brief Prints vertices the standard error output.
+    */
     void PrintVertices( void );
 
     /** \brief ReadVertices: Reads in the vertices, and links them into a circular
@@ -297,6 +325,13 @@ class ConvexHull
     variable vertices via the add<> template function.
     */
     void ReadVertices( void );
+
+    /** \brief Set the floating point to integer scaling factor. If you want to tweak
+    this a good value to start from may well be a little bit more than the resolution of the
+    mounts encoders. Whatever is used must not exceed the default value which is
+    set to the constant SAFE.
+    */
+    void SetScaleFactor( const int NewScaleFactor ) { ScaleFactor = NewScaleFactor; }
 
     /** \brief SubVec:  Computes a - b and puts it into c.
     */
@@ -318,6 +353,8 @@ class ConvexHull
     private:
     bool debug;
     bool check;
+
+    int ScaleFactor; // Scale factor to be used when converting from floating point to integers and vice versa
 };
 
 } // namespace AlignmentSubsystem

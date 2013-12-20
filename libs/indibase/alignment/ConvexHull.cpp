@@ -603,6 +603,23 @@ ConvexHull::tFace ConvexHull::MakeFace( tVertex v0, tVertex v1, tVertex v2, tFac
    return f;
 }
 
+void ConvexHull::MakeNewVertex( double x, double y, double z, int VertexId )
+{
+    tVertex  v;
+    int	    vnum = 0;
+
+    v = MakeNullVertex();
+    v->v[X] = x * ScaleFactor;
+    v->v[Y] = y * ScaleFactor;
+    v->v[Z] = z * ScaleFactor;
+    v->vnum = VertexId;
+    if ( ( abs(x) > SAFE ) || ( abs(y) > SAFE ) || ( abs(z) > SAFE ) )
+    {
+        cout << "Coordinate of vertex below might be too large: run with -d flag\n";
+        PrintPoint(v);
+    }
+}
+
 ConvexHull::tEdge ConvexHull::MakeNullEdge( void )
 {
     tEdge  e;
