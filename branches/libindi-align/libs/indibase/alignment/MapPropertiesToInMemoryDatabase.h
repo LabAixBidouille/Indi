@@ -107,8 +107,6 @@ public:
     void ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
 private:
-    enum AlignmentPointSetEnum {ENTRY_OBSERVATION_JULIAN_DATE, ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME,
-                                ENTRY_RA, ENTRY_DEC, ENTRY_VECTOR_X, ENTRY_VECTOR_Y, ENTRY_VECTOR_Z};
     INumber AlignmentPointSetEntry[7];
     INumberVectorProperty AlignmentPointSetEntryV;
     IBLOB AlignmentPointSetPrivateBinaryData;

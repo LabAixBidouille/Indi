@@ -3,11 +3,12 @@
 
 
 #include <cstring>
+#include <sstream>
 
 
-#define MY_DEVICE "skywatcherAPIMount"
+using namespace INDI::AlignmentSubsystem;
 
-LoaderClient::LoaderClient()
+LoaderClient::LoaderClient() : DeviceName("skywatcherAPIMount")
 {
     //ctor
 }
@@ -17,28 +18,44 @@ LoaderClient::~LoaderClient()
     //dtor
 }
 
-void LoaderClient::Initialise()
+void LoaderClient::Initialise(int argc, char* argv[])
 {
-    setServer("localhost", 7624);
+    std::string HostName("localhost");
+    int Port = 7624;
 
-    watchDevice(MY_DEVICE);
+    if (argc > 1)
+        DeviceName = argv[1];
+    if (argc > 2)
+        HostName = argv[2];
+    if (argc > 3)
+    {
+        std::istringstream Parameter(argv[3]);
+        Parameter >> Port;
+    }
+
+    AlignmentSubsystemForClients::Initialise(DeviceName.c_str());
+
+    setServer(HostName.c_str(), Port);
+
+    watchDevice(DeviceName.c_str());
 
     connectServer();
 }
 
 void LoaderClient::newDevice(INDI::BaseDevice *dp)
 {
-    if (!strcmp(dp->getDeviceName(), MY_DEVICE))
-        IDLog("Receiving %s Device...\n", dp->getDeviceName());
-
-    Device = dp;
+    ProcessNewDevice(dp);
 }
 
 void LoaderClient::newProperty(INDI::Property *property)
 {
+    ProcessNewProperty(property);
+}
 
-    if (!strcmp(property->getDeviceName(), MY_DEVICE))
-        IDLog("newProperty %s\n", property->getName());
+void LoaderClient::Load()
+{
+    AlignmentDatabaseEntry CurrentValues;
+    AppendSyncPoint(CurrentValues);
 }
 
 

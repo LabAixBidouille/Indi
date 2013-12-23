@@ -45,6 +45,9 @@ typedef struct
 
 enum AlignmentDatabaseActions { APPEND, INSERT, EDIT, DELETE, CLEAR, READ, READ_INCREMENT, LOAD_DATABASE, SAVE_DATABASE };
 
+enum AlignmentPointSetEnum {ENTRY_OBSERVATION_JULIAN_DATE, ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME,
+                                ENTRY_RA, ENTRY_DEC, ENTRY_VECTOR_X, ENTRY_VECTOR_Y, ENTRY_VECTOR_Z};
+
 } // namespace AlignmentSubsystem
 } // namespace INDI
 

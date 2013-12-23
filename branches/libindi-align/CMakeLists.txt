@@ -96,6 +96,9 @@ set (indiclient_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/basedevice.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/baseclient.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indiproperty.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForClients.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForAlignmentDatabase.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForMathPluginManagement.cpp
     )
 
 set (indidriver_SRCS
@@ -111,10 +114,7 @@ set (indidriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/indifilterinterface.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indilogger.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indicontroller.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForClients.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForDrivers.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForAlignmentDatabase.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForMathPluginManagement.cpp
 	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/Common.h
 	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/InMemoryDatabase.cpp
 	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MapPropertiesToInMemoryDatabase.cpp

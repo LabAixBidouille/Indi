@@ -6,11 +6,13 @@ using namespace std;
 
 static LoaderClient Client;
 
-int main()
+int main(int argc, char* argv[])
 {
-    Client.Initialise();
+    Client.Initialise(argc, argv);
 
-    cout << "Press any key to terminate the client.\n";
+    Client.Load();
+
+    cout << "Press any key followed by return to terminate the client.\n";
     string term;
     cin >> term;
     return 0;
