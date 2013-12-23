@@ -13,9 +13,11 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
-void AlignmentSubsystemForClients::Initialise(const char * DeviceName)
+void AlignmentSubsystemForClients::Initialise(const char * DeviceName, INDI::BaseClient * BaseClient)
 {
     AlignmentSubsystemForClients::DeviceName = DeviceName;
+    ClientAPIForAlignmentDatabase::Initialise(BaseClient);
+
 }
 
 void AlignmentSubsystemForClients::ProcessNewDevice(INDI::BaseDevice *DevicePointer)
@@ -33,6 +35,24 @@ void AlignmentSubsystemForClients::ProcessNewProperty(INDI::Property *PropertyPo
     {
         IDLog("newProperty %s\n", PropertyPointer->getName());
         ClientAPIForAlignmentDatabase::ProcessNewProperty(PropertyPointer);
+    }
+}
+
+void AlignmentSubsystemForClients::ProcessNewSwitch(ISwitchVectorProperty *SwitchVectorPropertyPointer)
+{
+    if (!strcmp(SwitchVectorPropertyPointer->device, DeviceName.c_str()))
+    {
+        IDLog("newSwitch %s\n", SwitchVectorPropertyPointer->name);
+        ClientAPIForAlignmentDatabase::ProcessNewSwitch(SwitchVectorPropertyPointer);
+    }
+}
+
+void AlignmentSubsystemForClients::ProcessNewNumber(INumberVectorProperty *NumberVectorPropertyPointer)
+{
+    if (!strcmp(NumberVectorPropertyPointer->device, DeviceName.c_str()))
+    {
+        IDLog("newNumber %s\n", NumberVectorPropertyPointer->name);
+        ClientAPIForAlignmentDatabase::ProcessNewNumber(NumberVectorPropertyPointer);
     }
 }
 

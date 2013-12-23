@@ -33,7 +33,7 @@ void LoaderClient::Initialise(int argc, char* argv[])
         Parameter >> Port;
     }
 
-    AlignmentSubsystemForClients::Initialise(DeviceName.c_str());
+    AlignmentSubsystemForClients::Initialise(DeviceName.c_str(), this);
 
     setServer(HostName.c_str(), Port);
 
@@ -50,6 +50,16 @@ void LoaderClient::newDevice(INDI::BaseDevice *dp)
 void LoaderClient::newProperty(INDI::Property *property)
 {
     ProcessNewProperty(property);
+}
+
+void LoaderClient::newSwitch(ISwitchVectorProperty *svp)
+{
+    ProcessNewSwitch(svp);
+}
+
+void LoaderClient::newNumber(INumberVectorProperty *nvp)
+{
+    ProcessNewNumber(nvp);
 }
 
 void LoaderClient::Load()

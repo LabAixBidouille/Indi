@@ -36,7 +36,7 @@ public:
     /** \brief This routine should be called before any connections to devices are made.
         \param[in] DeviceName The device name of INDI driver instance to be used.
     */
-    void Initialise(const char * DeviceName);
+    void Initialise(const char * DeviceName, INDI::BaseClient * BaseClient);
 
     /** \brief Process new device message from driver. This routine should be called from within
      the newDevice handler in the client.
@@ -50,6 +50,17 @@ public:
     */
     void ProcessNewProperty(INDI::Property *PropertyPointer);
 
+    /** \brief Process new switch message from driver. This routine should be called from within
+     the newSwitch handler in the client.
+        \param[in] SwitchVectorPropertyPointer A pointer to the INDI::ISwitchVectorProperty.
+    */
+    void ProcessNewSwitch(ISwitchVectorProperty *SwitchVectorPropertyPointer);
+
+    /** \brief Process new number message from driver. This routine should be called from within
+     the newNumber handler in the client.
+        \param[in] NumberVectorPropertyPointer A pointer to the INDI::INumberVectorProperty.
+    */
+    void ProcessNewNumber(INumberVectorProperty *NumberVectorPropertyPointer);
 private:
     std::string DeviceName;
 };

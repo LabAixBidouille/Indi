@@ -12,6 +12,7 @@
 #include "Common.h"
 
 #include "indibase/basedevice.h"
+#include "indibase/baseclient.h"
 
 #include <string>
 
@@ -29,6 +30,8 @@ public:
     ClientAPIForAlignmentDatabase();
     virtual ~ClientAPIForAlignmentDatabase();
 
+    void Initialise(INDI::BaseClient *BaseClient);
+
     /** \brief Process new device message from driver. This routine should be called from within
      the newDevice handler in the client. This routine is not normally called directly but is called by
      the ProcessNewDevice function in INDI::Alignment::AlignmentSubsystemForClients which filters out calls
@@ -44,6 +47,22 @@ public:
         \param[in] PropertyPointer A pointer to the INDI::Property object.
     */
     void ProcessNewProperty(INDI::Property *PropertyPointer);
+
+    /** \brief Process new switch message from driver. This routine should be called from within
+     the newSwitch handler in the client. This routine is not normally called directly but is called by
+     the ProcessNewSwitch function in INDI::Alignment::AlignmentSubsystemForClients which filters out calls
+     from unwanted devices. TODO maybe hide this function.
+        \param[in] SwitchVectorProperty A pointer to the INDI::ISwitchVectorProperty.
+    */
+    void ProcessNewSwitch(ISwitchVectorProperty *SwitchVectorProperty);
+
+    /** \brief Process new number message from driver. This routine should be called from within
+     the newNumber handler in the client. This routine is not normally called directly but is called by
+     the ProcessNewNumber function in INDI::Alignment::AlignmentSubsystemForClients which filters out calls
+     from unwanted devices. TODO maybe hide this function.
+        \param[in] NumberVectorProperty A pointer to the INDI::INumberVectorProperty.
+    */
+    void ProcessNewNumber(INumberVectorProperty *NumberVectorProperty);
 
     /** \brief Append a sync point to the database.
         \param[in] CurrentValues The entry to append.
@@ -111,6 +130,9 @@ public:
     const int GetDatabaseSize();
 
 private:
+    // Pointer to INDI::BaseClient
+    INDI::BaseClient *BaseClient;
+
     // Synchronise with the listener thread
     bool WaitForDriverCompletion();
     bool SignalDriverCompletion();
