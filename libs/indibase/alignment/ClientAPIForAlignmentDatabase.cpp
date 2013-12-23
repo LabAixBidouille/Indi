@@ -62,13 +62,18 @@ void ClientAPIForAlignmentDatabase::ProcessNewProperty(INDI::Property *PropertyP
                 && (NULL != Action)
                 && (NULL != Commit))
     {
+        // The DriverActionComplete state variable is initialised to false
+        // So I need to call this to set it to true and signal anyone
+        // waiting for the driver to initialise etc.
         SignalDriverCompletion();
     }
 }
 
 bool ClientAPIForAlignmentDatabase::AppendSyncPoint(const AlignmentDatabaseEntry& CurrentValues)
 {
+    // Wait for driver to initialise if neccessary
     WaitForDriverCompletion();
+
     if (APPEND != IUFindOnSwitchIndex(Action->getSwitch()))
     {
     }
@@ -80,13 +85,16 @@ bool ClientAPIForAlignmentDatabase::WaitForDriverCompletion()
     ReturnCode = pthread_mutex_lock(&DriverActionCompleteMutex);
     while(!DriverActionComplete)
     {
+        IDLog("WaitForDriverCompletion - Waiting\n");
         ReturnCode = pthread_cond_wait(&DriverActionCompleteCondition, &DriverActionCompleteMutex);
+        IDLog("WaitForDriverCompletion - Back from wait ReturnCode = %d\n", ReturnCode);
         if (ReturnCode)
         {
             ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
             return false;
         }
     }
+    IDLog("WaitForDriverCompletion - Finished waiting\n");
     ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
     if (ReturnCode)
         return false;
@@ -103,7 +111,10 @@ bool ClientAPIForAlignmentDatabase::SignalDriverCompletion()
     DriverActionComplete = true;
     ReturnCode = pthread_cond_signal(&DriverActionCompleteCondition);
     if (ReturnCode)
+    {
+        ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
         return false;
+    }
     ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
     if (ReturnCode)
         return false;
