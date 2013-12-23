@@ -4,13 +4,17 @@
 #include "indibase/baseclient.h"
 #include "indibase/basedevice.h"
 
-class LoaderClient : public INDI::BaseClient
+#include "indibase/alignment/AlignmentSubsystemForClients.h"
+
+class LoaderClient : public INDI::BaseClient, INDI::AlignmentSubsystem::AlignmentSubsystemForClients
 {
 public:
     LoaderClient();
     virtual ~LoaderClient();
 
-    void Initialise();
+    void Initialise(int argc, char* argv[]);
+
+    void Load();
 
 protected:
     virtual void newDevice(INDI::BaseDevice *dp);
@@ -27,6 +31,7 @@ protected:
 
 private:
     INDI::BaseDevice *Device;
+    std::string DeviceName;
 };
 
 #endif // LOADERCLIENT_H
