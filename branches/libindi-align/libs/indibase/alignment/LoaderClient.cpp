@@ -66,6 +66,13 @@ void LoaderClient::Load()
 {
     AlignmentDatabaseEntry CurrentValues;
     AppendSyncPoint(CurrentValues);
+    AppendSyncPoint(CurrentValues);
+    AppendSyncPoint(CurrentValues);
+    CurrentValues.ObservationDate = 128;
+    EditSyncPoint(2, CurrentValues);
+    CurrentValues.ObservationDate = 256;
+    InsertSyncPoint(2, CurrentValues);
+    DeleteSyncPoint(0);
 }
 
 
