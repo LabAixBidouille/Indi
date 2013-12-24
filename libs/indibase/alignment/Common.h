@@ -21,27 +21,30 @@ namespace AlignmentSubsystem {
  * The x y,z fields of this class should always represent a normalised (unit length)
  * vector in a right handed rectangular coordinate space.
  */
-typedef struct
+struct TelescopeDirectionVector
 {
+    TelescopeDirectionVector() : x(0), y(0), z(0) {}
     double x;
     double y;
     double z;
-} TelescopeDirectionVector;
+};
 
 /*!
  * \struct AlignmentDatabaseEntry
  * \brief Entry in the in memory alignment database
  *
  */
-typedef struct
+struct AlignmentDatabaseEntry
 {
+    AlignmentDatabaseEntry() : ObservationDate(0), ObservationTime(0),
+                                RightAscension(0), Declination(0) {}
     int ObservationDate;
     double ObservationTime;
     double RightAscension;
     double Declination;
     TelescopeDirectionVector TelescopeDirection;
     std::auto_ptr<void> PrivateData;
-} AlignmentDatabaseEntry;
+};
 
 enum AlignmentDatabaseActions { APPEND, INSERT, EDIT, DELETE, CLEAR, READ, READ_INCREMENT, LOAD_DATABASE, SAVE_DATABASE };
 

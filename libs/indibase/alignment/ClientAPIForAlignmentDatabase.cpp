@@ -82,7 +82,9 @@ void ClientAPIForAlignmentDatabase::ProcessNewSwitch(ISwitchVectorProperty *Swit
 {
     if (!strcmp(SwitchVectorProperty->name, "ALIGNMENT_POINTSET_ACTION"))
     {
-        if ((IPS_OK == SwitchVectorProperty->s) || (IPS_ALERT == SwitchVectorProperty->s))
+        if ((IPS_OK == SwitchVectorProperty->s)
+        || (IPS_ALERT == SwitchVectorProperty->s)
+        || (IPS_IDLE == SwitchVectorProperty->s)) // IDLE appears to be used to signal validation errors
             SignalDriverCompletion();
     }
 }
@@ -91,7 +93,9 @@ void ClientAPIForAlignmentDatabase::ProcessNewNumber(INumberVectorProperty *Numb
 {
     if (!strcmp(NumberVectorProperty->name, "ALIGNMENT_POINT_MANDATORY_NUMBERS"))
     {
-        if ((IPS_OK == NumberVectorProperty->s) || (IPS_ALERT == NumberVectorProperty->s))
+        if ((IPS_OK == NumberVectorProperty->s)
+        || (IPS_ALERT == NumberVectorProperty->s)
+        || (IPS_IDLE == NumberVectorProperty->s)) // IDLE appears to be used to signal validation errors
             SignalDriverCompletion();
     }
 }
