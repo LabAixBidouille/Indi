@@ -98,31 +98,25 @@ public:
     /** \brief Read a sync point from the database.
         \param[in] Offset Pointer to where to read from.
         \param[out] CurrentValues The entry read.
-        \note Unlike the property based database access methods a read next function is not provided. The caller is
-        expected to manage any position pointers (carets).
         \return True if successful
     */
     bool ReadSyncPoint(unsigned int Offset, AlignmentDatabaseEntry& CurrentValues);
 
-    /** \brief Read a sync point from the database at the current offset and increment the caret after reading.
+    /** \brief Increment ther current offset then read a sync point from the database.
         \param[out] CurrentValues The entry read.
-        \note Unlike the property based database access methods a read next function is not provided. The caller is
-        expected to manage any position pointers (carets).
         \return True if successful
     */
     bool ReadIncrementSyncPoint(AlignmentDatabaseEntry& CurrentValues);
 
     /** \brief Load the database from persistent storage
-        \param[in] DeviceName The name of the current device.
         \return True if successful
     */
-    bool LoadDatabase(const char* DeviceName);
+    bool LoadDatabase();
 
     /** \brief Save the database to persistent storage
-        \param[in] DeviceName The name of the current device.
         \return True if successful
     */
-    bool SaveDatabase(const char* DeviceName);
+    bool SaveDatabase();
 
     /** \brief Return the number of entries in the database.
         \return The number of entries in the database

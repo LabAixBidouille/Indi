@@ -82,9 +82,12 @@ void ClientAPIForAlignmentDatabase::ProcessNewSwitch(ISwitchVectorProperty *Swit
 {
     if (!strcmp(SwitchVectorProperty->name, "ALIGNMENT_POINTSET_ACTION"))
     {
-        if ((IPS_OK == SwitchVectorProperty->s)
-        || (IPS_ALERT == SwitchVectorProperty->s)
-        || (IPS_IDLE == SwitchVectorProperty->s)) // IDLE appears to be used to signal validation errors
+        if (IPS_BUSY != SwitchVectorProperty->s)
+            SignalDriverCompletion();
+    }
+    else if (!strcmp(SwitchVectorProperty->name, "ALIGNMENT_POINTSET_COMMIT"))
+    {
+        if (IPS_BUSY != SwitchVectorProperty->s)
             SignalDriverCompletion();
     }
 }
@@ -93,10 +96,23 @@ void ClientAPIForAlignmentDatabase::ProcessNewNumber(INumberVectorProperty *Numb
 {
     if (!strcmp(NumberVectorProperty->name, "ALIGNMENT_POINT_MANDATORY_NUMBERS"))
     {
-        if ((IPS_OK == NumberVectorProperty->s)
-        || (IPS_ALERT == NumberVectorProperty->s)
-        || (IPS_IDLE == NumberVectorProperty->s)) // IDLE appears to be used to signal validation errors
-            SignalDriverCompletion();
+        if (IPS_BUSY != NumberVectorProperty->s)
+        {
+            ISwitchVectorProperty *pAction = Action->getSwitch();
+            int Index = IUFindOnSwitchIndex(pAction);
+            if ((READ != Index) && (READ_INCREMENT != Index))
+                SignalDriverCompletion();
+        }
+    }
+    else if (!strcmp(NumberVectorProperty->name, "ALIGNMENT_POINTSET_CURRENT_ENTRY"))
+    {
+        if (IPS_BUSY != NumberVectorProperty->s)
+        {
+            ISwitchVectorProperty *pAction = Action->getSwitch();
+            int Index = IUFindOnSwitchIndex(pAction);
+            if (READ_INCREMENT != Index)
+                SignalDriverCompletion();
+        }
     }
 }
 
@@ -105,40 +121,394 @@ bool ClientAPIForAlignmentDatabase::AppendSyncPoint(const AlignmentDatabaseEntry
     // Wait for driver to initialise if neccessary
     WaitForDriverCompletion();
 
-    ISwitchVectorProperty *pSwitch = Action->getSwitch();
-    INumberVectorProperty *pNumber = MandatoryNumbers->getNumber();
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
 
 
-    if (APPEND != IUFindOnSwitchIndex(pSwitch))
+    if (APPEND != IUFindOnSwitchIndex(pAction))
     {
         // Request Append mode
-        IUResetSwitch(pSwitch);
-        pSwitch->sp[APPEND].s = ISS_ON;
+        IUResetSwitch(pAction);
+        pAction->sp[APPEND].s = ISS_ON;
         SetDriverBusy();
-        BaseClient->sendNewSwitch(pSwitch);
+        BaseClient->sendNewSwitch(pAction);
         WaitForDriverCompletion();
-        if (IPS_OK != pSwitch->s)
+        if (IPS_OK != pAction->s)
         {
-            IDLog("AppendSyncPoint - Bad Action switch state %s\n", pstateStr(pSwitch->s));
+            IDLog("AppendSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
             return false;
         }
     }
 
-    pNumber->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
-    pNumber->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value  = CurrentValues.ObservationTime;
-    pNumber->np[ENTRY_RA].value  = CurrentValues.RightAscension;
-    pNumber->np[ENTRY_DEC].value  = CurrentValues.Declination;
-    pNumber->np[ENTRY_VECTOR_X].value  = CurrentValues.TelescopeDirection.x;
-    pNumber->np[ENTRY_VECTOR_Y].value  = CurrentValues.TelescopeDirection.y;
-    pNumber->np[ENTRY_VECTOR_Z].value  = CurrentValues.TelescopeDirection.z;
+    // Send the entry data
+    pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
+    pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value  = CurrentValues.ObservationTime;
+    pMandatoryNumbers->np[ENTRY_RA].value  = CurrentValues.RightAscension;
+    pMandatoryNumbers->np[ENTRY_DEC].value  = CurrentValues.Declination;
+    pMandatoryNumbers->np[ENTRY_VECTOR_X].value  = CurrentValues.TelescopeDirection.x;
+    pMandatoryNumbers->np[ENTRY_VECTOR_Y].value  = CurrentValues.TelescopeDirection.y;
+    pMandatoryNumbers->np[ENTRY_VECTOR_Z].value  = CurrentValues.TelescopeDirection.z;
     SetDriverBusy();
-    BaseClient->sendNewNumber(pNumber);
+    BaseClient->sendNewNumber(pMandatoryNumbers);
     WaitForDriverCompletion();
-    if (IPS_OK != pNumber->s)
+    if (IPS_OK != pMandatoryNumbers->s)
     {
-        IDLog("AppendSyncPoint - Bad mandatory numbers state %s\n", pstateStr(pSwitch->s));
+        IDLog("AppendSyncPoint - Bad mandatory numbers state %s\n", pstateStr(pMandatoryNumbers->s));
         return false;
     }
+
+    // Commit the entry to the database
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCommit->s)
+    {
+        IDLog("AppendSyncPoint - Bad Commit switch state %s\n", pstateStr(pCommit->s));
+        return false;
+    }
+
+    return true;
+}
+
+bool ClientAPIForAlignmentDatabase::InsertSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues)
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
+    INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (INSERT != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Insert mode
+        IUResetSwitch(pAction);
+        pAction->sp[INSERT].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("InsertSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    // Send the offset
+    pCurrentEntry->np[0].value = Offset;
+    SetDriverBusy();
+    BaseClient->sendNewNumber(pCurrentEntry);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCurrentEntry->s)
+    {
+        IDLog("InsertSyncPoint - Bad Current Entry state %s\n", pstateStr(pCurrentEntry->s));
+        return false;
+    }
+
+    // Send the entry data
+    pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
+    pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value  = CurrentValues.ObservationTime;
+    pMandatoryNumbers->np[ENTRY_RA].value  = CurrentValues.RightAscension;
+    pMandatoryNumbers->np[ENTRY_DEC].value  = CurrentValues.Declination;
+    pMandatoryNumbers->np[ENTRY_VECTOR_X].value  = CurrentValues.TelescopeDirection.x;
+    pMandatoryNumbers->np[ENTRY_VECTOR_Y].value  = CurrentValues.TelescopeDirection.y;
+    pMandatoryNumbers->np[ENTRY_VECTOR_Z].value  = CurrentValues.TelescopeDirection.z;
+    SetDriverBusy();
+    BaseClient->sendNewNumber(pMandatoryNumbers);
+    WaitForDriverCompletion();
+    if (IPS_OK != pMandatoryNumbers->s)
+    {
+        IDLog("InsertSyncPoint - Bad mandatory numbers state %s\n", pstateStr(pMandatoryNumbers->s));
+        return false;
+    }
+
+    // Commit the entry to the database
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCommit->s)
+    {
+        IDLog("InsertSyncPoint - Bad Commit switch state %s\n", pstateStr(pCommit->s));
+        return false;
+    }
+
+    return true;
+}
+
+bool ClientAPIForAlignmentDatabase::EditSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues)
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
+    INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (EDIT != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Edit mode
+        IUResetSwitch(pAction);
+        pAction->sp[EDIT].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("EditSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    // Send the offset
+    pCurrentEntry->np[0].value = Offset;
+    SetDriverBusy();
+    BaseClient->sendNewNumber(pCurrentEntry);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCurrentEntry->s)
+    {
+        IDLog("EditSyncPoint - Bad Current Entry state %s\n", pstateStr(pCurrentEntry->s));
+        return false;
+    }
+
+    // Send the entry data
+    pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
+    pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value  = CurrentValues.ObservationTime;
+    pMandatoryNumbers->np[ENTRY_RA].value  = CurrentValues.RightAscension;
+    pMandatoryNumbers->np[ENTRY_DEC].value  = CurrentValues.Declination;
+    pMandatoryNumbers->np[ENTRY_VECTOR_X].value  = CurrentValues.TelescopeDirection.x;
+    pMandatoryNumbers->np[ENTRY_VECTOR_Y].value  = CurrentValues.TelescopeDirection.y;
+    pMandatoryNumbers->np[ENTRY_VECTOR_Z].value  = CurrentValues.TelescopeDirection.z;
+    SetDriverBusy();
+    BaseClient->sendNewNumber(pMandatoryNumbers);
+    WaitForDriverCompletion();
+    if (IPS_OK != pMandatoryNumbers->s)
+    {
+        IDLog("EditSyncPoint - Bad mandatory numbers state %s\n", pstateStr(pMandatoryNumbers->s));
+        return false;
+    }
+
+    // Commit the entry to the database
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCommit->s)
+    {
+        IDLog("EditSyncPoint - Bad Commit switch state %s\n", pstateStr(pCommit->s));
+        return false;
+    }
+
+    return true;
+}
+
+bool ClientAPIForAlignmentDatabase::DeleteSyncPoint(unsigned int Offset)
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (DELETE != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Delete mode
+        IUResetSwitch(pAction);
+        pAction->sp[DELETE].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("DeleteSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    // Send the offset
+    pCurrentEntry->np[0].value = Offset;
+    SetDriverBusy();
+    BaseClient->sendNewNumber(pCurrentEntry);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCurrentEntry->s)
+    {
+        IDLog("DeleteSyncPoint - Bad Current Entry state %s\n", pstateStr(pCurrentEntry->s));
+        return false;
+    }
+
+    // Commit the entry to the database
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCommit->s)
+    {
+        IDLog("DeleteSyncPoint - Bad Commit switch state %s\n", pstateStr(pCommit->s));
+        return false;
+    }
+
+    return true;
+}
+
+bool ClientAPIForAlignmentDatabase::ClearSyncPoints()
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (CLEAR != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Clear mode
+        IUResetSwitch(pAction);
+        pAction->sp[CLEAR].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("ClearSyncPoints - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCommit->s)
+    {
+        IDLog("ClearSyncPoints - Bad Commit switch state %s\n", pstateStr(pCommit->s));
+        return false;
+    }
+
+    return true;
+}
+
+bool ClientAPIForAlignmentDatabase::ReadSyncPoint(unsigned int Offset, AlignmentDatabaseEntry& CurrentValues)
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
+    INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (READ != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Read mode
+        IUResetSwitch(pAction);
+        pAction->sp[READ].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("ReadSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    // Send the offset
+    pCurrentEntry->np[0].value = Offset;
+    SetDriverBusy();
+    BaseClient->sendNewNumber(pCurrentEntry);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCurrentEntry->s)
+    {
+        IDLog("ReadSyncPoint - Bad Current Entry state %s\n", pstateStr(pCurrentEntry->s));
+        return false;
+    }
+
+    // Commit the read
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if ((IPS_OK != pCommit->s) || (IPS_OK != pMandatoryNumbers->s))
+    {
+        IDLog("ReadSyncPoint - Bad Commit or Mandatory numbers state %s %s\n", pstateStr(pCommit->s), pstateStr(pMandatoryNumbers->s));
+        return false;
+    }
+
+    // Read the entry data
+    CurrentValues.ObservationDate = pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value;
+    CurrentValues.ObservationTime = pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value;
+    CurrentValues.RightAscension = pMandatoryNumbers->np[ENTRY_RA].value;
+    CurrentValues.Declination = pMandatoryNumbers->np[ENTRY_DEC].value;
+    CurrentValues.TelescopeDirection.x = pMandatoryNumbers->np[ENTRY_VECTOR_X].value;
+    CurrentValues.TelescopeDirection.y = pMandatoryNumbers->np[ENTRY_VECTOR_Y].value;
+    CurrentValues.TelescopeDirection.z = pMandatoryNumbers->np[ENTRY_VECTOR_Z].value;
+
+    return true;
+}
+
+bool ClientAPIForAlignmentDatabase::ReadIncrementSyncPoint(AlignmentDatabaseEntry& CurrentValues)
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
+    INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (READ_INCREMENT != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Read mode
+        IUResetSwitch(pAction);
+        pAction->sp[READ_INCREMENT].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("ReadIncrementSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    // Commit the read
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if ((IPS_OK != pCommit->s) || (IPS_OK != pMandatoryNumbers->s) || (IPS_OK != pCurrentEntry->s))
+    {
+        IDLog("ReadIncrementSyncPoint - Bad Commit, Mandatory numbers, Current entry state %s %s %s \n",
+            pstateStr(pCommit->s), pstateStr(pMandatoryNumbers->s), pstateStr(pCurrentEntry->s));
+        return false;
+    }
+
+    // Read the entry data
+    CurrentValues.ObservationDate = pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value;
+    CurrentValues.ObservationTime = pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value;
+    CurrentValues.RightAscension = pMandatoryNumbers->np[ENTRY_RA].value;
+    CurrentValues.Declination = pMandatoryNumbers->np[ENTRY_DEC].value;
+    CurrentValues.TelescopeDirection.x = pMandatoryNumbers->np[ENTRY_VECTOR_X].value;
+    CurrentValues.TelescopeDirection.y = pMandatoryNumbers->np[ENTRY_VECTOR_Y].value;
+    CurrentValues.TelescopeDirection.z = pMandatoryNumbers->np[ENTRY_VECTOR_Z].value;
+
     return true;
 }
 

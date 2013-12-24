@@ -47,7 +47,7 @@ void MapPropertiesToInMemoryDatabase::InitProperties(Telescope* pTelescope)
     IUFillSwitch(&AlignmentPointSetAction[3], "DELETE", "Delete entry at current index", ISS_OFF);
     IUFillSwitch(&AlignmentPointSetAction[4], "CLEAR","Delete all the entries in the set", ISS_OFF);
     IUFillSwitch(&AlignmentPointSetAction[5], "READ", "Read the entry at the current pointer", ISS_OFF);
-    IUFillSwitch(&AlignmentPointSetAction[6], "READ INCREMENT", "Increment the pointer after reading the entry", ISS_OFF);
+    IUFillSwitch(&AlignmentPointSetAction[6], "READ INCREMENT", "Increment the pointer before reading the entry", ISS_OFF);
     IUFillSwitch(&AlignmentPointSetAction[7], "LOAD DATABASE", "Load the alignment database from local storage", ISS_OFF);
     IUFillSwitch(&AlignmentPointSetAction[8], "SAVE DATABASE", "Save the alignment database to local storage", ISS_OFF);
     IUFillSwitchVector(&AlignmentPointSetActionV, AlignmentPointSetAction, 9, pTelescope->getDeviceName(),
@@ -67,13 +67,13 @@ void MapPropertiesToInMemoryDatabase::ProcessNumberProperties(Telescope* pTelesc
     {
         AlignmentPointSetEntryV.s = IPS_OK;
         if (0 == IUUpdateNumber(&AlignmentPointSetEntryV, values, names, n))
-            //  Update client display
+            //  Update client
             IDSetNumber(&AlignmentPointSetEntryV, NULL);
     } else if (strcmp(name, AlignmentPointSetPointerV.name) == 0)
     {
         AlignmentPointSetPointerV.s = IPS_OK;
         if (0 == IUUpdateNumber(&AlignmentPointSetPointerV, values, names, n))
-            //  Update client display
+            //  Update client
             IDSetNumber(&AlignmentPointSetPointerV, NULL);
     }
 }
@@ -87,7 +87,7 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
     {
         AlignmentPointSetActionV.s=IPS_OK;
         if (0 == IUUpdateSwitch(&AlignmentPointSetActionV, states, names, n))
-            //  Update client display
+            //  Update client
             IDSetSwitch(&AlignmentPointSetActionV, NULL);
     } else if (strcmp(name, AlignmentPointSetCommitV.name) == 0)
     {
@@ -108,7 +108,7 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
         {
             AlignmentDatabase.push_back(CurrentValues);
             AlignmentPointSetSize.value = AlignmentDatabase.size();
-            //  Update client display
+            //  Update client
             IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
         else if (AlignmentPointSetAction[INSERT].s == ISS_ON)
@@ -119,7 +119,7 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
             {
                 AlignmentDatabase.insert(AlignmentDatabase.begin() + Offset, CurrentValues);
                 AlignmentPointSetSize.value = AlignmentDatabase.size();
-                //  Update client display
+                //  Update client
                 IDSetNumber(&AlignmentPointSetSizeV, NULL);
             }
         }
@@ -138,7 +138,7 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
             {
                 AlignmentDatabase.erase(AlignmentDatabase.begin() + Offset);
                 AlignmentPointSetSize.value = AlignmentDatabase.size();
-                //  Update client display
+                //  Update client
                 IDSetNumber(&AlignmentPointSetSizeV, NULL);
             }
         }
@@ -147,11 +147,18 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
             // AlignmentDatabaseType().swap(AlignmentDatabase); // Do it this wasy to force a reallocation
             AlignmentDatabase.clear();
             AlignmentPointSetSize.value = 0;
-            //  Update client display
+            //  Update client
             IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
         else if ((AlignmentPointSetAction[READ].s == ISS_ON) || (AlignmentPointSetAction[READ_INCREMENT].s == ISS_ON))
         {
+             if (AlignmentPointSetAction[READ_INCREMENT].s == ISS_ON)
+            {
+                AlignmentPointSetPointer.value++;
+                // Update client
+                IDSetNumber(&AlignmentPointSetPointerV, NULL);
+            }
+
             if ((Offset < 0) || (Offset >= AlignmentDatabase.size()))
                 AlignmentPointSetCommitV.s=IPS_ALERT;
             else
@@ -164,20 +171,15 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
                 AlignmentPointSetEntry[ENTRY_VECTOR_Y].value = AlignmentDatabase[Offset].TelescopeDirection.y;
                 AlignmentPointSetEntry[ENTRY_VECTOR_Z].value= AlignmentDatabase[Offset].TelescopeDirection.z;
 
-                //  Update client display
+                //  Update client
                 IDSetNumber(&AlignmentPointSetEntryV, NULL);
-                if (AlignmentPointSetAction[READ_INCREMENT].s == ISS_ON)
-                {
-                    AlignmentPointSetPointer.value++;
-                    IDSetNumber(&AlignmentPointSetPointerV, NULL);
-                }
             }
         }
         else if (AlignmentPointSetAction[LOAD_DATABASE].s == ISS_ON)
         {
             LoadDatabase(pTelescope->getDeviceName());
             AlignmentPointSetSize.value = AlignmentDatabase.size();
-            //  Update client display
+            //  Update client
             IDSetNumber(&AlignmentPointSetSizeV, NULL);
         }
         else if (AlignmentPointSetAction[SAVE_DATABASE].s == ISS_ON)
@@ -185,7 +187,7 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
             SaveDatabase(pTelescope->getDeviceName());
         }
 
-        //  Update client display
+        //  Update client
         IUResetSwitch(&AlignmentPointSetCommitV);
         IDSetSwitch(&AlignmentPointSetCommitV, NULL);
     }

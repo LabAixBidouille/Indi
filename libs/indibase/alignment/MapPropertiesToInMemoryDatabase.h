@@ -42,7 +42,7 @@ namespace AlignmentSubsystem {
  *   A zero based number that sets/shows the current entry (number)
  *   Only valid if ALIGNMENT_POINTSET_SIZE is greater than zero
  * - ALIGNMENT_POINTSET_ACTION\n
- *   Whenever this switch is written to one of the following actions is taken
+ *   Determines the action to take when the COMMIT property is written
  *   - APPEND\n
  *     Append a new entry to the set.
  *   - INSERT\n
@@ -56,11 +56,14 @@ namespace AlignmentSubsystem {
  *   - READ\n
  *     Read the entry at the pointer.
  *   - READ INCREMENT\n
- *     Increment the pointer after reading the entry.
+ *     Increment the pointer before reading the entry.
  *   - LOAD DATABASE\n
  *     Load the databse from local storage.
  *   - SAVE DATABASE\n
  *     Save the database to local storage.
+ * - ALIGNMENT_POINTSET_COMMIT\n
+ *   When written take the action defined above.
+ *   - COMMIT
  *
  */
 class MapPropertiesToInMemoryDatabase : public InMemoryDatabase
