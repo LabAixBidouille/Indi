@@ -66,15 +66,15 @@ void MapPropertiesToInMemoryDatabase::ProcessNumberProperties(Telescope* pTelesc
     if (strcmp(name, AlignmentPointSetEntryV.name) == 0)
     {
         AlignmentPointSetEntryV.s = IPS_OK;
-        IUUpdateNumber(&AlignmentPointSetEntryV, values, names, n);
-        //  Update client display
-        IDSetNumber(&AlignmentPointSetEntryV, NULL);
+        if (0 == IUUpdateNumber(&AlignmentPointSetEntryV, values, names, n))
+            //  Update client display
+            IDSetNumber(&AlignmentPointSetEntryV, NULL);
     } else if (strcmp(name, AlignmentPointSetPointerV.name) == 0)
     {
         AlignmentPointSetPointerV.s = IPS_OK;
-        IUUpdateNumber(&AlignmentPointSetPointerV, values, names, n);
-        //  Update client display
-        IDSetNumber(&AlignmentPointSetPointerV, NULL);
+        if (0 == IUUpdateNumber(&AlignmentPointSetPointerV, values, names, n))
+            //  Update client display
+            IDSetNumber(&AlignmentPointSetPointerV, NULL);
     }
 }
 
@@ -86,10 +86,9 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
     if (strcmp(name, AlignmentPointSetActionV.name) == 0)
     {
         AlignmentPointSetActionV.s=IPS_OK;
-        IUUpdateSwitch(&AlignmentPointSetActionV, states, names, n);
-
-        //  Update client display
-        IDSetSwitch(&AlignmentPointSetActionV, NULL);
+        if (0 == IUUpdateSwitch(&AlignmentPointSetActionV, states, names, n))
+            //  Update client display
+            IDSetSwitch(&AlignmentPointSetActionV, NULL);
     } else if (strcmp(name, AlignmentPointSetCommitV.name) == 0)
     {
         unsigned int Offset = AlignmentPointSetPointer.value;
