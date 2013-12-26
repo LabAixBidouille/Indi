@@ -474,7 +474,7 @@ bool ClientAPIForAlignmentDatabase::ReadIncrementSyncPoint(AlignmentDatabaseEntr
     // Select the required action
     if (READ_INCREMENT != IUFindOnSwitchIndex(pAction))
     {
-        // Request Read mode
+        // Request Read Increment mode
         IUResetSwitch(pAction);
         pAction->sp[READ_INCREMENT].s = ISS_ON;
         SetDriverBusy();
@@ -487,7 +487,7 @@ bool ClientAPIForAlignmentDatabase::ReadIncrementSyncPoint(AlignmentDatabaseEntr
         }
     }
 
-    // Commit the read
+    // Commit the read increment
     IUResetSwitch(pCommit);
     pCommit->sp[0].s = ISS_ON;
     SetDriverBusy();
@@ -508,6 +508,84 @@ bool ClientAPIForAlignmentDatabase::ReadIncrementSyncPoint(AlignmentDatabaseEntr
     CurrentValues.TelescopeDirection.x = pMandatoryNumbers->np[ENTRY_VECTOR_X].value;
     CurrentValues.TelescopeDirection.y = pMandatoryNumbers->np[ENTRY_VECTOR_Y].value;
     CurrentValues.TelescopeDirection.z = pMandatoryNumbers->np[ENTRY_VECTOR_Z].value;
+
+    return true;
+}
+
+bool ClientAPIForAlignmentDatabase::LoadDatabase()
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (LOAD_DATABASE != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Load Database mode
+        IUResetSwitch(pAction);
+        pAction->sp[LOAD_DATABASE].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("LoadDatabase - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    // Commit the Load Database
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCommit->s)
+    {
+        IDLog("LoadDatabase - Bad Commit state %s\n", pstateStr(pCommit->s));
+        return false;
+    }
+
+    return true;
+}
+
+bool ClientAPIForAlignmentDatabase::SaveDatabase()
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (SAVE_DATABASE != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Load Database mode
+        IUResetSwitch(pAction);
+        pAction->sp[SAVE_DATABASE].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("SaveDatabase - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    // Commit the Save Database
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCommit->s)
+    {
+        IDLog("Save Database - Bad Commit state %s\n", pstateStr(pCommit->s));
+        return false;
+    }
 
     return true;
 }
