@@ -17,6 +17,7 @@ void AlignmentSubsystemForClients::Initialise(const char * DeviceName, INDI::Bas
 {
     AlignmentSubsystemForClients::DeviceName = DeviceName;
     ClientAPIForAlignmentDatabase::Initialise(BaseClient);
+    ClientAPIForMathPluginManagement::Initialise(BaseClient);
 
 }
 
@@ -26,6 +27,7 @@ void AlignmentSubsystemForClients::ProcessNewDevice(INDI::BaseDevice *DevicePoin
     {
         IDLog("Receiving %s Device...\n", DevicePointer->getDeviceName());
         ClientAPIForAlignmentDatabase::ProcessNewDevice(DevicePointer);
+        ClientAPIForMathPluginManagement::ProcessNewDevice(DevicePointer);
     }
 }
 
@@ -35,6 +37,7 @@ void AlignmentSubsystemForClients::ProcessNewProperty(INDI::Property *PropertyPo
     {
         IDLog("newProperty %s\n", PropertyPointer->getName());
         ClientAPIForAlignmentDatabase::ProcessNewProperty(PropertyPointer);
+        ClientAPIForMathPluginManagement::ProcessNewProperty(PropertyPointer);
     }
 }
 
@@ -44,6 +47,7 @@ void AlignmentSubsystemForClients::ProcessNewSwitch(ISwitchVectorProperty *Switc
     {
         IDLog("newSwitch %s\n", SwitchVectorPropertyPointer->name);
         ClientAPIForAlignmentDatabase::ProcessNewSwitch(SwitchVectorPropertyPointer);
+        ClientAPIForMathPluginManagement::ProcessNewSwitch(SwitchVectorPropertyPointer);
     }
 }
 
