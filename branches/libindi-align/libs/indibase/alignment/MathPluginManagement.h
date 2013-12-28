@@ -37,7 +37,7 @@ public:
     MathPluginManagement() : pInitialise(&MathPlugin::Initialise),
                             pTransformCelestialToTelescope(&MathPlugin::TransformCelestialToTelescope),
                             pTransformTelescopeToCelestial(&MathPlugin::TransformTelescopeToCelestial),
-                            pLoadedMathPlugin(&BuiltInPlugin) {}
+                            pLoadedMathPlugin(&BuiltInPlugin), LoadedMathPluginHandle(NULL) {}
     virtual ~MathPluginManagement() {}
 
     /** \brief Initilize alignment math plugin properties. It is recommended to call this function within initProperties() of your primary device
@@ -79,6 +79,9 @@ public:
 
 
 private:
+    void EnumeratePlugins();
+    std::vector<std::string> MathPluginFiles;
+    std::vector<std::string> MathPluginDisplayNames;
 
     std::auto_ptr<ISwitch> AlignmentSubsystemMathPlugins;
     ISwitchVectorProperty AlignmentSubsystemMathPluginsV;
@@ -95,6 +98,7 @@ private:
     bool (MathPlugin::*pTransformCelestialToTelescope)(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector);
     bool (MathPlugin::*pTransformTelescopeToCelestial)(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination);
     MathPlugin* pLoadedMathPlugin;
+    void* LoadedMathPluginHandle;
 
     BuiltInMathPlugin BuiltInPlugin;
 };

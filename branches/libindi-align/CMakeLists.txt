@@ -13,6 +13,9 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules/")
 set(DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/indi/")
 set(BIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
 set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include")
+set(INDI_MATH_PLUGINS_DIRECTORY "${DATA_INSTALL_DIR}MathPlugins/" CACHE PATH "Path to Math Plugins directory")
+
+set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS INDI_MATH_PLUGINS_DIRECTORY="${INDI_MATH_PLUGINS_DIRECTORY}")
 
 IF(APPLE)
 set(CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup")
@@ -172,7 +175,7 @@ set_target_properties(indimain PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} S
 # To link with main() and indibase classes  ######
 ##################################################
 add_library(indidriver SHARED ${libindicom_SRCS} ${liblilxml_SRCS} ${indimain_SRCS} ${indidriver_SRCS})
-target_link_libraries(indidriver ${LIBUSB_LIBRARIES} ${NOVA_LIBRARIES})
+target_link_libraries(indidriver ${LIBUSB_LIBRARIES} ${NOVA_LIBRARIES} dl)
 if (CFITSIO_FOUND)
 target_link_libraries(indidriver ${CFITSIO_LIBRARIES})
 endif(CFITSIO_FOUND)
@@ -703,3 +706,5 @@ ${CMAKE_SOURCE_DIR}/libs/indibase/indilogger.h ${CMAKE_SOURCE_DIR}/libs/indibase
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libindi.pc.cmake ${CMAKE_CURRENT_BINARY_DIR}/libindi.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libindi.pc DESTINATION ${PKGCONFIG_INSTALL_PREFIX})
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/libs/indibase/alignment)
