@@ -6,12 +6,11 @@ If you cannot commit an edit then send your version to me and I will commit it.
 
 Roger.
 
-1. Finish implementation of ClientAPIForMathPluginManagement.
+1. Implement the "Builtin Math Plugin" (30% complete).
 
-2. Implement the "Builtin Math Plugin" (30% complete).
+2. Implement enough of SkyWatcherAPIMount to do basic testing (30% complete).
 
-3. Implement enough of SkyWatcherAPIMount to do basic testing (30% complete).
+3. Modify my coordinate conversion layer driver to use the new architecture.
 
-4. Modify my coordinate conversion layer driver to use the new architecture.
+4. Implement an example client program to load eqmod format databases into the alignment subsystem (50% complete).
 
-5. Implement an example client program to load eqmod format databases into the alignment subsystem (50% complete).
