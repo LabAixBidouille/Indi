@@ -1,0 +1,75 @@
+set(INDI_MATH_PLUGINS_DIRECTORY "${DATA_INSTALL_DIR}MathPlugins/" CACHE PATH "Path to Math Plugins directory")
+
+set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS INDI_MATH_PLUGINS_DIRECTORY="${INDI_MATH_PLUGINS_DIRECTORY}")
+
+##################################################
+####### INDI AlignmentDriver shared library ######
+##################################################
+set (AlignmentDriver_SRCS
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForDrivers.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/InMemoryDatabase.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MapPropertiesToInMemoryDatabase.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPlugin.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPluginManagement.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/TelescopeDirectionVectorSupportFunctions.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForMathPlugins.h
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/BuiltInMathPlugin.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ConvexHull.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/Common.h
+    )
+
+add_library(AlignmentDriver SHARED ${AlignmentDriver_SRCS})
+target_link_libraries(AlignmentDriver dl)
+
+##################################################
+####### INDI AlignmentClient static library ######
+##################################################
+set (AlignmentClient_SRCS
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForClients.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForAlignmentDatabase.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForMathPluginManagement.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/Common.h
+    )
+
+add_library(AlignmentClient ${AlignmentClient_SRCS})
+
+##################################################
+############ LoaderCLient test program ###########
+##################################################
+set(LoaderClient_SRCS
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/LoaderClient.cpp
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/LoaderMain.cpp
+	)
+
+add_executable(LoaderClient ${LoaderClient_SRCS})
+
+target_link_libraries(LoaderClient indiclient AlignmentClient)
+
+install(TARGETS LoaderClient RUNTIME DESTINATION bin)
+
+##################################################
+######### MathPluginManager test program #########
+##################################################
+set(MathPluginManagerClient_SRCS
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPluginManagerClient.cpp
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPluginManagerMain.cpp
+	)
+
+add_executable(MathPluginManagerClient ${MathPluginManagerClient_SRCS})
+
+target_link_libraries(MathPluginManagerClient indiclient AlignmentClient)
+
+install(TARGETS MathPluginManagerClient RUNTIME DESTINATION bin)
+
+##################################################
+########### Dummy math plugin example ############
+##################################################
+set(DummyMathPlugin_SRCS
+	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/DummyMathPlugin.cpp
+	)
+
+add_library(indi_Dummy_MathPlugin SHARED ${DummyMathPlugin_SRCS})
+
+target_link_libraries(indi_Dummy_MathPlugin indidriver)
+
+install(TARGETS indi_Dummy_MathPlugin LIBRARY DESTINATION ${INDI_MATH_PLUGINS_DIRECTORY})

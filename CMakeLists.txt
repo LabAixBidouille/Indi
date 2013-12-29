@@ -13,9 +13,6 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules/")
 set(DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/indi/")
 set(BIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
 set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include")
-set(INDI_MATH_PLUGINS_DIRECTORY "${DATA_INSTALL_DIR}MathPlugins/" CACHE PATH "Path to Math Plugins directory")
-
-set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS INDI_MATH_PLUGINS_DIRECTORY="${INDI_MATH_PLUGINS_DIRECTORY}")
 
 IF(APPLE)
 set(CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup")
@@ -65,7 +62,6 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_SOURCE_DIR})
 include_directories( ${CMAKE_SOURCE_DIR}/libs)
 include_directories( ${CMAKE_SOURCE_DIR}/libs/indibase)
-include_directories( ${CMAKE_SOURCE_DIR}/libs/indibase/alignment)
 include_directories( ${CMAKE_SOURCE_DIR}/libs/webcam)
 
 if (CFITSIO_FOUND)
@@ -99,9 +95,6 @@ set (indiclient_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/basedevice.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/baseclient.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indiproperty.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForClients.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForAlignmentDatabase.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ClientAPIForMathPluginManagement.cpp
     )
 
 set (indidriver_SRCS
@@ -117,16 +110,6 @@ set (indidriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/indifilterinterface.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indilogger.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/indicontroller.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForDrivers.cpp
-	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/Common.h
-	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/InMemoryDatabase.cpp
-	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MapPropertiesToInMemoryDatabase.cpp
-	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPlugin.cpp
-	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPluginManagement.cpp
-	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/TelescopeDirectionVectorSupportFunctions.cpp
-	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForMathPlugins.h
-	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/BuiltInMathPlugin.cpp
-	${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ConvexHull.cpp
     )
 
 ######################################
@@ -175,7 +158,7 @@ set_target_properties(indimain PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} S
 # To link with main() and indibase classes  ######
 ##################################################
 add_library(indidriver SHARED ${libindicom_SRCS} ${liblilxml_SRCS} ${indimain_SRCS} ${indidriver_SRCS})
-target_link_libraries(indidriver ${LIBUSB_LIBRARIES} ${NOVA_LIBRARIES} dl)
+target_link_libraries(indidriver ${LIBUSB_LIBRARIES} ${NOVA_LIBRARIES})
 if (CFITSIO_FOUND)
 target_link_libraries(indidriver ${CFITSIO_LIBRARIES})
 endif(CFITSIO_FOUND)
@@ -190,6 +173,11 @@ set_target_properties(indidriver PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING}
 add_library(indiclient STATIC ${indiclient_SRCS})
 target_link_libraries(indiclient indi pthread)
 install(TARGETS indiclient ARCHIVE DESTINATION ${LIB_DESTINATION})
+
+##################################################
+########### INDI Alignment Subsystem #############
+##################################################
+add_subdirectory(${CMAKE_SOURCE_DIR}/libs/indibase/alignment)
 
 #####################################
 ########## TELESCOPE GROUP ##########
@@ -323,7 +311,7 @@ set(skywatcherAPIMount_SRCS
    ${CMAKE_SOURCE_DIR}/drivers/telescope/skywatcherAPI.cpp )
 
 add_executable(indi_skywatcherAPIMount ${skywatcherAPIMount_SRCS})
-target_link_libraries(indi_skywatcherAPIMount indidriver m z)
+target_link_libraries(indi_skywatcherAPIMount indidriver AlignmentDriver m z)
 
 install(TARGETS indi_skywatcherAPIMount RUNTIME DESTINATION bin )
 
@@ -707,4 +695,3 @@ ${CMAKE_SOURCE_DIR}/libs/indibase/indilogger.h ${CMAKE_SOURCE_DIR}/libs/indibase
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libindi.pc.cmake ${CMAKE_CURRENT_BINARY_DIR}/libindi.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libindi.pc DESTINATION ${PKGCONFIG_INSTALL_PREFIX})
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/libs/indibase/alignment)
