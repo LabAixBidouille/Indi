@@ -62,7 +62,7 @@ void MapPropertiesToInMemoryDatabase::InitProperties(Telescope* pTelescope)
 
 void MapPropertiesToInMemoryDatabase::ProcessNumberProperties(Telescope* pTelescope, const char *name, double values[], char *names[], int n)
 {
-    DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessAlignmentNumberProperties - name(%s)", name);
+    DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessNumberProperties - name(%s)", name);
     if (strcmp(name, AlignmentPointSetEntryV.name) == 0)
     {
         AlignmentPointSetEntryV.s = IPS_OK;
@@ -81,7 +81,7 @@ void MapPropertiesToInMemoryDatabase::ProcessNumberProperties(Telescope* pTelesc
 
 void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n)
 {
-    DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessAlignmentSwitchProperties - name(%s)", name);
+    DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessSwitchProperties - name(%s)", name);
     AlignmentDatabaseType& AlignmentDatabase = GetAlignmentDatabase();
     if (strcmp(name, AlignmentPointSetActionV.name) == 0)
     {
@@ -196,7 +196,14 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
 
 void MapPropertiesToInMemoryDatabase::ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
-    // No BLOB support yet
+    DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessBlobProperties - name(%s)", name);
+    if (strcmp(name, AlignmentPointSetPrivateBinaryDataV.name) == 0)
+    {
+        AlignmentPointSetPrivateBinaryDataV.s=IPS_OK;
+        // if (0 == IUUpdateBLOB(&AlignmentPointSetPrivateBinaryDataV, sizes, blobsizes, blobs, formats, names, n))
+            //  Update client
+            IDSetBLOB(&AlignmentPointSetPrivateBinaryDataV, NULL);
+    }
 }
 
 } // namespace AlignmentSubsystem

@@ -97,7 +97,8 @@ public:
     void ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
 
     /** \brief Call this function from within the ISNewBLOB processing path. The function will
-     * handle any alignment database related properties.
+     * handle any alignment database related properties. The default implementation of this function will silently discard
+     * any data it receives.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
      * \param[in] sizes
@@ -107,7 +108,7 @@ public:
      * \param[in] names
      * \param[in] n
     */
-    void ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
+    virtual void ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
 private:
     INumber AlignmentPointSetEntry[7];
