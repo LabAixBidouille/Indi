@@ -43,6 +43,7 @@ void AlignmentSubsystemForDrivers::ProcessSwitchProperties(Telescope* pTelescope
 
 void AlignmentSubsystemForDrivers::ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
+    MapPropertiesToInMemoryDatabase::ProcessBlobProperties(pTelescope, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
 void AlignmentSubsystemForDrivers::SaveConfigProperties(FILE *fp)

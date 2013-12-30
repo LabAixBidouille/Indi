@@ -20,6 +20,7 @@ set (AlignmentDriver_SRCS
 
 add_library(AlignmentDriver SHARED ${AlignmentDriver_SRCS})
 target_link_libraries(AlignmentDriver dl)
+install(TARGETS AlignmentDriver LIBRARY DESTINATION ${LIB_DESTINATION})
 
 ##################################################
 ####### INDI AlignmentClient static library ######
@@ -32,6 +33,7 @@ set (AlignmentClient_SRCS
     )
 
 add_library(AlignmentClient ${AlignmentClient_SRCS})
+install(TARGETS AlignmentClient ARCHIVE DESTINATION ${LIB_DESTINATION})
 
 ##################################################
 ############ LoaderCLient test program ###########

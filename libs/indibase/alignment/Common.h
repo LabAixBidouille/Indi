@@ -10,6 +10,7 @@
 #define INDI_ALIGNMENTSUBSYSTEM_COMMON_H
 
 #include <memory>
+#include <cstring>
 
 namespace INDI {
 namespace AlignmentSubsystem {
@@ -37,13 +38,28 @@ struct TelescopeDirectionVector
 struct AlignmentDatabaseEntry
 {
     AlignmentDatabaseEntry() : ObservationDate(0), ObservationTime(0),
-                                RightAscension(0), Declination(0) {}
+                                RightAscension(0), Declination(0), PrivateDataSize(0) {}
+
+    AlignmentDatabaseEntry(const AlignmentDatabaseEntry& Source) : ObservationDate(Source.ObservationDate),
+                                                                    ObservationTime(Source.ObservationTime),
+                                                                    RightAscension(Source.RightAscension),
+                                                                    Declination(Source.Declination),
+                                                                    PrivateDataSize(Source.PrivateDataSize)
+    {
+        if (0 != PrivateDataSize)
+        {
+            PrivateData.reset(new unsigned char[PrivateDataSize]);
+            memcpy(PrivateData.get(), Source.PrivateData.get(), PrivateDataSize);
+        }
+    }
+
     int ObservationDate;
     double ObservationTime;
     double RightAscension;
     double Declination;
     TelescopeDirectionVector TelescopeDirection;
-    std::auto_ptr<void> PrivateData;
+    std::auto_ptr<unsigned char> PrivateData;
+    int PrivateDataSize;
 };
 
 enum AlignmentDatabaseActions { APPEND, INSERT, EDIT, DELETE, CLEAR, READ, READ_INCREMENT, LOAD_DATABASE, SAVE_DATABASE };
