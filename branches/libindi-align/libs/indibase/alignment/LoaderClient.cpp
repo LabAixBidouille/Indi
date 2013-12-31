@@ -62,6 +62,12 @@ void LoaderClient::newNumber(INumberVectorProperty *nvp)
     ProcessNewNumber(nvp);
 }
 
+void LoaderClient::newBLOB(IBLOB *bp)
+{
+    ProcessNewBLOB(bp);
+}
+
+
 void LoaderClient::Load()
 {
     AlignmentDatabaseEntry CurrentValues;

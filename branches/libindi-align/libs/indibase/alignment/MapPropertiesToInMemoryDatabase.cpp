@@ -9,12 +9,15 @@
 #include "MapPropertiesToInMemoryDatabase.h"
 
 #include <cfloat>
+#include <cstdlib>
+#include <unistd.h> // for sleep
 
 namespace INDI {
 namespace AlignmentSubsystem {
 
 void MapPropertiesToInMemoryDatabase::InitProperties(Telescope* pTelescope)
 {
+
     IUFillNumber(&AlignmentPointSetEntry[0], "ALIGNMENT_POINT_ENTRY_OBSERVATION_JULIAN_DATE", "Observation Julian date", "%g", 0, 60000, 0, 0);
     IUFillNumber(&AlignmentPointSetEntry[1], "ALIGNMENT_POINT_ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME", "Observation local sidereal time (hh:mm:ss.ss)", "%010.9m", 0, 24, 0, 0);
     IUFillNumber(&AlignmentPointSetEntry[2], "ALIGNMENT_POINT_ENTRY_RA", "Right Ascension (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
@@ -26,7 +29,7 @@ void MapPropertiesToInMemoryDatabase::InitProperties(Telescope* pTelescope)
                     "ALIGNMENT_POINT_MANDATORY_NUMBERS", "Mandatory sync point numeric fields", ALIGNMENT_TAB, IP_RW, 60, IPS_IDLE);
     pTelescope->registerProperty(&AlignmentPointSetEntryV, INDI_NUMBER);
 
-    IUFillBLOB(&AlignmentPointSetPrivateBinaryData, "ALIGNMENT_POINT_ENTRY_PRIVATE", "Private binary data", "");
+    IUFillBLOB(&AlignmentPointSetPrivateBinaryData, "ALIGNMENT_POINT_ENTRY_PRIVATE", "Private binary data", "alignmentPrivateData");
     IUFillBLOBVector(&AlignmentPointSetPrivateBinaryDataV, &AlignmentPointSetPrivateBinaryData, 1, pTelescope->getDeviceName(),
                     "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB", "Optional sync point binary data", ALIGNMENT_TAB, IP_RW, 60, IPS_IDLE);
     pTelescope->registerProperty(&AlignmentPointSetPrivateBinaryDataV, INDI_BLOB);
@@ -103,6 +106,12 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
         CurrentValues.TelescopeDirection.x = AlignmentPointSetEntry[ENTRY_VECTOR_X].value;
         CurrentValues.TelescopeDirection.y = AlignmentPointSetEntry[ENTRY_VECTOR_Y].value;
         CurrentValues.TelescopeDirection.z = AlignmentPointSetEntry[ENTRY_VECTOR_Z].value;
+        if ((0 != AlignmentPointSetPrivateBinaryData.size) && (NULL != AlignmentPointSetPrivateBinaryData.blob))
+        {
+            CurrentValues.PrivateData.reset(new unsigned char[AlignmentPointSetPrivateBinaryData.size]);
+            memcpy(CurrentValues.PrivateData.get(), AlignmentPointSetPrivateBinaryData.blob, AlignmentPointSetPrivateBinaryData.size);
+            CurrentValues.PrivateDataSize = AlignmentPointSetPrivateBinaryData.size;
+        }
 
         if (AlignmentPointSetAction[APPEND].s == ISS_ON)
         {
@@ -173,6 +182,17 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
 
                 //  Update client
                 IDSetNumber(&AlignmentPointSetEntryV, NULL);
+
+                if ((0 != AlignmentDatabase[Offset].PrivateDataSize) && (NULL != AlignmentDatabase[Offset].PrivateData.get()))
+                {
+                    // Hope that INDI has freed the old pointer !!!!!!!!!!!
+                    AlignmentPointSetPrivateBinaryData.blob = malloc(AlignmentDatabase[Offset].PrivateDataSize);
+                    memcpy(AlignmentPointSetPrivateBinaryData.blob, AlignmentDatabase[Offset].PrivateData.get(), AlignmentDatabase[Offset].PrivateDataSize);
+                    AlignmentPointSetPrivateBinaryData.bloblen = AlignmentDatabase[Offset].PrivateDataSize;
+                    AlignmentPointSetPrivateBinaryData.size = AlignmentDatabase[Offset].PrivateDataSize;
+                    AlignmentPointSetPrivateBinaryDataV.s = IPS_OK;
+                    IDSetBLOB(&AlignmentPointSetPrivateBinaryDataV, NULL);
+                }
             }
         }
         else if (AlignmentPointSetAction[LOAD_DATABASE].s == ISS_ON)
@@ -200,9 +220,20 @@ void MapPropertiesToInMemoryDatabase::ProcessBlobProperties(Telescope* pTelescop
     if (strcmp(name, AlignmentPointSetPrivateBinaryDataV.name) == 0)
     {
         AlignmentPointSetPrivateBinaryDataV.s=IPS_OK;
-        // if (0 == IUUpdateBLOB(&AlignmentPointSetPrivateBinaryDataV, sizes, blobsizes, blobs, formats, names, n))
-            //  Update client
-            IDSetBLOB(&AlignmentPointSetPrivateBinaryDataV, NULL);
+        if (0 == IUUpdateBLOB(&AlignmentPointSetPrivateBinaryDataV, sizes, blobsizes, blobs, formats, names, n))
+        {
+            // Reset the blob format string just in case it got trashed
+            strncpy(AlignmentPointSetPrivateBinaryData.format, "alignmentPrivateData", MAXINDIBLOBFMT);
+
+            // Send back a dummy zero length blob
+            // to inform client I have received the data
+            IBLOB DummyBlob;
+            IBLOBVectorProperty DummyBlobV;
+            IUFillBLOB(&DummyBlob, "ALIGNMENT_POINT_ENTRY_PRIVATE", "Private binary data", "alignmentPrivateData");
+            IUFillBLOBVector(&DummyBlobV, NULL, 0, pTelescope->getDeviceName(),
+                    "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB", "Optional sync point binary data", ALIGNMENT_TAB, IP_RW, 60, IPS_OK);
+            IDSetBLOB(&DummyBlobV, NULL);
+        }
     }
 }
 

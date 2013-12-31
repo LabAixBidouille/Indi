@@ -81,7 +81,7 @@ IDSnoopDevice (const char *snooped_device_name, const char *snooped_property_nam
 /* tell indiserver whether we want BLOBs from the given snooped device.
  * silently ignored if given device is not already registered for snooping.
  */
-void 
+void
 IDSnoopBLOBs (const char *snooped_device, BLOBHandling bh)
 {
 	const char *how;
@@ -151,7 +151,7 @@ IEDeferLoop0 (int maxms, int *flagp)
 }
 
 /* Update property switches in accord with states and names. */
-int 
+int
 IUUpdateSwitch(ISwitchVectorProperty *svp, ISState *states, char *names[], int n)
 {
  int i=0;
@@ -163,24 +163,24 @@ IUUpdateSwitch(ISwitchVectorProperty *svp, ISState *states, char *names[], int n
  {
  	sp = IUFindOnSwitch(svp);
  	if (sp) strncpy(sn, sp->name, MAXINDINAME);
- 
+
 	IUResetSwitch(svp);
  }
- 
+
  for (i = 0; i < n ; i++)
  {
    sp = IUFindSwitch(svp, names[i]);
-	 
+
    if (!sp)
    {
               svp->s = IPS_IDLE;
 	      IDSetSwitch(svp, "Error: %s is not a member of %s property.", names[i], svp->name);
 	      return -1;
    }
-	 
-   sp->s = states[i]; 
+
+   sp->s = states[i];
  }
- 
+
  /* Consistency checks for ISR_1OFMANY after update. */
  if (svp->r == ISR_1OFMANY)
  {
@@ -200,7 +200,7 @@ IUUpdateSwitch(ISwitchVectorProperty *svp, ISState *states, char *names[], int n
 		return -1;
 	}
  }
-		
+
  return 0;
 
 }
@@ -209,9 +209,9 @@ IUUpdateSwitch(ISwitchVectorProperty *svp, ISState *states, char *names[], int n
 int IUUpdateNumber(INumberVectorProperty *nvp, double values[], char *names[], int n)
 {
   int i=0;
-  
+
   INumber *np;
-  
+
   for (i = 0; i < n; i++)
   {
     np = IUFindNumber(nvp, names[i]);
@@ -221,21 +221,21 @@ int IUUpdateNumber(INumberVectorProperty *nvp, double values[], char *names[], i
 	IDSetNumber(nvp, "Error: %s is not a member of %s property.", names[i], nvp->name);
 	return -1;
     }
-    
+
     if (values[i] < np->min || values[i] > np->max)
     {
        nvp->s = IPS_IDLE;
        IDSetNumber(nvp, "Error: Invalid range. Valid range is from %g to %g", np->min, np->max);
        return -1;
     }
-      
+
   }
 
   /* First loop checks for error, second loop set all values atomically*/
   for (i=0; i < n; i++)
   {
     np = IUFindNumber(nvp, names[i]);
-    np->value = values[i];  
+    np->value = values[i];
   }
 
   return 0;
@@ -246,9 +246,9 @@ int IUUpdateNumber(INumberVectorProperty *nvp, double values[], char *names[], i
 int IUUpdateText(ITextVectorProperty *tvp, char * texts[], char *names[], int n)
 {
   int i=0;
-  
+
   IText *tp;
-  
+
   for (i = 0; i < n; i++)
   {
     tp = IUFindText(tvp, names[i]);
@@ -335,7 +335,7 @@ void IUFillNumber(INumber *np, const char *name, const char * label, const char 
   strncpy(np->name, name, MAXINDINAME);
   strncpy(np->label, label, MAXINDILABEL);
   strncpy(np->format, format, MAXINDIFORMAT);
-  
+
   np->min	= min;
   np->max	= max;
   np->step	= step;
@@ -365,7 +365,7 @@ void IUFillBLOB(IBLOB *bp, const char *name, const char * label, const char *for
     memset(bp, 0, sizeof(IBLOB));
     strncpy(bp->name, name, MAXINDINAME);
     strncpy(bp->label, label, MAXINDILABEL);
-    strncpy(bp->format, label, MAXINDIBLOBFMT);
+    strncpy(bp->format, format, MAXINDIBLOBFMT);
     bp->blob     = 0;
     bp->bloblen  = 0;
     bp->size     = 0;
@@ -381,7 +381,7 @@ void IUFillSwitchVector(ISwitchVectorProperty *svp, ISwitch *sp, int nsp, const 
   strncpy(svp->name, name, MAXINDINAME);
   strncpy(svp->label, label, MAXINDILABEL);
   strncpy(svp->group, group, MAXINDIGROUP);
-  
+
   svp->p	= p;
   svp->r	= r;
   svp->timeout	= timeout;
@@ -397,27 +397,27 @@ void IUFillLightVector(ILightVectorProperty *lvp, ILight *lp, int nlp, const cha
     strncpy(lvp->label, label, MAXINDILABEL);
     strncpy(lvp->group, group, MAXINDIGROUP);
     strcpy(lvp->timestamp, "");
-  
+
   lvp->s	= s;
   lvp->lp	= lp;
   lvp->nlp	= nlp;
 }
- 
+
 void IUFillNumberVector(INumberVectorProperty *nvp, INumber *np, int nnp, const char * dev, const char *name, const char *label, const char* group, IPerm p, double timeout, IPState s)
 {
-  
+
  strncpy(nvp->device, dev, MAXINDIDEVICE);
  strncpy(nvp->name, name, MAXINDINAME);
  strncpy(nvp->label, label, MAXINDILABEL);
  strncpy(nvp->group, group, MAXINDIGROUP);
  strcpy(nvp->timestamp, "");
-  
+
   nvp->p	= p;
   nvp->timeout	= timeout;
   nvp->s	= s;
   nvp->np	= np;
   nvp->nnp	= nnp;
-  
+
 }
 
 void IUFillTextVector(ITextVectorProperty *tvp, IText *tp, int ntp, const char * dev, const char *name, const char *label, const char* group, IPerm p, double timeout, IPState s)
@@ -427,7 +427,7 @@ void IUFillTextVector(ITextVectorProperty *tvp, IText *tp, int ntp, const char *
     strncpy(tvp->label, label, MAXINDILABEL);
     strncpy(tvp->group, group, MAXINDIGROUP);
     strcpy(tvp->timestamp, "");
-  
+
   tvp->p	= p;
   tvp->timeout	= timeout;
   tvp->s	= s;

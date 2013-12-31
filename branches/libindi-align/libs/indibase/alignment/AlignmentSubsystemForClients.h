@@ -61,6 +61,12 @@ public:
         \param[in] NumberVectorPropertyPointer A pointer to the INDI::INumberVectorProperty.
     */
     void ProcessNewNumber(INumberVectorProperty *NumberVectorPropertyPointer);
+
+    /** \brief Process new BLOB message from driver. This routine should be called from within
+     the newBLOB handler in the client.
+        \param[in] BLOBPointer A pointer to the INDI::IBLOB.
+    */
+    void ProcessNewBLOB(IBLOB *BLOBPointer);
 private:
     std::string DeviceName;
 };
