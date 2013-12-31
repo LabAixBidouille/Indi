@@ -60,5 +60,14 @@ void AlignmentSubsystemForClients::ProcessNewNumber(INumberVectorProperty *Numbe
     }
 }
 
+void AlignmentSubsystemForClients::ProcessNewBLOB(IBLOB *BLOBPointer)
+{
+    if (!strcmp(BLOBPointer->bvp->device, DeviceName.c_str()))
+    {
+        IDLog("newBLOB %s\n", BLOBPointer->bvp->name);
+        ClientAPIForAlignmentDatabase::ProcessNewBLOB(BLOBPointer);
+    }
+}
+
 } // namespace AlignmentSubsystem
 } // namespace INDI

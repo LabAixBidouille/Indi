@@ -50,7 +50,11 @@ void ClientAPIForAlignmentDatabase::ProcessNewProperty(INDI::Property *PropertyP
     if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINT_MANDATORY_NUMBERS"))
         MandatoryNumbers = PropertyPointer;
     else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB"))
+    {
         OptionalBinaryBlob = PropertyPointer;
+        // Make sure the format string is set up
+        strncpy(OptionalBinaryBlob->getBLOB()->bp->format, "alignmentPrivateData", MAXINDIBLOBFMT);
+    }
     else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_SIZE"))
         PointsetSize = PropertyPointer;
     else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_CURRENT_ENTRY"))
@@ -111,6 +115,20 @@ void ClientAPIForAlignmentDatabase::ProcessNewNumber(INumberVectorProperty *Numb
             ISwitchVectorProperty *pAction = Action->getSwitch();
             int Index = IUFindOnSwitchIndex(pAction);
             if (READ_INCREMENT != Index)
+                SignalDriverCompletion();
+        }
+    }
+}
+
+void ClientAPIForAlignmentDatabase::ProcessNewBLOB(IBLOB *BLOBPointer)
+{
+    if (!strcmp(BLOBPointer->bvp->name, "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB"))
+    {
+        if (IPS_BUSY != BLOBPointer->bvp->s)
+        {
+            ISwitchVectorProperty *pAction = Action->getSwitch();
+            int Index = IUFindOnSwitchIndex(pAction);
+            if ((READ != Index) && (READ_INCREMENT != Index))
                 SignalDriverCompletion();
         }
     }

@@ -64,6 +64,14 @@ public:
     */
     void ProcessNewNumber(INumberVectorProperty *NumberVectorProperty);
 
+    /** \brief Process new BLOB message from driver. This routine should be called from within
+     the newBLOB handler in the client. This routine is not normally called directly but is called by
+     the ProcessNewBLOB function in INDI::Alignment::AlignmentSubsystemForClients which filters out calls
+     from unwanted devices. TODO maybe hide this function.
+        \param[in] BLOBPointer A pointer to the INDI::IBLOB.
+    */
+    void ProcessNewBLOB(IBLOB *BLOBPointer);
+
     /** \brief Append a sync point to the database.
         \param[in] CurrentValues The entry to append.
         \return True if successful
