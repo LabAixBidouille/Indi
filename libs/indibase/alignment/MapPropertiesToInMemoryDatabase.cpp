@@ -230,7 +230,7 @@ void MapPropertiesToInMemoryDatabase::ProcessBlobProperties(Telescope* pTelescop
             IBLOB DummyBlob;
             IBLOBVectorProperty DummyBlobV;
             IUFillBLOB(&DummyBlob, "ALIGNMENT_POINT_ENTRY_PRIVATE", "Private binary data", "alignmentPrivateData");
-            IUFillBLOBVector(&DummyBlobV, NULL, 0, pTelescope->getDeviceName(),
+            IUFillBLOBVector(&DummyBlobV, &DummyBlob, 1, pTelescope->getDeviceName(),
                     "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB", "Optional sync point binary data", ALIGNMENT_TAB, IP_RW, 60, IPS_OK);
             IDSetBLOB(&DummyBlobV, NULL);
         }

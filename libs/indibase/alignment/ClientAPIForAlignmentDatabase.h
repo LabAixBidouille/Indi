@@ -135,6 +135,8 @@ private:
     // Pointer to INDI::BaseClient
     INDI::BaseClient *BaseClient;
 
+    bool SendEntryData(const AlignmentDatabaseEntry& CurrentValues);
+
     // Synchronise with the listener thread
     bool WaitForDriverCompletion();
     bool SignalDriverCompletion();
