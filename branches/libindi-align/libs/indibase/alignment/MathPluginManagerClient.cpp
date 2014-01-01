@@ -40,6 +40,8 @@ void MathPluginManagerClient::Initialise(int argc, char* argv[])
     watchDevice(DeviceName.c_str());
 
     connectServer();
+
+    setBLOBMode(B_ALSO, DeviceName.c_str(), NULL);
 }
 
 void MathPluginManagerClient::newDevice(INDI::BaseDevice *dp)

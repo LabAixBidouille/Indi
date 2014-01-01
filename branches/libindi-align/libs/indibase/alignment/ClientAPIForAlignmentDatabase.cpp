@@ -10,6 +10,8 @@
 
 #include <cstring>
 
+#include <indicom.h>
+
 namespace INDI {
 namespace AlignmentSubsystem {
 
@@ -140,7 +142,6 @@ bool ClientAPIForAlignmentDatabase::AppendSyncPoint(const AlignmentDatabaseEntry
     WaitForDriverCompletion();
 
     ISwitchVectorProperty *pAction = Action->getSwitch();
-    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
     ISwitchVectorProperty *pCommit = Commit->getSwitch();
 
 
@@ -159,22 +160,8 @@ bool ClientAPIForAlignmentDatabase::AppendSyncPoint(const AlignmentDatabaseEntry
         }
     }
 
-    // Send the entry data
-    pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
-    pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value  = CurrentValues.ObservationTime;
-    pMandatoryNumbers->np[ENTRY_RA].value  = CurrentValues.RightAscension;
-    pMandatoryNumbers->np[ENTRY_DEC].value  = CurrentValues.Declination;
-    pMandatoryNumbers->np[ENTRY_VECTOR_X].value  = CurrentValues.TelescopeDirection.x;
-    pMandatoryNumbers->np[ENTRY_VECTOR_Y].value  = CurrentValues.TelescopeDirection.y;
-    pMandatoryNumbers->np[ENTRY_VECTOR_Z].value  = CurrentValues.TelescopeDirection.z;
-    SetDriverBusy();
-    BaseClient->sendNewNumber(pMandatoryNumbers);
-    WaitForDriverCompletion();
-    if (IPS_OK != pMandatoryNumbers->s)
-    {
-        IDLog("AppendSyncPoint - Bad mandatory numbers state %s\n", pstateStr(pMandatoryNumbers->s));
+    if (!SendEntryData(CurrentValues))
         return false;
-    }
 
     // Commit the entry to the database
     IUResetSwitch(pCommit);
@@ -665,6 +652,44 @@ bool ClientAPIForAlignmentDatabase::SetDriverBusy()
         return false;
     else
         return true;
+}
+
+bool ClientAPIForAlignmentDatabase::SendEntryData(const AlignmentDatabaseEntry& CurrentValues)
+{
+    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
+    IBLOBVectorProperty   *pBLOB = OptionalBinaryBlob->getBLOB();
+    // Send the entry data
+    pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
+    pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value  = CurrentValues.ObservationTime;
+    pMandatoryNumbers->np[ENTRY_RA].value  = CurrentValues.RightAscension;
+    pMandatoryNumbers->np[ENTRY_DEC].value  = CurrentValues.Declination;
+    pMandatoryNumbers->np[ENTRY_VECTOR_X].value  = CurrentValues.TelescopeDirection.x;
+    pMandatoryNumbers->np[ENTRY_VECTOR_Y].value  = CurrentValues.TelescopeDirection.y;
+    pMandatoryNumbers->np[ENTRY_VECTOR_Z].value  = CurrentValues.TelescopeDirection.z;
+    SetDriverBusy();
+    BaseClient->sendNewNumber(pMandatoryNumbers);
+    WaitForDriverCompletion();
+    if (IPS_OK != pMandatoryNumbers->s)
+    {
+        IDLog("SendEntryData - Bad mandatory numbers state %s\n", pstateStr(pMandatoryNumbers->s));
+        return false;
+    }
+
+    if ((0 != CurrentValues.PrivateDataSize) && (NULL != CurrentValues.PrivateData.get()))
+    {
+        // I have a BLOB to send
+        SetDriverBusy();
+        BaseClient->startBlob(Device->getDeviceName(), pBLOB->name, timestamp());
+        BaseClient->sendOneBlob(pBLOB->bp->name, CurrentValues.PrivateDataSize, pBLOB->bp->format, CurrentValues.PrivateData.get());
+        BaseClient->finishBlob();
+        WaitForDriverCompletion();
+        if (IPS_OK != pBLOB->s)
+        {
+            IDLog("SendEntryData - Bad BLOB state %s\n", pstateStr(pBLOB->s));
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace AlignmentSubsystem

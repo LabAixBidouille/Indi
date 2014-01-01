@@ -94,7 +94,7 @@ ILightVectorProperty * INDI::BaseDevice::getLight(const char *name)
 }
 
 IBLOBVectorProperty * INDI::BaseDevice::getBLOB(const char *name)
-{       
+{
   IBLOBVectorProperty * bvp = NULL;
 
   bvp = static_cast<IBLOBVectorProperty *> (getRawProperty(name, INDI_BLOB));
@@ -250,7 +250,7 @@ INDI::Property * INDI::BaseDevice::getProperty(const char *name, INDI_TYPE type)
 }
 
 int INDI::BaseDevice::removeProperty(const char *name, char *errmsg)
-{    
+{
     std::vector<INDI::Property *>::iterator orderi;
 
     INDI_TYPE pType;
@@ -932,7 +932,7 @@ int INDI::BaseDevice::setValue (XMLEle *root, char * errmsg)
  * Return 0 if okay, -1 if error
 */
 int INDI::BaseDevice::setBLOB(IBLOBVectorProperty *bvp, XMLEle * root, char * errmsg)
-{   
+{
     IBLOB *blobEL;
     unsigned char * dataBuffer=NULL;
     XMLEle *ep;
@@ -957,7 +957,11 @@ int INDI::BaseDevice::setBLOB(IBLOBVectorProperty *bvp, XMLEle * root, char * er
 
                 /* Blob size = 0 when only state changes */
                 if (blobEL->size == 0)
+                {
+                    if (mediator)
+                        mediator->newBLOB(blobEL);
                     continue;
+                }
 
                  blobEL->blob = (unsigned char *) realloc (blobEL->blob, 3*pcdatalenXMLEle(ep)/4);
 

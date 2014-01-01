@@ -40,6 +40,8 @@ void LoaderClient::Initialise(int argc, char* argv[])
     watchDevice(DeviceName.c_str());
 
     connectServer();
+
+    setBLOBMode(B_ALSO, DeviceName.c_str(), NULL);
 }
 
 void LoaderClient::newDevice(INDI::BaseDevice *dp)
@@ -79,6 +81,10 @@ void LoaderClient::Load()
     CurrentValues.ObservationDate = 256;
     InsertSyncPoint(2, CurrentValues);
     DeleteSyncPoint(0);
+    CurrentValues.PrivateData.reset(new unsigned char[50]);
+    strcpy((char*)CurrentValues.PrivateData.get(), "This is a test BLOB");
+    CurrentValues.PrivateDataSize = strlen((char*)CurrentValues.PrivateData.get()) + 1;
+    AppendSyncPoint(CurrentValues);
 }
 
 
