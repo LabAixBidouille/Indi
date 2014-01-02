@@ -431,15 +431,9 @@ void IUFillBLOB(IBLOB *bp, const char *name, const char * label, const char *for
     char *escapedLabel = escapeXML(label, MAXINDILABEL);
 
     memset(bp, 0, sizeof(IBLOB));
-<<<<<<< .working
-    strncpy(bp->name, name, MAXINDINAME);
-    strncpy(bp->label, label, MAXINDILABEL);
-    strncpy(bp->format, format, MAXINDIBLOBFMT);
-=======
     strncpy(bp->name, escapedName, MAXINDINAME);
     strncpy(bp->label, escapedLabel, MAXINDILABEL);
     strncpy(bp->format, format, MAXINDIBLOBFMT);
->>>>>>> .merge-right.r1332
     bp->blob     = 0;
     bp->bloblen  = 0;
     bp->size     = 0;
@@ -496,13 +490,9 @@ void IUFillLightVector(ILightVectorProperty *lvp, ILight *lp, int nlp, const cha
 
 void IUFillNumberVector(INumberVectorProperty *nvp, INumber *np, int nnp, const char * dev, const char *name, const char *label, const char* group, IPerm p, double timeout, IPState s)
 {
-<<<<<<< .working
-
-=======
  char *escapedName = escapeXML(name, MAXINDINAME);
  char *escapedLabel = escapeXML(label, MAXINDILABEL);
 
->>>>>>> .merge-right.r1332
  strncpy(nvp->device, dev, MAXINDIDEVICE);
  strncpy(nvp->name, escapedName, MAXINDINAME);
  strncpy(nvp->label, escapedLabel, MAXINDILABEL);
@@ -514,15 +504,11 @@ void IUFillNumberVector(INumberVectorProperty *nvp, INumber *np, int nnp, const 
   nvp->s	= s;
   nvp->np	= np;
   nvp->nnp	= nnp;
-<<<<<<< .working
-
-=======
 
   free(escapedName);
   free(escapedLabel);
 
-  
->>>>>>> .merge-right.r1332
+
 }
 
 void IUFillTextVector(ITextVectorProperty *tvp, IText *tp, int ntp, const char * dev, const char *name, const char *label, const char* group, IPerm p, double timeout, IPState s)
