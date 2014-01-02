@@ -67,17 +67,20 @@ INDI::DefaultDevice::~DefaultDevice()
 {
 }
 
-bool INDI::DefaultDevice::loadConfig()
+bool INDI::DefaultDevice::loadConfig(bool silent)
 {
     char errmsg[MAXRBUF];
     bool pResult = false;
 
     pResult = IUReadConfig(NULL, deviceID, errmsg) == 0 ? true : false;
 
-   if (pResult)
-       IDMessage(deviceID, "Configuration successfully loaded.\n");
-	else
-		IDMessage(deviceID,"Error loading configuration\n");
+   if (silent == false)
+   {
+    if (pResult)
+            DEBUG(INDI::Logger::DBG_SESSION, "Configuration successfully loaded.");
+        else
+            DEBUGF(INDI::Logger::DBG_ERROR, "Error loading configuration. %s", errmsg);
+   }
 
    IUSaveDefaultConfig(NULL, NULL, deviceID);
 
@@ -140,7 +143,7 @@ bool INDI::DefaultDevice::saveConfig()
 
     if (fp == NULL)
     {
-        IDMessage(deviceID, "Error saving configuration. %s\n", errmsg);
+        DEBUGF(INDI::Logger::DBG_ERROR, "Error saving configuration. %s", errmsg);
         return false;
     }
 
@@ -154,7 +157,7 @@ bool INDI::DefaultDevice::saveConfig()
 
     IUSaveDefaultConfig(NULL, NULL, deviceID);
 
-    IDMessage(deviceID, "Configuration successfully saved.");
+    DEBUG(INDI::Logger::DBG_SESSION, "Configuration successfully saved.");
 
     return true;
 }
@@ -170,15 +173,15 @@ bool INDI::DefaultDevice::loadDefaultConfig()
     else
         snprintf(configDefaultFileName, MAXRBUF, "%s/.indi/%s_config.xml.default", getenv("HOME"), deviceID);
 
-    if (pDebug)
-        IDLog("Requesting to load default config with: %s\n", configDefaultFileName);
+
+    DEBUGF(INDI::Logger::DBG_DEBUG, "Requesting to load default config with: %s", configDefaultFileName);
 
     pResult = IUReadConfig(configDefaultFileName, deviceID, errmsg) == 0 ? true : false;
 
     if (pResult)
-        IDMessage(deviceID, "Default configuration loaded.");
+        DEBUG(INDI::Logger::DBG_SESSION, "Default configuration loaded.");
     else
-        IDMessage(deviceID, "Error loading default configuraiton. %s", errmsg);
+        DEBUGF(INDI::Logger::DBG_SESSION, "Error loading default configuraiton. %s", errmsg);
 
     return pResult;
 }
@@ -361,7 +364,7 @@ void INDI::DefaultDevice::setDebug(bool enable)
         if (sp)
         {
             sp->s = ISS_ON;
-            IDMessage(deviceID, "Debug is enabled.");
+            DEBUG(INDI::Logger::DBG_SESSION, "Debug is enabled.");
         }
     }
     else
@@ -370,7 +373,7 @@ void INDI::DefaultDevice::setDebug(bool enable)
         if (sp)
         {
             sp->s = ISS_ON;
-            IDMessage(deviceID, "Debug is disabled.");
+            DEBUG(INDI::Logger::DBG_SESSION, "Debug is disabled.");
         }
     }
 
@@ -403,7 +406,7 @@ void INDI::DefaultDevice::setSimulation(bool enable)
        ISwitch *sp = IUFindSwitch(&SimulationSP, "ENABLE");
        if (sp)
        {
-           IDMessage(deviceID, "Simulation is enabled.");
+           DEBUG(INDI::Logger::DBG_SESSION, "Simulation is enabled.");
            sp->s = ISS_ON;
        }
    }
@@ -413,7 +416,7 @@ void INDI::DefaultDevice::setSimulation(bool enable)
        if (sp)
        {
            sp->s = ISS_ON;
-           IDMessage(deviceID, "Simulation is disabled.");
+           DEBUG(INDI::Logger::DBG_SESSION, "Simulation is disabled.");
        }
    }
 

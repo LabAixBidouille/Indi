@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
+#include <locale.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -39,6 +40,48 @@
 #include "indidriver.h"
 
 #define MAXRBUF 2048
+
+/* output a string expanding special characters into xml/html escape sequences */
+/* N.B. You must free the returned buffer after use! */
+char * escapeXML(const char *s, unsigned int MAX_BUF_SIZE)
+{
+        char *buf = malloc(sizeof(char)*MAX_BUF_SIZE);
+        char *out = buf;
+        unsigned int i=0;
+
+        for (i=0; i <= strlen(s); i++)
+        {
+            switch (s[i])
+            {
+                case '&':
+                    strncpy(out, "&amp;", 5);
+                    out+=5;
+                    break;
+                case '\'':
+                    strncpy(out, "&apos;", 6);
+                    out+=6;
+                    break;
+                case '"':
+                    strncpy(out, "&quot;", 6);
+                    out+=6;
+                    break;
+                case '<':
+                    strncpy(out, "&lt;", 4);
+                    out+=4;
+                    break;
+                case '>':
+                    strncpy(out, "&gt;", 4);
+                    out+=4;
+                    break;
+                default:
+                    strncpy(out++, s+i, 1);
+                    break;
+            }
+
+        }
+
+        return buf;
+}
 
 /* tell Client to delete the property with given name on given device, or
  * entire device if !name
@@ -225,7 +268,7 @@ int IUUpdateNumber(INumberVectorProperty *nvp, double values[], char *names[], i
     if (values[i] < np->min || values[i] > np->max)
     {
        nvp->s = IPS_IDLE;
-       IDSetNumber(nvp, "Error: Invalid range. Valid range is from %g to %g", np->min, np->max);
+       IDSetNumber(nvp, "Error: Invalid range for %s. Valid range is from %g to %g. Requested value is %g", np->name, np->min, np->max, values[i]);
        return -1;
     }
 
@@ -312,28 +355,42 @@ int IUSaveBLOB(IBLOB *bp, int size, int blobsize, char *blob, char *format)
 
 void IUFillSwitch(ISwitch *sp, const char *name, const char * label, ISState s)
 {
-  strncpy(sp->name, name, MAXINDINAME);
-  strncpy(sp->label, label, MAXINDILABEL);
+  char *escapedName = escapeXML(name, MAXINDINAME);
+  char *escapedLabel = escapeXML(label, MAXINDILABEL);
+
+  strncpy(sp->name, escapedName, MAXINDINAME);
+  strncpy(sp->label, escapedLabel, MAXINDILABEL);
   sp->s = s;
   sp->svp = NULL;
   sp->aux = NULL;
+
+  free(escapedName);
+  free(escapedLabel);
 }
 
 void IUFillLight(ILight *lp, const char *name, const char * label, IPState s)
 {
-  strncpy(lp->name, name, MAXINDINAME);
-  strncpy(lp->label, label, MAXINDILABEL);
+  char *escapedName = escapeXML(name, MAXINDINAME);
+  char *escapedLabel = escapeXML(label, MAXINDILABEL);
+
+  strncpy(lp->name, escapedName, MAXINDINAME);
+  strncpy(lp->label, escapedLabel, MAXINDILABEL);
   lp->s = s;
   lp->lvp = NULL;
   lp->aux = NULL;
+
+  free(escapedName);
+  free(escapedLabel);
 }
 
 
 void IUFillNumber(INumber *np, const char *name, const char * label, const char *format, double min, double max, double step, double value)
 {
+  char *escapedName = escapeXML(name, MAXINDINAME);
+  char *escapedLabel = escapeXML(label, MAXINDILABEL);
 
-  strncpy(np->name, name, MAXINDINAME);
-  strncpy(np->label, label, MAXINDILABEL);
+  strncpy(np->name, escapedName, MAXINDINAME);
+  strncpy(np->label, escapedLabel, MAXINDILABEL);
   strncpy(np->format, format, MAXINDIFORMAT);
 
   np->min	= min;
@@ -343,13 +400,18 @@ void IUFillNumber(INumber *np, const char *name, const char * label, const char 
   np->nvp	= NULL;
   np->aux0	= NULL;
   np->aux1	= NULL;
+
+  free(escapedName);
+  free(escapedLabel);
 }
 
 void IUFillText(IText *tp, const char *name, const char * label, const char *initialText)
 {
+  char *escapedName = escapeXML(name, MAXINDINAME);
+  char *escapedLabel = escapeXML(label, MAXINDILABEL);
 
-  strncpy(tp->name, name, MAXINDINAME);
-  strncpy(tp->label, label, MAXINDILABEL);
+  strncpy(tp->name, escapedName, MAXINDINAME);
+  strncpy(tp->label, escapedLabel, MAXINDILABEL);
   tp->text = NULL;
   tp->tvp  = NULL;
   tp->aux0 = NULL;
@@ -358,14 +420,26 @@ void IUFillText(IText *tp, const char *name, const char * label, const char *ini
   if (initialText && strlen(initialText) > 0)
     IUSaveText(tp, initialText);
 
+  free(escapedName);
+  free(escapedLabel);
+
 }
 
 void IUFillBLOB(IBLOB *bp, const char *name, const char * label, const char *format)
 {
+    char *escapedName = escapeXML(name, MAXINDINAME);
+    char *escapedLabel = escapeXML(label, MAXINDILABEL);
+
     memset(bp, 0, sizeof(IBLOB));
+<<<<<<< .working
     strncpy(bp->name, name, MAXINDINAME);
     strncpy(bp->label, label, MAXINDILABEL);
     strncpy(bp->format, format, MAXINDIBLOBFMT);
+=======
+    strncpy(bp->name, escapedName, MAXINDINAME);
+    strncpy(bp->label, escapedLabel, MAXINDILABEL);
+    strncpy(bp->format, format, MAXINDIBLOBFMT);
+>>>>>>> .merge-right.r1332
     bp->blob     = 0;
     bp->bloblen  = 0;
     bp->size     = 0;
@@ -373,13 +447,19 @@ void IUFillBLOB(IBLOB *bp, const char *name, const char * label, const char *for
     bp->aux0     = 0;
     bp->aux1     = 0;
     bp->aux2     = 0;
+
+    free(escapedName);
+    free(escapedLabel);
 }
 
 void IUFillSwitchVector(ISwitchVectorProperty *svp, ISwitch *sp, int nsp, const char * dev, const char *name, const char *label, const char *group, IPerm p, ISRule r, double timeout, IPState s)
 {
+  char *escapedName = escapeXML(name, MAXINDINAME);
+  char *escapedLabel = escapeXML(label, MAXINDILABEL);
+
   strncpy(svp->device, dev, MAXINDIDEVICE);
-  strncpy(svp->name, name, MAXINDINAME);
-  strncpy(svp->label, label, MAXINDILABEL);
+  strncpy(svp->name, escapedName, MAXINDINAME);
+  strncpy(svp->label, escapedLabel, MAXINDILABEL);
   strncpy(svp->group, group, MAXINDIGROUP);
 
   svp->p	= p;
@@ -388,27 +468,44 @@ void IUFillSwitchVector(ISwitchVectorProperty *svp, ISwitch *sp, int nsp, const 
   svp->s	= s;
   svp->sp	= sp;
   svp->nsp	= nsp;
+
+  free(escapedName);
+  free(escapedLabel);
+
 }
 
 void IUFillLightVector(ILightVectorProperty *lvp, ILight *lp, int nlp, const char * dev, const char *name, const char *label, const char *group, IPState s)
 {
+    char *escapedName = escapeXML(name, MAXINDINAME);
+    char *escapedLabel = escapeXML(label, MAXINDILABEL);
+
     strncpy(lvp->device, dev, MAXINDIDEVICE);
-    strncpy(lvp->name, name, MAXINDINAME);
-    strncpy(lvp->label, label, MAXINDILABEL);
+    strncpy(lvp->name, escapedName, MAXINDINAME);
+    strncpy(lvp->label, escapedLabel, MAXINDILABEL);
     strncpy(lvp->group, group, MAXINDIGROUP);
     strcpy(lvp->timestamp, "");
 
   lvp->s	= s;
   lvp->lp	= lp;
   lvp->nlp	= nlp;
+
+  free(escapedName);
+  free(escapedLabel);
+
 }
 
 void IUFillNumberVector(INumberVectorProperty *nvp, INumber *np, int nnp, const char * dev, const char *name, const char *label, const char* group, IPerm p, double timeout, IPState s)
 {
+<<<<<<< .working
 
+=======
+ char *escapedName = escapeXML(name, MAXINDINAME);
+ char *escapedLabel = escapeXML(label, MAXINDILABEL);
+
+>>>>>>> .merge-right.r1332
  strncpy(nvp->device, dev, MAXINDIDEVICE);
- strncpy(nvp->name, name, MAXINDINAME);
- strncpy(nvp->label, label, MAXINDILABEL);
+ strncpy(nvp->name, escapedName, MAXINDINAME);
+ strncpy(nvp->label, escapedLabel, MAXINDILABEL);
  strncpy(nvp->group, group, MAXINDIGROUP);
  strcpy(nvp->timestamp, "");
 
@@ -417,31 +514,47 @@ void IUFillNumberVector(INumberVectorProperty *nvp, INumber *np, int nnp, const 
   nvp->s	= s;
   nvp->np	= np;
   nvp->nnp	= nnp;
+<<<<<<< .working
 
+=======
+
+  free(escapedName);
+  free(escapedLabel);
+
+  
+>>>>>>> .merge-right.r1332
 }
 
 void IUFillTextVector(ITextVectorProperty *tvp, IText *tp, int ntp, const char * dev, const char *name, const char *label, const char* group, IPerm p, double timeout, IPState s)
 {
+    char *escapedName = escapeXML(name, MAXINDINAME);
+    char *escapedLabel = escapeXML(label, MAXINDILABEL);
+
     strncpy(tvp->device, dev, MAXINDIDEVICE);
-    strncpy(tvp->name, name, MAXINDINAME);
-    strncpy(tvp->label, label, MAXINDILABEL);
+    strncpy(tvp->name, escapedName, MAXINDINAME);
+    strncpy(tvp->label, escapedLabel, MAXINDILABEL);
     strncpy(tvp->group, group, MAXINDIGROUP);
     strcpy(tvp->timestamp, "");
 
-  tvp->p	= p;
-  tvp->timeout	= timeout;
-  tvp->s	= s;
-  tvp->tp	= tp;
-  tvp->ntp	= ntp;
+    tvp->p	= p;
+    tvp->timeout	= timeout;
+    tvp->s	= s;
+    tvp->tp	= tp;
+    tvp->ntp	= ntp;
 
+    free(escapedName);
+    free(escapedLabel);
 }
 
 void IUFillBLOBVector(IBLOBVectorProperty *bvp, IBLOB *bp, int nbp, const char * dev, const char *name, const char *label, const char* group, IPerm p, double timeout, IPState s)
 {
+    char *escapedName = escapeXML(name, MAXINDINAME);
+    char *escapedLabel = escapeXML(label, MAXINDILABEL);
+
     memset(bvp, 0, sizeof(IBLOBVectorProperty));
     strncpy(bvp->device, dev, MAXINDIDEVICE);
-    strncpy(bvp->name, name, MAXINDINAME);
-    strncpy(bvp->label, label, MAXINDILABEL);
+    strncpy(bvp->name, escapedName, MAXINDINAME);
+    strncpy(bvp->label, escapedLabel, MAXINDILABEL);
     strncpy(bvp->group, group, MAXINDIGROUP);
     strcpy(bvp->timestamp, "");
 
@@ -450,6 +563,9 @@ void IUFillBLOBVector(IBLOBVectorProperty *bvp, IBLOB *bp, int nbp, const char *
     bvp->s	= s;
     bvp->bp	= bp;
     bvp->nbp	= nbp;
+
+    free(escapedName);
+    free(escapedLabel);
 }
 
 /*****************************************************************************
@@ -1002,7 +1118,7 @@ int IUReadConfig(const char *filename, const char *dev, char errmsg[])
     fp = fopen(configFileName, "r");
     if (fp == NULL)
     {
-         snprintf(errmsg, MAXRBUF, "Unable to read config file. Error loading file %s: %s\n", filename, strerror(errno));
+         snprintf(errmsg, MAXRBUF, "Unable to read config file. Error loading file %s: %s\n", configFileName, strerror(errno));
          return -1;
     }
 
@@ -1164,7 +1280,8 @@ void IUSaveConfigNumber (FILE *fp, const INumberVectorProperty *nvp)
 {
     int i;
 
-    fprintf (fp, "<newNumberVector device='%s' name='%s'>\n", nvp->device, nvp->name);
+    setlocale(LC_NUMERIC,"C");
+   fprintf (fp, "<newNumberVector device='%s' name='%s'>\n", nvp->device, nvp->name);
 
     for (i = 0; i < nvp->nnp; i++)
     {
@@ -1175,6 +1292,7 @@ void IUSaveConfigNumber (FILE *fp, const INumberVectorProperty *nvp)
     }
 
     fprintf (fp, "</newNumberVector>\n");
+    setlocale(LC_NUMERIC,"");
 }
 
 void IUSaveConfigText (FILE *fp, const ITextVectorProperty *tvp)
@@ -1251,6 +1369,7 @@ IDDefText (const ITextVectorProperty *tvp, const char *fmt, ...)
         ROSC *SC;
 
         xmlv1();
+        setlocale(LC_NUMERIC,"C");
         printf ("<defTextVector\n");
         printf ("  device='%s'\n", tvp->device);
         printf ("  name='%s'\n", tvp->name);
@@ -1292,6 +1411,7 @@ IDDefText (const ITextVectorProperty *tvp, const char *fmt, ...)
                 SC->perm = tvp->p;
         }
 
+        setlocale(LC_NUMERIC,"");
         fflush (stdout);
 }
 
@@ -1303,6 +1423,7 @@ IDDefNumber (const INumberVectorProperty *n, const char *fmt, ...)
         ROSC *SC;
 
         xmlv1();
+        setlocale(LC_NUMERIC,"C");
         printf ("<defNumberVector\n");
         printf ("  device='%s'\n", n->device);
         printf ("  name='%s'\n", n->name);
@@ -1355,6 +1476,7 @@ IDDefNumber (const INumberVectorProperty *n, const char *fmt, ...)
 
         }
 
+        setlocale(LC_NUMERIC,"");
         fflush (stdout);
 }
 
@@ -1367,6 +1489,7 @@ IDDefSwitch (const ISwitchVectorProperty *s, const char *fmt, ...)
         ROSC *SC;
 
         xmlv1();
+        setlocale(LC_NUMERIC,"C");
         printf ("<defSwitchVector\n");
         printf ("  device='%s'\n", s->device);
         printf ("  name='%s'\n", s->name);
@@ -1409,6 +1532,7 @@ IDDefSwitch (const ISwitchVectorProperty *s, const char *fmt, ...)
                 SC->perm = s->p;
         }
 
+        setlocale(LC_NUMERIC,"");
         fflush (stdout);
 }
 
@@ -1457,6 +1581,7 @@ IDDefBLOB (const IBLOBVectorProperty *b, const char *fmt, ...)
   ROSC *SC;
 
         xmlv1();
+        setlocale(LC_NUMERIC,"C");
         printf ("<defBLOBVector\n");
         printf ("  device='%s'\n", b->device);
         printf ("  name='%s'\n", b->name);
@@ -1497,6 +1622,7 @@ IDDefBLOB (const IBLOBVectorProperty *b, const char *fmt, ...)
                 SC->perm = b->p;
         }
 
+        setlocale(LC_NUMERIC,"");
         fflush (stdout);
 }
 
@@ -1507,6 +1633,7 @@ IDSetText (const ITextVectorProperty *tvp, const char *fmt, ...)
         int i;
 
         xmlv1();
+        setlocale(LC_NUMERIC,"C");
         printf ("<setTextVector\n");
         printf ("  device='%s'\n", tvp->device);
         printf ("  name='%s'\n", tvp->name);
@@ -1531,6 +1658,7 @@ IDSetText (const ITextVectorProperty *tvp, const char *fmt, ...)
         }
 
         printf ("</setTextVector>\n");
+        setlocale(LC_NUMERIC,"");
         fflush (stdout);
 }
 
@@ -1541,6 +1669,7 @@ IDSetNumber (const INumberVectorProperty *nvp, const char *fmt, ...)
         int i;
 
         xmlv1();
+        setlocale(LC_NUMERIC,"C");
         printf ("<setNumberVector\n");
         printf ("  device='%s'\n", nvp->device);
         printf ("  name='%s'\n", nvp->name);
@@ -1565,6 +1694,7 @@ IDSetNumber (const INumberVectorProperty *nvp, const char *fmt, ...)
         }
 
         printf ("</setNumberVector>\n");
+        setlocale(LC_NUMERIC,"");
         fflush (stdout);
 }
 
@@ -1575,6 +1705,7 @@ IDSetSwitch (const ISwitchVectorProperty *svp, const char *fmt, ...)
         int i;
 
         xmlv1();
+        setlocale(LC_NUMERIC,"C");
         printf ("<setSwitchVector\n");
         printf ("  device='%s'\n", svp->device);
         printf ("  name='%s'\n", svp->name);
@@ -1599,7 +1730,8 @@ IDSetSwitch (const ISwitchVectorProperty *svp, const char *fmt, ...)
         }
 
         printf ("</setSwitchVector>\n");
-        fflush (stdout);
+        setlocale(LC_NUMERIC,"");
+       fflush (stdout);
 }
 
 /* tell client to update an existing lights vector property */
@@ -1642,6 +1774,7 @@ IDSetBLOB (const IBLOBVectorProperty *bvp, const char *fmt, ...)
         int i;
 
         xmlv1();
+        setlocale(LC_NUMERIC,"C");
         printf ("<setBLOBVector\n");
         printf ("  device='%s'\n", bvp->device);
         printf ("  name='%s'\n", bvp->name);
@@ -1678,6 +1811,7 @@ IDSetBLOB (const IBLOBVectorProperty *bvp, const char *fmt, ...)
         }
 
   printf ("</setBLOBVector>\n");
+  setlocale(LC_NUMERIC,"");
   fflush (stdout);
 }
 
@@ -1687,6 +1821,7 @@ void IUUpdateMinMax(const INumberVectorProperty *nvp)
   int i;
 
   xmlv1();
+  setlocale(LC_NUMERIC,"C");
   printf ("<setNumberVector\n");
   printf ("  device='%s'\n", nvp->device);
   printf ("  name='%s'\n", nvp->name);
@@ -1707,6 +1842,7 @@ void IUUpdateMinMax(const INumberVectorProperty *nvp)
   }
 
   printf ("</setNumberVector>\n");
+  setlocale(LC_NUMERIC,"");
   fflush (stdout);
 }
 

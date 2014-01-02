@@ -1,5 +1,11 @@
 /*******************************************************************************
-  Copyright(c) 2010, 2011 Gerry Rozema, Jasem Mutlaq. All rights reserved.
+ Copyright(c) 2010, 2011 Gerry Rozema, Jasem Mutlaq. All rights reserved.
+
+ Rapid Guide support added by CloudMakers, s. r. o.
+ Copyright(c) 2013 CloudMakers, s. r. o. All rights reserved.
+  
+ Star detection algorithm is based on PHD Guiding by Craig Stark
+ Copyright (c) 2006-2010 Craig Stark. All rights reserved.
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -29,7 +35,7 @@
 extern const char *IMAGE_SETTINGS_TAB;
 extern const char *IMAGE_INFO_TAB;
 extern const char *GUIDE_HEAD_TAB;
-extern const char *GUIDE_CONTROL_TAB;
+extern const char *RAPIDGUIDE_TAB;
 
 /**
  * @brief The CCDChip class provides functionality of a CCD Chip within a CCD.
@@ -144,6 +150,14 @@ public:
     inline char *getFrameBuffer() { return RawFrame; }
 
     /**
+     * @brief setFrameBuffer Set raw frame buffer pointer.
+     * @param buffer pointer to frame buffer
+     * /note CCD Chip allocates the frame buffer internally once SetFrameBufferSize is called with allocMem set to true which is the default behavior.
+     *       If you allocated the memory yourself (i.e. allocMem is false), then you must call this function to set the pointer to the raw frame buffer.
+     */
+    void setFrameBuffer(char *buffer) { RawFrame = buffer; }
+
+    /**
      * @brief isCompressed
      * @return True if frame is compressed, false otherwise.
      */
@@ -169,11 +183,11 @@ public:
     const char *getFrameTypeName(CCD_FRAME fType);
 
     /**
-     * @brief setResolutoin set CCD Chip resolution
+     * @brief setResolution set CCD Chip resolution
      * @param x width
      * @param y height
      */
-    void setResolutoin(int x, int y);
+    void setResolution(int x, int y);
 
     /**
      * @brief setFrame Set desired frame resolutoin for an exposure.
@@ -215,8 +229,9 @@ public:
      * desired frame resolution (Left, Top, Width, Height), depth of the CCD chip (bpp), and binning settings. You must set the frame size any time
      * any of the prior parameters gets updated.
      * @param nbuf size of buffer in bytes.
+     * @param allocMem if True, it will allocate memory of nbut size bytes.
      */
-    void setFrameBufferSize(int nbuf);
+    void setFrameBufferSize(int nbuf, bool allocMem=true);
 
     /**
      * @brief setBPP Set depth of CCD chip.
@@ -248,6 +263,32 @@ public:
      */
     void setExposureFailed();
 
+    /**
+     * @return Get number of FITS axis in image. By default 2
+     */
+    int getNAxis() const;
+
+    /**
+     * @brief setNAxis Set FITS number of axis
+     * @param value number of axis
+     */
+    void setNAxis(int value);
+
+    /**
+     * @brief setImageExtension Set image exntension
+     * @param ext extension (fits, jpeg, raw..etc)
+     */
+    void setImageExtension(const char *ext);
+
+    /**
+     * @return Return image extension (fits, jpeg, raw..etc)
+     */
+    char *getImageExtension() { return imageExtention;}
+
+    /**
+     * @return True if CCD is currently exposing, false otherwise.
+     */
+    bool isExposing() { return (ImageExposureNP->s == IPS_BUSY); }
 
 private:
 
@@ -259,6 +300,7 @@ private:
     int SubH;   //  UNBINNED height of the subframe
     int BinX;   //  Binning requested in the x direction
     int BinY;   //  Binning requested in the Y direction
+    int NAxis;  //  # of Axis
     float PixelSizex;   //  pixel size in microns, x direction
     float PixelSizey;   //  pixel size in microns, y direction
     int BPP;            //  Bytes per Pixel
@@ -269,6 +311,9 @@ private:
     CCD_FRAME FrameType;
     double exposureDuration;
     timeval startExposureTime;
+    int lastRapidX;
+    int lastRapidY;
+    char imageExtention[MAXINDIBLOBFMT];
 
     INumberVectorProperty *ImageExposureNP;
     INumber ImageExposureN[1];
@@ -285,7 +330,7 @@ private:
     INumberVectorProperty *ImagePixelSizeNP;
     INumber ImagePixelSizeN[6];
 
-    ISwitch FrameTypeS[4];
+    ISwitch FrameTypeS[5];
     ISwitchVectorProperty *FrameTypeSP;
 
     ISwitch CompressS[2];
@@ -293,6 +338,15 @@ private:
 
     IBLOB FitsB;
     IBLOBVectorProperty *FitsBP;
+
+    ISwitch RapidGuideS[2];
+    ISwitchVectorProperty *RapidGuideSP;
+
+    ISwitch RapidGuideSetupS[3];
+    ISwitchVectorProperty *RapidGuideSetupSP;
+
+    INumber RapidGuideDataN[3];
+    INumberVectorProperty *RapidGuideDataNP;
 
     friend class INDI::CCD;
 };
@@ -312,6 +366,17 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
         CCD();
         virtual ~CCD();
 
+        typedef struct
+        {
+            bool hasGuideHead;
+            bool hasST4Port;
+            bool hasShutter;
+            bool hasCooler;
+            bool canBin;
+            bool canSubFrame;
+            bool canAbort;
+        } Capability;
+
         virtual bool initProperties();
         virtual bool updateProperties();
         virtual void ISGetProperties (const char *dev);
@@ -321,12 +386,62 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
         virtual bool ISSnoopDevice (XMLEle *root);
 
      protected:
+
+        Capability GetCapability() const { return capability;}
+        void SetCapability(Capability * cap);
+
+        /**
+         * @return True if CCD can abort exposure. False otherwise.
+        */
+        bool CanAbort() { return capability.canAbort;}
+
+        /**
+         * @return True if CCD supports binning. False otherwise.
+        */
+        bool CanBin() { return capability.canBin;}
+
+        /**
+         * @return True if CCD supports subframing. False otherwise.
+        */
+        bool CanSubFrame() { return capability.canSubFrame;}
+
+        /**
+         * @return True if CCD has guide head. False otherwise.
+         */
+        bool HasGuideHead() { return capability.hasGuideHead; }
+
+        /**
+         * @return True if CCD has mechanical or electronic shutter. False otherwise.
+         */
+        bool HasShutter() { return capability.hasShutter;}
+
+        /**
+         * @return True if CCD has ST4 port for guiding. False otherwise.
+         */
+        bool HasST4Port() { return capability.hasST4Port;}
+
+        /**
+         * @return True if CCD has cooler and temperature can be controlled. False otherwise.
+         */
+        bool HasCooler() { return capability.hasCooler;}
+
+        /**
+         * @brief Set CCD temperature
+         * @param temperature CCD temperature in degrees celcius.
+         * @return 0 or 1 if setting the temperature call to the hardware is successful. -1 if an error is encountered.
+         *         Return 0 if setting the temperature to the requested value takes time. Return 1 if setting the temperature to the
+         *         requested value is complete.
+         * \note Upon returning 0, the property becomes BUSY. Once the temperature reaches the requested value, change the state to OK.
+         * \note This function is not implemented in INDI::CCD, it must be implemented in the child class
+         */
+        virtual int SetTemperature(double temperature);
+
         /** \brief Start exposing primary CCD chip
             \param duration Duration in seconds
-            \return 0 if OK and exposure will take some time to complete, 1 if exposure is short and complete already (e.g. bias), -1 on error.
+            \return true if OK and exposure will take some time to complete, false on error.
             \note This function is not implemented in INDI::CCD, it must be implemented in the child class
         */
-        virtual int StartExposure(float duration);
+        virtual bool StartExposure(float duration);
 
         /** \brief Uploads target Chip exposed buffer as FITS to the client. Dervied classes should class this function when an exposure is complete.
              \note This function is not implemented in INDI::CCD, it must be implemented in the child class
@@ -341,10 +456,10 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
 
         /** \brief Start exposing guide CCD chip
             \param duration Duration in seconds
-            \return 0 if OK and exposure will take some time to complete, 1 if exposure is short and complete already (e.g. bias), -1 on error.
+            \return true if OK and exposure will take some time to complete, false on error.
             \note This function is not implemented in INDI::CCD, it must be implemented in the child class
         */
-        virtual int StartGuideExposure(float duration);
+        virtual bool StartGuideExposure(float duration);
 
         /** \brief Abort ongoing exposure
             \return true is abort is successful, false otherwise.
@@ -361,7 +476,7 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
             \return true is CCD chip update is successful, false otherwise.
             \note This function is not implemented in INDI::CCD, it must be implemented in the child class
         */
-        virtual bool updateCCDFrame(int x, int y, int w, int h);
+        virtual bool UpdateCCDFrame(int x, int y, int w, int h);
 
 
         /** \brief INDI::CCD calls this function when Guide head frame dimension is updated by the client. Derived classes should implement this function
@@ -373,7 +488,7 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
             \return true is CCD chip update is successful, false otherwise.
             \note This function is not implemented in INDI::CCD, it must be implemented in the child class
         */
-        virtual bool updateGuideFrame(int x, int y, int w, int h);
+        virtual bool UpdateGuiderFrame(int x, int y, int w, int h);
 
 
         /** \brief INDI::CCD calls this function when CCD Binning needs to be updated in the hardware. Derived classes should implement this function
@@ -382,7 +497,7 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
             \return true is CCD chip update is successful, false otherwise.
             \note This function is not implemented in INDI::CCD, it must be implemented in the child class
         */
-        virtual bool updateCCDBin(int hor, int ver);
+        virtual bool UpdateCCDBin(int hor, int ver);
 
 
         /** \brief INDI::CCD calls this function when Guide head binning is updated by the client. Derived classes should implement this function
@@ -391,7 +506,7 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
             \return true is CCD chip update is successful, false otherwise.
             \note This function is not implemented in INDI::CCD, it must be implemented in the child class
         */
-        virtual bool updateGuideBin(int hor, int ver);
+        virtual bool UpdateGuiderBin(int hor, int ver);
 
         /** \brief INDI::CCD calls this function when CCD frame type needs to be updated in the hardware.
             \param fType Frame type
@@ -399,7 +514,7 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
             \note It is \e not mandotary to implement this function in the child class. The CCD hardware layer may either set the frame type when this function
              is called, or (optionally) before an exposure is started.
         */
-        virtual bool updateCCDFrameType(CCDChip::CCD_FRAME fType);
+        virtual bool UpdateCCDFrameType(CCDChip::CCD_FRAME fType);
 
         /** \brief INDI::CCD calls this function when Guide frame type is updated by the client.
             \param fType Frame type
@@ -407,7 +522,7 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
             \note It is \e not mandotary to implement this function in the child class. The CCD hardware layer may either set the frame type when this function
              is called, or (optionally) before an exposure is started.
         */
-        virtual bool updateGuideFrameType(CCDChip::CCD_FRAME fType);
+        virtual bool UpdateGuiderFrameType(CCDChip::CCD_FRAME fType);
 
         /** \brief Setup CCD paramters for primary CCD. Child classes call this function to update CCD paramaters
             \param x Frame X coordinates in pixels.
@@ -425,7 +540,7 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
             \param xf X pixel size in microns.
             \param yf Y pixel size in microns.
         */
-        virtual void SetGuideHeadParams(int x,int y,int bpp,float xf,float yf);
+        virtual void SetGuiderParams(int x,int y,int bpp,float xf,float yf);
 
 
         /** \brief Guide northward for ms milliseconds
@@ -487,12 +602,23 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
 
         virtual bool saveConfigItems(FILE *fp);
 
+
         float RA;
         float Dec;
-        bool HasGuideHead;
-        bool HasSt4Port;
         bool InExposure;
         bool InGuideExposure;
+        bool RapidGuideEnabled;
+        bool GuiderRapidGuideEnabled;
+
+        bool AutoLoop;
+        bool GuiderAutoLoop;
+        bool SendImage;
+        bool GuiderSendImage;
+        bool ShowMarker;
+        bool GuiderShowMarker;
+        
+        float ExposureTime;
+        float GuiderExposureTime;
 
         CCDChip PrimaryCCD;
         CCDChip GuideCCD;
@@ -504,7 +630,13 @@ class INDI::CCD : public INDI::DefaultDevice, INDI::GuiderInterface
         ITextVectorProperty *ActiveDeviceTP;
         IText ActiveDeviceT[2];
 
+        INumber                 TemperatureN[1];
+        INumberVectorProperty   TemperatureNP;
+
      private:
+        Capability capability;
+
+        bool uploadFile(CCDChip * targetChip, const void *fitsData, size_t totalBytes);
         void getMinMax(double *min, double *max, CCDChip *targetChip);
 
 

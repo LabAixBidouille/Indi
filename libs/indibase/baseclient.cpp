@@ -147,6 +147,9 @@ bool INDI::BaseClient::disconnectServer()
     if (svrwfp != NULL)
         fclose(svrwfp);
    svrwfp = NULL;
+    
+   cDevices.clear();
+   cDeviceNames.clear();
 
    pthread_join(listen_thread, NULL);
 
@@ -236,6 +239,7 @@ void INDI::BaseClient::listenINDI()
     int maxfd=0;
     fd_set rs;
 
+    setlocale(LC_NUMERIC,"C");
     if (cDeviceNames.empty())
        fprintf(svrwfp, "<getProperties version='%g'/>\n", INDIV);
     else
@@ -244,6 +248,7 @@ void INDI::BaseClient::listenINDI()
         for ( stri = cDeviceNames.begin(); stri != cDeviceNames.end(); stri++)
             fprintf(svrwfp, "<getProperties version='%g' device='%s'/>\n", INDIV, (*stri).c_str());
     }
+    setlocale(LC_NUMERIC,"");
 
     fflush (svrwfp);
 

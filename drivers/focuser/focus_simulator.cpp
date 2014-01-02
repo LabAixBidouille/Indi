@@ -92,6 +92,7 @@ void ISSnoopDevice (XMLEle *root)
 
 FocusSim::FocusSim()
 {
+    setFocuserFeatures(true, false, true, true);
 
 }
 
@@ -289,4 +290,9 @@ int FocusSim::MoveAbs(int targetTicks)
 
     return 0;
 
+}
+
+bool FocusSim::Abort()
+{
+    return true;
 }

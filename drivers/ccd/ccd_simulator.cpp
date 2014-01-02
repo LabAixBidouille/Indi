@@ -96,8 +96,17 @@ CCDSim::CCDSim()
     AbortPrimaryFrame = false;
     ShowStarField=true;
 
-    HasSt4Port=true;
-    HasGuideHead=true;
+    Capability cap;
+
+    cap.canAbort = true;
+    cap.canBin = true;
+    cap.canSubFrame = true;
+    cap.hasCooler = false;
+    cap.hasGuideHead = true;
+    cap.hasShutter = true;
+    cap.hasST4Port = true;
+
+    SetCapability(&cap);
 
     polarError=0;
     polarDrift=0;
@@ -258,9 +267,9 @@ bool CCDSim::updateProperties()
     {
         SetupParms();
 
-        if(HasGuideHead)
+        if(HasGuideHead())
         {
-            SetGuideHeadParams(500,290,16,9.8,12.6);
+            SetGuiderParams(500,290,16,9.8,12.6);
             GuideCCD.setFrameBufferSize(GuideCCD.getXRes() * GuideCCD.getYRes() * 2);
         }
 
@@ -268,6 +277,10 @@ bool CCDSim::updateProperties()
         defineNumber(&FilterSlotNP);
         if (FilterNameT != NULL)
             defineText(FilterNameTP);
+    } else
+    {
+        deleteProperty(FilterSlotNP.name);
+        deleteProperty(FilterNameTP->name);
     }
 
     return true;
@@ -279,7 +292,7 @@ bool CCDSim::Disconnect()
     return true;
 }
 
-int CCDSim::StartExposure(float duration)
+bool CCDSim::StartExposure(float duration)
 {
     //  for the simulator, we can just draw the frame now
     //  and it will get returned at the right time
@@ -294,10 +307,10 @@ int CCDSim::StartExposure(float duration)
     //  Now compress the actual wait time
     ExposureRequest=duration*TimeFactor;
     InExposure=true;
-    return 0;
+    return true;
 }
 
-int CCDSim::StartGuideExposure(float n)
+bool CCDSim::StartGuideExposure(float n)
 {
     GuideExposureRequest=n;
     AbortGuideFrame = false;
@@ -305,7 +318,7 @@ int CCDSim::StartGuideExposure(float n)
     DrawCcdFrame(&GuideCCD);
     gettimeofday(&GuideExpStart,NULL);
     InGuideExposure=true;
-    return 0;
+    return true;
 }
 
 bool CCDSim::AbortExposure()
@@ -585,7 +598,9 @@ int CCDSim::DrawCcdFrame(CCDChip *targetChip)
         if(radius > 60) lookuplimit=11;
 
         //  if this is a light frame, we need a star field drawn
-        if(targetChip->getFrameType()==CCDChip::LIGHT_FRAME)
+        CCDChip::CCD_FRAME ftype = targetChip->getFrameType();
+
+        if (ftype==CCDChip::LIGHT_FRAME)
         {
             //sprintf(gsccmd,"gsc -c %8.6f %+8.6f -r 120 -m 0 9.1",rad+PEOffset,decPE);
             sprintf(gsccmd,"gsc -c %8.6f %+8.6f -r %4.1f -m 0 %4.2f -n 3000",rad+PEOffset,cameradec,radius,lookuplimit);
@@ -674,9 +689,8 @@ int CCDSim::DrawCcdFrame(CCDChip *targetChip)
         //  this is essentially the same math as drawing a dim star with
         //  fwhm equivalent to the full field of view
 
-        CCDChip::CCD_FRAME ftype = targetChip->getFrameType();
 
-        if((ftype==CCDChip::LIGHT_FRAME)||(ftype==CCDChip::FLAT_FRAME))
+        if (ftype==CCDChip::LIGHT_FRAME || ftype==CCDChip::FLAT_FRAME)
         {
             float skyflux;
             float glow;
@@ -1121,7 +1135,7 @@ bool CCDSim::GetFilterNames(const char* groupName)
         IUFillText(&FilterNameT[i], filterName, filterLabel, filterDesignation[i]);
     }
 
-    IUFillTextVector(FilterNameTP, FilterNameT, MaxFilter, getDeviceName(), "FILTER_NAME", "Filter", groupName, IP_RW, 0, IPS_IDLE);
+    IUFillTextVector(FilterNameTP, FilterNameT, MaxFilter, getDeviceName(), "FILTER_NAME", "Filter names", groupName, IP_RW, 0, IPS_IDLE);
 
     return true;
 }

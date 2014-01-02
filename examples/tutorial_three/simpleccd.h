@@ -31,7 +31,6 @@ class SimpleCCD : public INDI::CCD
 public:
     SimpleCCD();
 
-    bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
     void ISGetProperties(const char *dev);
 
 protected:
@@ -43,10 +42,10 @@ protected:
     bool updateProperties();
 
     // CCD specific functions
-    int StartExposure(float duration);
+    bool StartExposure(float duration);
     bool AbortExposure();
+    int SetTemperature(double temperature);
     void TimerHit();
-    void addFITSKeywords(fitsfile *fptr, CCDChip *targetChip);
 
 private:
     // Utility functions
