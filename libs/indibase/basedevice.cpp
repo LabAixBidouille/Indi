@@ -396,7 +396,7 @@ int INDI::BaseDevice::buildProp(XMLEle *root, char *errmsg)
     if (!strcmp (rtag, "defNumberVector"))
     {
         setlocale(LC_NUMERIC,"C");
-        
+
         INDI::Property *indiProp = new INDI::Property();
         INumberVectorProperty *nvp = new INumberVectorProperty;
 
@@ -788,7 +788,7 @@ int INDI::BaseDevice::setValue (XMLEle *root, char * errmsg)
     if (ap)
     {
         setlocale(LC_NUMERIC,"C");
-        
+
         timeout = atof(valuXMLAtt(ap));
         timeoutSet = true;
 
@@ -813,7 +813,7 @@ int INDI::BaseDevice::setValue (XMLEle *root, char * errmsg)
             nvp->timeout = timeout;
 
         setlocale(LC_NUMERIC,"C");
-        
+
        for (ep = nextXMLEle (root, 1); ep != NULL; ep = nextXMLEle (root, 0))
         {
            INumber *np =  IUFindNumber(nvp, findXMLAttValu(ep, "name"));
@@ -964,15 +964,9 @@ int INDI::BaseDevice::setBLOB(IBLOBVectorProperty *bvp, XMLEle * root, char * er
 
                 /* Blob size = 0 when only state changes */
                 if (blobEL->size == 0)
-<<<<<<< .working
-                {
-                    if (mediator)
-                        mediator->newBLOB(blobEL);
-=======
                 {
                     if (mediator)
                        mediator->newBLOB(blobEL);
->>>>>>> .merge-right.r1332
                     continue;
                 }
 

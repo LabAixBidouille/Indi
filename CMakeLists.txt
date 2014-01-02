@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.4.7)
 PROJECT(libindi C CXX)
 
+cmake_policy(SET CMP0003 NEW)
+
 ##################  INDI version  ################################
 set(INDI_SOVERSION "0")
 set(CMAKE_INDI_VERSION_MAJOR 0)
@@ -23,7 +25,7 @@ set (LIB_SUFFIX "" CACHE STRING "Define suffix of directory name (32/64)" )
 set (LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" CACHE STRING "Library directory name")
 ## the following are directories where stuff will be installed to
 set(INCLUDE_INSTALL_DIR      "${CMAKE_INSTALL_PREFIX}/include/" CACHE PATH "The subdirectory to the header prefix")
-set(PKGCONFIG_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/" CACHE STRING "Base directory for pkgconfig files")
+set(PKGCONFIG_INSTALL_PREFIX "${LIB_DESTINATION}/pkgconfig/" CACHE STRING "Base directory for pkgconfig files")
 set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 
 ##################  Includes  ################################
@@ -33,10 +35,15 @@ include (MacroLogFeature)
 include (MacroBoolTo01)
 include (CheckIncludeFiles)
 
+FIND_LIBRARY(M_LIB m)
 FIND_PACKAGE(ZLIB REQUIRED)
-FIND_PACKAGE(USB REQUIRED)
+FIND_PACKAGE(USB-1 REQUIRED)
 FIND_PACKAGE(CFITSIO REQUIRED)
 FIND_PACKAGE(Nova REQUIRED)
+FIND_PACKAGE(Threads REQUIRED)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  FIND_PACKAGE(JPEG REQUIRED)
+endif ()
 
 if (NOT CFITSIO_FOUND OR CFITSIO_VERSION_MAJOR LESS 3)
   message(FATAL_ERROR "CFITSIO version too old, Please install cfitsio 3.x and try again. http://heasarc.gsfc.nasa.gov/fitsio/fitsio.html")
@@ -54,15 +61,15 @@ macro_bool_to_01(TERMIOS_FOUND HAVE_TERMIOS_H)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 
-if(COMMAND cmake_policy)
- cmake_policy(SET CMP0003 NEW)
-endif(COMMAND cmake_policy)
-
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_SOURCE_DIR})
 include_directories( ${CMAKE_SOURCE_DIR}/libs)
 include_directories( ${CMAKE_SOURCE_DIR}/libs/indibase)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 include_directories( ${CMAKE_SOURCE_DIR}/libs/webcam)
+  include_directories( ${JPEG_INCLUDE_DIR} )
+endif()
 
 if (CFITSIO_FOUND)
   include_directories(${CFITSIO_INCLUDE_DIR})
@@ -77,13 +84,16 @@ set(libindicom_SRCS
 	${CMAKE_SOURCE_DIR}/base64.c
 	)
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 set(libwebcam_SRCS
 	${CMAKE_SOURCE_DIR}/libs/webcam/PPort.cpp
 	${CMAKE_SOURCE_DIR}/libs/webcam/port.cpp
 	${CMAKE_SOURCE_DIR}/libs/webcam/v4l2_base.cpp
 	${CMAKE_SOURCE_DIR}/libs/webcam/ccvt_c2.c
 	${CMAKE_SOURCE_DIR}/libs/webcam/ccvt_misc.c
+        ${CMAKE_SOURCE_DIR}/libs/webcam/jpegutils.c
 	)
+endif()
 
 set (indimain_SRCS
         ${CMAKE_SOURCE_DIR}/indidriver.c
@@ -112,6 +122,10 @@ set (indidriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/indicontroller.cpp
     )
 
+set (lx_SRCS
+     ${CMAKE_SOURCE_DIR}/libs/lx/Lx.cpp
+)
+
 ######################################
 ########### INDI SERVER ##############
 ######################################
@@ -119,7 +133,7 @@ set(indiserver_SRCS indiserver.c fq.c)
 
 add_executable(indiserver ${indiserver_SRCS} ${liblilxml_SRCS})
 
-target_link_libraries(indiserver ${NOVA_LIBRARIES} pthread)
+target_link_libraries(indiserver ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS indiserver RUNTIME DESTINATION bin)
 
@@ -129,11 +143,7 @@ install(TARGETS indiserver RUNTIME DESTINATION bin)
 # Mostly used by generic clients                #
 #################################################
 add_library(indi SHARED ${libindicom_SRCS} ${liblilxml_SRCS})
-target_link_libraries(indi ${NOVA_LIBRARIES} m z)
-
-if (CFITSIO_FOUND)
-target_link_libraries(indi ${CFITSIO_LIBRARIES})
-endif(CFITSIO_FOUND)
+target_link_libraries(indi ${NOVA_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY} ${CFITSIO_LIBRARIES})
 
 install(TARGETS indi LIBRARY DESTINATION ${LIB_DESTINATION})
 set_target_properties(indi PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} SOVERSION ${INDI_SOVERSION})
@@ -144,11 +154,7 @@ set_target_properties(indi PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} SOVER
 ###################################################
 add_library(indimain SHARED ${indimain_SRCS} ${libindicom_SRCS} ${liblilxml_SRCS})
 
-target_link_libraries(indimain ${NOVA_LIBRARIES})
-
-if (CFITSIO_FOUND)
-target_link_libraries(indimain ${CFITSIO_LIBRARIES})
-endif(CFITSIO_FOUND)
+target_link_libraries(indimain ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES})
 
 install(TARGETS indimain LIBRARY DESTINATION ${LIB_DESTINATION})
 set_target_properties(indimain PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} SOVERSION ${INDI_SOVERSION})
@@ -158,26 +164,39 @@ set_target_properties(indimain PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} S
 # To link with main() and indibase classes  ######
 ##################################################
 add_library(indidriver SHARED ${libindicom_SRCS} ${liblilxml_SRCS} ${indimain_SRCS} ${indidriver_SRCS})
-target_link_libraries(indidriver ${LIBUSB_LIBRARIES} ${NOVA_LIBRARIES})
-if (CFITSIO_FOUND)
-target_link_libraries(indidriver ${CFITSIO_LIBRARIES})
-endif(CFITSIO_FOUND)
+target_link_libraries(indidriver ${LIBUSB_1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
+add_library(indidriverstatic STATIC ${libindicom_SRCS} ${liblilxml_SRCS} ${indimain_SRCS} ${indidriver_SRCS})
+target_link_libraries(indidriverstatic ${LIBUSB_1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
+set_target_properties(indidriver indidriverstatic PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} SOVERSION ${INDI_SOVERSION} OUTPUT_NAME indidriver)
 install(TARGETS indidriver LIBRARY DESTINATION ${LIB_DESTINATION})
-set_target_properties(indidriver PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} SOVERSION ${INDI_SOVERSION})
-
-#install(TARGETS indidriver ARCHIVE DESTINATION ${LIB_DESTINATION})
+install(TARGETS indidriverstatic ARCHIVE DESTINATION ${LIB_DESTINATION})
 
 ##################################################
 ########### INDI Client Static Library ###########
 ##################################################
 add_library(indiclient STATIC ${indiclient_SRCS})
-target_link_libraries(indiclient indi pthread)
+target_link_libraries(indiclient indi ${CMAKE_THREAD_LIBS_INIT})
 install(TARGETS indiclient ARCHIVE DESTINATION ${LIB_DESTINATION})
 
 ##################################################
 ########### INDI Alignment Subsystem #############
 ##################################################
 add_subdirectory(${CMAKE_SOURCE_DIR}/libs/indibase/alignment)
+
+#####################################
+######## AGENT GROUP #########
+#####################################
+
+########### Imager ##############
+set(imager_SRCS
+        ${CMAKE_SOURCE_DIR}/drivers/agent/agent_imager.cpp
+   )
+
+add_executable(indi_imager_agent ${imager_SRCS})
+target_link_libraries(indi_imager_agent indidriver indiclient)
+install(TARGETS indi_imager_agent RUNTIME DESTINATION bin )
+
+#################################################################################
 
 #####################################
 ########## TELESCOPE GROUP ##########
@@ -199,7 +218,6 @@ install(TARGETS indi_lx200basic RUNTIME DESTINATION bin )
 
 ########### LX200 Generic ###########
 set(lx200generic_SRCS
-   ${indimain_SRCS}
    ${CMAKE_SOURCE_DIR}/drivers/telescope/lx200driver.c
    ${CMAKE_SOURCE_DIR}/drivers/telescope/lx200autostar.cpp
    ${CMAKE_SOURCE_DIR}/drivers/telescope/lx200_16.cpp
@@ -209,7 +227,7 @@ set(lx200generic_SRCS
 
 add_executable(indi_lx200generic ${lx200generic_SRCS})
 
-target_link_libraries(indi_lx200generic indidriver ${NOVA_LIBRARIES} m )
+target_link_libraries(indi_lx200generic indidriver)
 
 install(TARGETS indi_lx200generic RUNTIME DESTINATION bin )
 
@@ -233,7 +251,7 @@ set(lx200genericlegacy_SRCS
 
 add_executable(indi_lx200genericlegacy ${lx200genericlegacy_SRCS}  ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_lx200genericlegacy ${NOVA_LIBRARIES} m )
+target_link_libraries(indi_lx200genericlegacy ${NOVA_LIBRARIES} ${M_LIB} )
 
 install(TARGETS indi_lx200genericlegacy RUNTIME DESTINATION bin )
 
@@ -246,13 +264,12 @@ set_target_properties(indi_lx200genericlegacy PROPERTIES POST_INSTALL_SCRIPT ${C
 
 ########### Celestron GPS ############
 set(celestrongps_SRCS
-   ${indimain_SRCS}
    ${CMAKE_SOURCE_DIR}/drivers/telescope/celestronprotocol.c
    ${CMAKE_SOURCE_DIR}/drivers/telescope/celestrongps.cpp )
 
 add_executable(indi_celestron_gps ${celestrongps_SRCS})
 
-target_link_libraries(indi_celestron_gps indidriver ${NOVA_LIBRARIES} m )
+target_link_libraries(indi_celestron_gps indidriver)
 
 install(TARGETS indi_celestron_gps RUNTIME DESTINATION bin )
 
@@ -265,7 +282,7 @@ set(temma_SRCS
 
 add_executable(indi_temma ${temma_SRCS}  ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_temma  ${NOVA_LIBRARIES} m )
+target_link_libraries(indi_temma  ${NOVA_LIBRARIES} ${M_LIB} )
 
 install(TARGETS indi_temma RUNTIME DESTINATION bin )
 #################################################################################
@@ -278,7 +295,7 @@ set(skycommander_SRCS
 
 add_executable(indi_skycommander ${skycommander_SRCS}  ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_skycommander  ${NOVA_LIBRARIES} m )
+target_link_libraries(indi_skycommander  ${NOVA_LIBRARIES} ${M_LIB} )
 
 install(TARGETS indi_skycommander  RUNTIME DESTINATION bin )
 
@@ -292,7 +309,7 @@ set(intelliscope_SRCS
 
 add_executable(indi_intelliscope ${intelliscope_SRCS} ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_intelliscope ${NOVA_LIBRARIES} m )
+target_link_libraries(indi_intelliscope ${NOVA_LIBRARIES} ${M_LIB} )
 
 install(TARGETS indi_intelliscope RUNTIME DESTINATION bin )
 
@@ -301,7 +318,7 @@ set(synscan_SRCS
    ${CMAKE_SOURCE_DIR}/drivers/telescope/synscanmount.cpp )
 
 add_executable(indi_synscan ${synscan_SRCS})
-target_link_libraries(indi_synscan indidriver m z)
+target_link_libraries(indi_synscan indidriver)
 
 install(TARGETS indi_synscan RUNTIME DESTINATION bin )
 
@@ -311,7 +328,7 @@ set(skywatcherAPIMount_SRCS
    ${CMAKE_SOURCE_DIR}/drivers/telescope/skywatcherAPI.cpp )
 
 add_executable(indi_skywatcherAPIMount ${skywatcherAPIMount_SRCS})
-target_link_libraries(indi_skywatcherAPIMount indidriver AlignmentDriver m z)
+target_link_libraries(indi_skywatcherAPIMount indidriver AlignmentDriver)
 
 install(TARGETS indi_skywatcherAPIMount RUNTIME DESTINATION bin )
 
@@ -358,7 +375,7 @@ set(telescopesimulator_SRCS
    )
 
 add_executable(indi_simulator_telescope ${telescopesimulator_SRCS})
-target_link_libraries(indi_simulator_telescope indidriver  m z pthread)
+target_link_libraries(indi_simulator_telescope indidriver)
 install(TARGETS indi_simulator_telescope RUNTIME DESTINATION bin )
 
 ########### CCD Simulator ##############
@@ -369,7 +386,7 @@ set(ccdsimulator_SRCS
    )
 
 add_executable(indi_simulator_ccd ${ccdsimulator_SRCS})
-target_link_libraries(indi_simulator_ccd indidriver m z pthread)
+target_link_libraries(indi_simulator_ccd indidriver)
 install(TARGETS indi_simulator_ccd RUNTIME DESTINATION bin )
 
 endif (CFITSIO_FOUND)
@@ -388,7 +405,7 @@ set(focussimulator_SRCS
    )
 
 add_executable(indi_simulator_focus ${focussimulator_SRCS})
-target_link_libraries(indi_simulator_focus indidriver m z)
+target_link_libraries(indi_simulator_focus indidriver)
 install(TARGETS indi_simulator_focus RUNTIME DESTINATION bin )
 
 ################ Robo Focuser ################
@@ -398,8 +415,19 @@ set(robofocus_SRCS
    )
 
 add_executable(indi_robo_focus ${robofocus_SRCS})
-target_link_libraries(indi_robo_focus indidriver m z)
+target_link_libraries(indi_robo_focus indidriver)
 install(TARGETS indi_robo_focus RUNTIME DESTINATION bin )
+
+
+################ Moonlite Focuser ################
+
+set(moonlite_SRCS
+        ${CMAKE_SOURCE_DIR}/drivers/focuser/moonlite.cpp
+   )
+
+add_executable(indi_moonlite_focus ${moonlite_SRCS})
+target_link_libraries(indi_moonlite_focus indidriver)
+install(TARGETS indi_moonlite_focus RUNTIME DESTINATION bin )
 
 ################ Optec TCF-S ################
 
@@ -409,7 +437,7 @@ set(tcfs_SRCS
 
 add_executable(indi_tcfs_focus ${tcfs_SRCS})
 
-target_link_libraries(indi_tcfs_focus indidriver m z)
+target_link_libraries(indi_tcfs_focus indidriver)
 install(TARGETS indi_tcfs_focus RUNTIME DESTINATION bin )
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/make_tcfs_symlink.cmake
@@ -430,7 +458,7 @@ set(trutechwheel_SRCS
 
 add_executable(indi_trutech_wheel ${trutechwheel_SRCS}  ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_trutech_wheel ${NOVA_LIBRARIES}  m)
+target_link_libraries(indi_trutech_wheel ${NOVA_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
 
 install(TARGETS indi_trutech_wheel RUNTIME DESTINATION bin )
 
@@ -440,7 +468,7 @@ set(filtersimulator_SRCS
    )
 
 add_executable(indi_simulator_wheel ${filtersimulator_SRCS})
-target_link_libraries(indi_simulator_wheel indidriver m z pthread)
+target_link_libraries(indi_simulator_wheel indidriver)
 install(TARGETS indi_simulator_wheel RUNTIME DESTINATION bin )
 
 #################################################################################
@@ -459,7 +487,7 @@ set(stv_SRCS
 
 add_executable(indi_sbig_stv ${stv_SRCS} ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_sbig_stv z m ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} pthread)
+target_link_libraries(indi_sbig_stv ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS indi_sbig_stv RUNTIME DESTINATION bin )
 
@@ -481,7 +509,7 @@ set(meade_lpi_SRCS
 
 add_executable(indi_meade_lpi ${meade_lpi_SRCS} ${libwebcam_SRCS} ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_meade_lpi z ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} pthread)
+target_link_libraries(indi_meade_lpi z ${JPEG_LIBRARY} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS indi_meade_lpi RUNTIME DESTINATION bin )
 
@@ -503,7 +531,7 @@ set(v4lphilips_SRCS
 
 add_executable(indi_v4l_philips ${v4lphilips_SRCS} ${libwebcam_SRCS} ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_v4l_philips m z ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} pthread)
+target_link_libraries(indi_v4l_philips ${JPEG_LIBRARY} ${M_LIB} ${ZLIB_LIBRARY} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS indi_v4l_philips RUNTIME DESTINATION bin )
 
@@ -512,7 +540,7 @@ endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 #################################################################################
 
-########### Generic V4L Driver ###############
+########### Old Generic V4L Driver ###############
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 if (CFITSIO_FOUND)
 
@@ -524,9 +552,23 @@ set(v4ldriver_SRCS
 
 add_executable(indi_v4l_generic ${v4ldriver_SRCS} ${libwebcam_SRCS} ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_v4l_generic m z ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} pthread)
+target_link_libraries(indi_v4l_generic ${JPEG_LIBRARY} ${M_LIB} ${ZLIB_LIBRARY} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS indi_v4l_generic RUNTIME DESTINATION bin )
+
+########### New INDI::CCD V4L Driver ###############
+
+set(v4l2driverccd_SRCS
+        ${lx_SRCS}
+        ${CMAKE_SOURCE_DIR}/drivers/video/v4l2driver.cpp
+        ${CMAKE_SOURCE_DIR}/drivers/video/indi_v4l2driver.cpp)
+
+add_executable(indi_v4l2_ccd ${v4l2driverccd_SRCS} ${libwebcam_SRCS} ${lx_SRCS})
+
+target_link_libraries(indi_v4l2_ccd ${JPEG_LIBRARY} indidriver)
+
+install(TARGETS indi_v4l2_ccd RUNTIME DESTINATION bin )
+
 
 endif (CFITSIO_FOUND)
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -537,7 +579,6 @@ endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 ############ AUX GROUP ##############
 #####################################
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 ########### GPUSB Driver ###############
 
 set(gpusb_SRCS
@@ -547,9 +588,13 @@ set(gpusb_SRCS
 
 add_executable(indi_gpusb ${gpusb_SRCS})
 
-target_link_libraries(indi_gpusb indidriver m z pthread)
+target_link_libraries(indi_gpusb indidriver)
 install(TARGETS indi_gpusb RUNTIME DESTINATION bin )
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 install(FILES ${CMAKE_SOURCE_DIR}/drivers/auxiliary/99-gpusb.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 ########### Joystick Driver ###############
 
@@ -560,7 +605,7 @@ set(joystick_SRCS
 
 add_executable(indi_joystick ${joystick_SRCS})
 
-target_link_libraries(indi_joystick indidriver m z pthread)
+target_link_libraries(indi_joystick indidriver)
 install(TARGETS indi_joystick RUNTIME DESTINATION bin )
 
 
@@ -574,7 +619,7 @@ set(getindi_SRCS
 
 add_executable(indi_getprop ${getindi_SRCS} ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_getprop ${NOVA_LIBRARIES} m z)
+target_link_libraries(indi_getprop ${NOVA_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
 
 install(TARGETS indi_getprop RUNTIME DESTINATION bin )
 
@@ -588,7 +633,7 @@ set(setindi_SRCS
 
 add_executable(indi_setprop ${setindi_SRCS} ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_setprop ${NOVA_LIBRARIES} m z)
+target_link_libraries(indi_setprop ${NOVA_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
 
 install(TARGETS indi_setprop RUNTIME DESTINATION bin )
 
@@ -603,7 +648,7 @@ set(evalindi_SRCS
 
 add_executable(indi_eval ${evalindi_SRCS} ${liblilxml_SRCS} ${libindicom_SRCS})
 
-target_link_libraries(indi_eval ${NOVA_LIBRARIES} m z)
+target_link_libraries(indi_eval ${NOVA_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
 
 install(TARGETS indi_eval RUNTIME DESTINATION bin )
 
@@ -617,7 +662,7 @@ set(tutorialone_SRCS
 
 add_executable(tutorial_one ${tutorialone_SRCS})
 
-target_link_libraries(tutorial_one indidriver m)
+target_link_libraries(tutorial_one indidriver)
 
 ########### Tutorial two ##############
 set(tutorialtwo_SRCS
@@ -627,7 +672,7 @@ set(tutorialtwo_SRCS
 
 add_executable(tutorial_two ${tutorialtwo_SRCS})
 
-target_link_libraries(tutorial_two indidriver m)
+target_link_libraries(tutorial_two indidriver)
 
 ########### Tutorial three ##############
 if (CFITSIO_FOUND)
@@ -638,7 +683,7 @@ set(tutorialthree_SRCS
 
 add_executable(tutorial_three ${tutorialthree_SRCS})
 
-target_link_libraries(tutorial_three indidriver m)
+target_link_libraries(tutorial_three indidriver)
 endif (CFITSIO_FOUND)
 ########### Tutorial four ##############
 set(tutorialfour_SRCS
@@ -648,7 +693,7 @@ set(tutorialfour_SRCS
 
 add_executable(tutorial_four ${tutorialfour_SRCS})
 
-target_link_libraries(tutorial_four indidriver m)
+target_link_libraries(tutorial_four indidriver)
 
 ########### Tutorial five - dome driver ##############
 set(tutorialdome_SRCS
@@ -694,4 +739,3 @@ ${CMAKE_SOURCE_DIR}/libs/indibase/indilogger.h ${CMAKE_SOURCE_DIR}/libs/indibase
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libindi.pc.cmake ${CMAKE_CURRENT_BINARY_DIR}/libindi.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libindi.pc DESTINATION ${PKGCONFIG_INSTALL_PREFIX})
-
