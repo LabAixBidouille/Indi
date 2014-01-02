@@ -50,6 +50,13 @@ class INDI::Focuser : public INDI::DefaultDevice
 
     protected:
 
+        /**
+         * @brief SetSpeed Set Focuser speed
+         * @param speed focuser speed
+         * @return true if successful, false otherwise
+         */
+        virtual bool SetSpeed(int speed);
+
         /** \brief Move the focuser in a particular direction with a specific speed for a finite duration.
             \param dir Direction of focuser, either FOCUS_INWARD or FOCUS_OUTWARD.
             \param speed Speed of focuser if supported by the focuser.
@@ -73,6 +80,28 @@ class INDI::Focuser : public INDI::DefaultDevice
         */
         virtual int MoveRel(FocusDirection dir, unsigned int ticks);
 
+        /**
+         * @brief Abort all focus motion
+         * @return True if abort is successful, false otherwise.
+         */
+        virtual bool Abort();
+
+        /**
+         * @brief saveConfigItems Saves the Device Port and Focuser Presets in the configuration file
+         * @param fp pointer to configuration file
+         * @return true if successful, false otherwise.
+         */
+        virtual bool saveConfigItems(FILE *fp);
+
+        /**
+         * @brief setFocuserFeatures Sets Focuser features
+         * @param CanAbsMove can the focuser move by absolute position?
+         * @param CanRelMove can the focuser move by relative position?
+         * @param CanAbort is it possible to abort focuser motion?
+         * @param VariableSpeed Can you control the focuser motor speed?
+         */
+        void setFocuserFeatures(bool CanAbsMove, bool CanRelMove, bool CanAbort, bool VariableSpeed);
+
         INumberVectorProperty FocusSpeedNP;
         INumber FocusSpeedN[1];
         ISwitchVectorProperty FocusMotionSP; //  A Switch in the client interface to park the scope
@@ -83,6 +112,16 @@ class INDI::Focuser : public INDI::DefaultDevice
         INumber FocusAbsPosN[1];
         INumberVectorProperty FocusRelPosNP;
         INumber FocusRelPosN[1];
+        ISwitchVectorProperty AbortSP;
+        ISwitch AbortS[1];
+        ITextVectorProperty PortTP;
+        IText PortT[1];
+        INumber PresetN[3];
+        INumberVectorProperty PresetNP;
+        ISwitch PresetGotoS[3];
+        ISwitchVectorProperty PresetGotoSP;
+
+        bool canAbort, canAbsMove, canRelMove, variableSpeed;
 
 };
 

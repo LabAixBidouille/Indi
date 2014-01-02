@@ -22,6 +22,10 @@
 
 INDI::Focuser::Focuser()
 {
+    canAbsMove = false;
+    canRelMove = false;
+    canAbort   = false;
+    variableSpeed = false;
 }
 
 INDI::Focuser::~Focuser()
@@ -32,12 +36,15 @@ bool INDI::Focuser::initProperties()
 {
     DefaultDevice::initProperties();   //  let the base class flesh in what it wants
 
+    /* Port */
+    IUFillText(&PortT[0], "PORT", "Port", "/dev/ttyUSB0");
+    IUFillTextVector(&PortTP, PortT, 1, getDeviceName(), "DEVICE_PORT", "Ports", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
+
     IUFillNumber(&FocusSpeedN[0],"FOCUS_SPEED_VALUE","Focus Speed","%3.0f",0.0,255.0,1.0,255.0);
     IUFillNumberVector(&FocusSpeedNP,FocusSpeedN,1,getDeviceName(),"FOCUS_SPEED","Speed",MAIN_CONTROL_TAB,IP_RW,60,IPS_OK);
 
-    IUFillNumber(&FocusTimerN[0],"FOCUS_TIMER_VALUE","Focus Timer","%4.0f",0.0,1000.0,10.0,1000.0);
+    IUFillNumber(&FocusTimerN[0],"FOCUS_TIMER_VALUE","Focus Timer (ms)","%4.0f",0.0,3000.0,50.0,1000.0);
     IUFillNumberVector(&FocusTimerNP,FocusTimerN,1,getDeviceName(),"FOCUS_TIMER","Timer",MAIN_CONTROL_TAB,IP_RW,60,IPS_OK);
-
 
     IUFillSwitch(&FocusMotionS[0],"FOCUS_INWARD","Focus In",ISS_ON);
     IUFillSwitch(&FocusMotionS[1],"FOCUS_OUTWARD","Focus Out",ISS_OFF);
@@ -50,6 +57,21 @@ bool INDI::Focuser::initProperties()
     IUFillNumber(&FocusRelPosN[0],"RELATIVE_ABSOLUTE_POSITION","Ticks","%4.0f",0.0,100000.0,1000.0,50000.0);
     IUFillNumberVector(&FocusRelPosNP,FocusRelPosN,1,getDeviceName(),"REL_FOCUS_POSITION","Relative Position",MAIN_CONTROL_TAB,IP_RW,60,IPS_OK);
 
+    IUFillSwitch(&AbortS[0],"ABORT","Abort",ISS_OFF);
+    IUFillSwitchVector(&AbortSP,AbortS,1,getDeviceName(),"FOCUS_ABORT_MOTION","Abort Motion",MAIN_CONTROL_TAB,IP_RW,ISR_1OFMANY,60,IPS_IDLE);
+
+    // Presets
+    IUFillNumber(&PresetN[0], "Preset 1", "", "%6.2f", 0, 60000, 1000, 0);
+    IUFillNumber(&PresetN[1], "Preset 2", "", "%6.2f", 0, 60000, 1000, 0);
+    IUFillNumber(&PresetN[2], "Preset 3", "", "%6.2f", 0, 60000, 1000, 0);
+    IUFillNumberVector(&PresetNP, PresetN, 3, getDeviceName(), "Presets", "", "Presets", IP_RW, 0, IPS_IDLE);
+
+    //Preset GOTO
+    IUFillSwitch(&PresetGotoS[0], "Preset 1", "", ISS_OFF);
+    IUFillSwitch(&PresetGotoS[1], "Preset 2", "", ISS_OFF);
+    IUFillSwitch(&PresetGotoS[2], "Preset 3", "", ISS_OFF);
+    IUFillSwitchVector(&PresetGotoSP, PresetGotoS, 3, getDeviceName(), "Goto", "", "Presets", IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
     addDebugControl();
 
     return true;
@@ -60,6 +82,8 @@ void INDI::Focuser::ISGetProperties (const char *dev)
     //  First we let our parent populate
     DefaultDevice::ISGetProperties(dev);
 
+    defineText(&PortTP);
+
     return;
 }
 
@@ -69,13 +93,42 @@ bool INDI::Focuser::updateProperties()
     {
         //  Now we add our focusser specific stuff
         defineSwitch(&FocusMotionSP);
-        defineNumber(&FocusSpeedNP);
-        defineNumber(&FocusTimerNP);
+
+        if (variableSpeed)
+        {
+            defineNumber(&FocusSpeedNP);
+            defineNumber(&FocusTimerNP);
+        }
+        if (canRelMove)
+            defineNumber(&FocusRelPosNP);
+        if (canAbsMove)            
+            defineNumber(&FocusAbsPosNP);
+        if (canAbort)
+            defineSwitch(&AbortSP);
+        if (canAbsMove)
+        {
+            defineNumber(&PresetNP);
+            defineSwitch(&PresetGotoSP);
+        }
     } else
     {
         deleteProperty(FocusMotionSP.name);
-        deleteProperty(FocusSpeedNP.name);
-        deleteProperty(FocusTimerNP.name);
+        if (variableSpeed)
+        {
+            deleteProperty(FocusSpeedNP.name);
+            deleteProperty(FocusTimerNP.name);
+        }
+        if (canRelMove)
+            deleteProperty(FocusRelPosNP.name);
+        if (canAbsMove)
+            deleteProperty(FocusAbsPosNP.name);
+        if (canAbort)
+            deleteProperty(AbortSP.name);
+        if (canAbsMove)
+        {
+            deleteProperty(PresetNP.name);
+            deleteProperty(PresetGotoSP.name);
+        }
     }
     return true;
 }
@@ -117,9 +170,14 @@ bool INDI::Focuser::ISNewNumber (const char *dev, const char *name, double value
         if(strcmp(name,"FOCUS_SPEED")==0)
         {
             FocusSpeedNP.s=IPS_OK;
+            int current_speed = FocusSpeedN[0].value;
             IUUpdateNumber(&FocusSpeedNP,values,names,n);
 
-
+            if (SetSpeed(FocusSpeedN[0].value) == false)
+            {
+                FocusSpeedN[0].value = current_speed;
+                FocusSpeedNP.s = IPS_ALERT;
+            }
 
             //  Update client display
             IDSetNumber(&FocusSpeedNP,NULL);
@@ -158,6 +216,30 @@ bool INDI::Focuser::ISNewNumber (const char *dev, const char *name, double value
             int newPos = (int) values[0];
             int ret =0;
 
+            if (canAbsMove)
+            {
+                if (FocusMotionS[0].s == ISS_ON)
+                {
+                    if (FocusAbsPosN[0].value - newPos < FocusAbsPosN[0].min)
+                    {
+                        FocusRelPosNP.s = IPS_ALERT;
+                        IDSetNumber(&FocusRelPosNP, NULL);
+                        DEBUGF(INDI::Logger::DBG_ERROR, "Requested position out of bound. Focus minimum position is %g", FocusAbsPosN[0].min);
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (FocusAbsPosN[0].value + newPos > FocusAbsPosN[0].max)
+                    {
+                        FocusRelPosNP.s = IPS_ALERT;
+                        IDSetNumber(&FocusRelPosNP, NULL);
+                        DEBUGF(INDI::Logger::DBG_ERROR, "Requested position out of bound. Focus maximum position is %g", FocusAbsPosN[0].max);
+                        return false;
+                    }
+                }
+            }
+
             if ( (ret=MoveRel( (FocusMotionS[0].s == ISS_ON ? FOCUS_INWARD : FOCUS_OUTWARD), newPos)) == 0)
             {
                FocusRelPosNP.s=IPS_OK;
@@ -168,6 +250,7 @@ bool INDI::Focuser::ISNewNumber (const char *dev, const char *name, double value
             }
             else if (ret == 1)
             {
+                 IUUpdateNumber(&FocusRelPosNP,values,names,n);
                  FocusRelPosNP.s=IPS_BUSY;
                  IDSetNumber(&FocusAbsPosNP, "Focuser is moving %d steps...", newPos);
                  return true;
@@ -176,6 +259,15 @@ bool INDI::Focuser::ISNewNumber (const char *dev, const char *name, double value
             FocusRelPosNP.s = IPS_ALERT;
             IDSetNumber(&FocusRelPosNP, "Focuser failed to move to new requested position.");
             return false;
+        }
+
+        if (!strcmp(name, PresetNP.name))
+        {
+            IUUpdateNumber(&PresetNP, values, names, n);
+            PresetNP.s = IPS_OK;
+            IDSetNumber(&PresetNP, NULL);
+
+            saveConfig();
         }
 
     }
@@ -201,6 +293,37 @@ bool INDI::Focuser::ISNewSwitch (const char *dev, const char *name, ISState *sta
             return true;
         }
 
+        if(strcmp(name,"FOCUS_ABORT_MOTION")==0)
+        {
+            IUResetSwitch(&AbortSP);
+
+            if (Abort())
+                AbortSP.s = IPS_OK;
+            else
+                AbortSP.s = IPS_ALERT;
+
+            IDSetSwitch(&AbortSP, NULL);
+            return true;
+        }
+
+        if (!strcmp(PresetGotoSP.name, name))
+        {
+            IUUpdateSwitch(&PresetGotoSP, states, names, n);
+            int index = IUFindOnSwitchIndex(&PresetGotoSP);
+            int rc = MoveAbs(PresetN[index].value);
+            if (rc >= 0)
+            {
+                PresetGotoSP.s = IPS_OK;
+                DEBUGF(INDI::Logger::DBG_SESSION, "Moving to Preset %d with position %g.", index+1, PresetN[index].value);
+                IDSetSwitch(&PresetGotoSP, NULL);
+                return true;
+            }
+
+            PresetGotoSP.s = IPS_ALERT;
+            IDSetSwitch(&PresetGotoSP, NULL);
+            return false;
+        }
+
     }
 
     //  Nobody has claimed this, so, ignore it
@@ -209,6 +332,17 @@ bool INDI::Focuser::ISNewSwitch (const char *dev, const char *name, ISState *sta
 
 bool INDI::Focuser::ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n)
 {
+    if(strcmp(dev,getDeviceName())==0)
+    {
+        if (!strcmp(name, PortTP.name))
+        {
+            IUUpdateText(&PortTP, texts, names, n);
+            PortTP.s = IPS_OK;
+            IDSetText(&PortTP, NULL);
+            return true;
+        }
+    }
+
     return DefaultDevice::ISNewText(dev, name, texts, names, n);
 }
 
@@ -244,4 +378,39 @@ bool INDI::Focuser::ISSnoopDevice (XMLEle *root)
 {
     return INDI::DefaultDevice::ISSnoopDevice(root);
 }
+
+bool INDI::Focuser::Abort()
+{
+    //  This should be a virtual function, because the low level hardware class
+    //  must override this
+    DEBUG(INDI::Logger::DBG_ERROR, "Focuser does not support abort motion.");
+    return false;
+}
+
+bool INDI::Focuser::SetSpeed(int speed)
+{
+    INDI_UNUSED(speed);
+
+    //  This should be a virtual function, because the low level hardware class
+    //  must override this
+    DEBUG(INDI::Logger::DBG_ERROR, "Focuser does not support variable speed.");
+    return false;
+}
+
+void INDI::Focuser::setFocuserFeatures(bool CanAbsMove, bool CanRelMove, bool CanAbort, bool VariableSpeed)
+{
+    canAbsMove = CanAbsMove;
+    canRelMove = CanRelMove;
+    canAbort   = CanAbort;
+    variableSpeed = VariableSpeed;
+}
+
+bool INDI::Focuser::saveConfigItems(FILE *fp)
+{
+    IUSaveConfigText(fp, &PortTP);
+    IUSaveConfigNumber(fp, &PresetNP);
+
+    return true;
+}
+
 

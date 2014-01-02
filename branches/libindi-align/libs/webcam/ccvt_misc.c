@@ -60,6 +60,7 @@
 
 #include "ccvt.h"
 #include "ccvt_types.h"
+#include "jpegutils.h"
 #include <stdlib.h>
 
 static float RGBYUV02990[256], RGBYUV05870[256], RGBYUV01140[256];
@@ -232,98 +233,54 @@ void bayer2rgb24(unsigned char *dst, unsigned char *src, long int WIDTH, long in
 
 }
 
-/* following lines are an Ilia Platone <info@iliaplatone.com> contribute, */
+/*
+ * mjpegtoyuv420p
+ *
+ * Return values
+ *  -1 on fatal error
+ *  0  on success
+ *  2  if jpeg lib threw a "corrupt jpeg data" warning.
+ *     in this case, "a damaged output image is likely."
+ *
+ * Copyright 2000 by Jeroen Vreeken (pe1rxq@amsat.org)
+ * 2006 by Krzysztof Blaszkowski (kb@sysmikro.com.pl)
+ * 2007 by Angel Carpinteo (ack@telefonica.net)
+ */
 
-void rggb2rgb24(unsigned char *dst, unsigned char *src, long int WIDTH, long int HEIGHT)
+int mjpegtoyuv420p(unsigned char *map, unsigned char *cap_map, int width, int height, unsigned int size)
 {
-    long int i;
-    unsigned char *rawpt, *scanpt;
-    long int size;
+    unsigned char *yuv[3];
+    unsigned char *y, *u, *v;
+    int loop, ret;
 
-    rawpt = src;
-    scanpt = dst;
-    size = WIDTH*HEIGHT;
+    yuv[0] = malloc(width * height * sizeof(yuv[0][0]));
+    yuv[1] = malloc(width * height / 4 * sizeof(yuv[1][0]));
+    yuv[2] = malloc(width * height / 4 * sizeof(yuv[2][0]));
 
-    for ( i = 0; i < size; i++ ) {
-	if ( (i/WIDTH) % 2 == 0 ) {
-	    if ( (i % 2) == 0 ) {
-		/* B */
-		if ( (i > WIDTH) && ((i % WIDTH) > 0) ) {
-		    *scanpt++ = *rawpt;					/* R */
-		    *scanpt++ = (*(rawpt-1)+*(rawpt+1)+
-				 *(rawpt+WIDTH)+*(rawpt-WIDTH))/4;	/* G */
-		    *scanpt++ = (*(rawpt-WIDTH-1)+*(rawpt-WIDTH+1)+
-				 *(rawpt+WIDTH-1)+*(rawpt+WIDTH+1))/4;	/* B */
-		} else {
-		    /* first line or left column */
-		    *scanpt++ = *rawpt;				/* R */
-		    *scanpt++ = (*(rawpt+1)+*(rawpt+WIDTH))/2;	/* G */
-		    *scanpt++ = *(rawpt+WIDTH+1);		/* B */
-		}
-	    } else {
-		/* (B)G */
-		if ( (i > WIDTH) && ((i % WIDTH) < (WIDTH-1)) ) {
-		    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;		/* R */
-		    *scanpt++ = *rawpt;					/* G */
-		    *scanpt++ = (*(rawpt+WIDTH)+*(rawpt-WIDTH))/2;	/* B */
-		} else {
-		    /* first line or right column */
-		    *scanpt++ = *(rawpt-1);	/* R */
-		    *scanpt++ = *rawpt;		/* G */
-		    *scanpt++ = *(rawpt+WIDTH);	/* B */
-		}
-	    }
-	} else {
-	    if ( (i % 2) == 0 ) {
-		/* G(R) */
-		if ( (i < (WIDTH*(HEIGHT-1))) && ((i % WIDTH) > 0) ) {
-		    *scanpt++ = (*(rawpt+WIDTH)+*(rawpt-WIDTH))/2;	/* R */
-		    *scanpt++ = *rawpt;					/* G */
-		    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;		/* B */
-		} else {
-		    /* bottom line or left column */
-		    *scanpt++ = *(rawpt-WIDTH);		/* R */
-		    *scanpt++ = *rawpt;			/* G */
-		    *scanpt++ = *(rawpt+1);		/* B */
-		}
-	    } else {
-		/* R */
-		if ( i < (WIDTH*(HEIGHT-1)) && ((i % WIDTH) < (WIDTH-1)) ) {
-		    *scanpt++ = (*(rawpt-WIDTH-1)+*(rawpt-WIDTH+1)+
-				 *(rawpt+WIDTH-1)+*(rawpt+WIDTH+1))/4;	/* R */
-		    *scanpt++ = (*(rawpt-1)+*(rawpt+1)+
-				 *(rawpt-WIDTH)+*(rawpt+WIDTH))/4;	/* G */
-		    *scanpt++ = *rawpt;					/* B */
-		} else {
-		    /* bottom line or right column */
-		    *scanpt++ = *(rawpt-WIDTH-1);		/* R */
-		    *scanpt++ = (*(rawpt-1)+*(rawpt-WIDTH))/2;	/* G */
-		    *scanpt++ = *rawpt;				/* B */
-		}
-	    }
-	}
-	rawpt++;
-    }
+    ret = decode_jpeg_raw(cap_map, size, 0, 420, width, height, yuv[0], yuv[1], yuv[2]);
 
+    y = map;
+    u = y + width * height;
+    v = u + (width * height) / 4;
+    memset(y, 0, width * height);
+    memset(u, 0, width * height / 4);
+    memset(v, 0, width * height / 4);
+
+    for(loop = 0; loop < width * height; loop++)
+        *map++=yuv[0][loop];
+
+    for(loop = 0; loop < width * height / 4; loop++)
+        *map++=yuv[1][loop];
+
+    for(loop = 0; loop < width * height / 4; loop++)
+        *map++=yuv[2][loop];
+
+    free(yuv[0]);
+    free(yuv[1]);
+    free(yuv[2]);
+
+    return ret;
 }
-
-void grey2rgb24(unsigned char *dst, unsigned char *src, long int WIDTH, long int HEIGHT) {
-    long int i;
-    unsigned char *destination, *source;
-    long int size;
-
-    source = src;
-    destination = dst;
-    size = WIDTH*HEIGHT;
-
-    for ( i = 0; i < size; i++ ) {
-        *destination++ = *(source + i);
-        *destination++ = *(source + i);
-        *destination++ = *(source + i);
-    }   
-}
-
-/************** end of contribute, more to come hopefully *****************/
 
 /************************************************************************
  *
