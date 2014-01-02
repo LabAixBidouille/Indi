@@ -1,7 +1,0 @@
-<devGroup group="CCDs">
-	<device label="Generic CCD">
-		<driver name="Generic CCD">indi_generic_ccd</driver>
-		<version>1.0</version>
-	</device>
-</devGroup>
-
