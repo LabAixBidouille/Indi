@@ -215,22 +215,8 @@ bool ClientAPIForAlignmentDatabase::InsertSyncPoint(unsigned int Offset, const A
         return false;
     }
 
-    // Send the entry data
-    pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
-    pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value  = CurrentValues.ObservationTime;
-    pMandatoryNumbers->np[ENTRY_RA].value  = CurrentValues.RightAscension;
-    pMandatoryNumbers->np[ENTRY_DEC].value  = CurrentValues.Declination;
-    pMandatoryNumbers->np[ENTRY_VECTOR_X].value  = CurrentValues.TelescopeDirection.x;
-    pMandatoryNumbers->np[ENTRY_VECTOR_Y].value  = CurrentValues.TelescopeDirection.y;
-    pMandatoryNumbers->np[ENTRY_VECTOR_Z].value  = CurrentValues.TelescopeDirection.z;
-    SetDriverBusy();
-    BaseClient->sendNewNumber(pMandatoryNumbers);
-    WaitForDriverCompletion();
-    if (IPS_OK != pMandatoryNumbers->s)
-    {
-        IDLog("InsertSyncPoint - Bad mandatory numbers state %s\n", pstateStr(pMandatoryNumbers->s));
+    if (!SendEntryData(CurrentValues))
         return false;
-    }
 
     // Commit the entry to the database
     IUResetSwitch(pCommit);
@@ -284,22 +270,8 @@ bool ClientAPIForAlignmentDatabase::EditSyncPoint(unsigned int Offset, const Ali
         return false;
     }
 
-    // Send the entry data
-    pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
-    pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value  = CurrentValues.ObservationTime;
-    pMandatoryNumbers->np[ENTRY_RA].value  = CurrentValues.RightAscension;
-    pMandatoryNumbers->np[ENTRY_DEC].value  = CurrentValues.Declination;
-    pMandatoryNumbers->np[ENTRY_VECTOR_X].value  = CurrentValues.TelescopeDirection.x;
-    pMandatoryNumbers->np[ENTRY_VECTOR_Y].value  = CurrentValues.TelescopeDirection.y;
-    pMandatoryNumbers->np[ENTRY_VECTOR_Z].value  = CurrentValues.TelescopeDirection.z;
-    SetDriverBusy();
-    BaseClient->sendNewNumber(pMandatoryNumbers);
-    WaitForDriverCompletion();
-    if (IPS_OK != pMandatoryNumbers->s)
-    {
-        IDLog("EditSyncPoint - Bad mandatory numbers state %s\n", pstateStr(pMandatoryNumbers->s));
+    if (!SendEntryData(CurrentValues))
         return false;
-    }
 
     // Commit the entry to the database
     IUResetSwitch(pCommit);
@@ -412,6 +384,7 @@ bool ClientAPIForAlignmentDatabase::ReadSyncPoint(unsigned int Offset, Alignment
 
     ISwitchVectorProperty *pAction = Action->getSwitch();
     INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
+    IBLOBVectorProperty   *pBLOB = OptionalBinaryBlob->getBLOB();
     INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
     ISwitchVectorProperty *pCommit = Commit->getSwitch();
 
@@ -448,9 +421,11 @@ bool ClientAPIForAlignmentDatabase::ReadSyncPoint(unsigned int Offset, Alignment
     SetDriverBusy();
     BaseClient->sendNewSwitch(pCommit);
     WaitForDriverCompletion();
-    if ((IPS_OK != pCommit->s) || (IPS_OK != pMandatoryNumbers->s))
+    if ((IPS_OK != pCommit->s) || (IPS_OK != pMandatoryNumbers->s) || (IPS_OK != pBLOB->s))
     {
-        IDLog("ReadSyncPoint - Bad Commit or Mandatory numbers state %s %s\n", pstateStr(pCommit->s), pstateStr(pMandatoryNumbers->s));
+        IDLog("ReadSyncPoint - Bad Commit/Mandatory numbers/Blob state %s %s %s\n", pstateStr(pCommit->s),
+                                                                                    pstateStr(pMandatoryNumbers->s),
+                                                                                    pstateStr(pBLOB->s));
         return false;
     }
 
@@ -473,6 +448,7 @@ bool ClientAPIForAlignmentDatabase::ReadIncrementSyncPoint(AlignmentDatabaseEntr
 
     ISwitchVectorProperty *pAction = Action->getSwitch();
     INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
+    IBLOBVectorProperty   *pBLOB = OptionalBinaryBlob->getBLOB();
     INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
     ISwitchVectorProperty *pCommit = Commit->getSwitch();
 
@@ -498,10 +474,13 @@ bool ClientAPIForAlignmentDatabase::ReadIncrementSyncPoint(AlignmentDatabaseEntr
     SetDriverBusy();
     BaseClient->sendNewSwitch(pCommit);
     WaitForDriverCompletion();
-    if ((IPS_OK != pCommit->s) || (IPS_OK != pMandatoryNumbers->s) || (IPS_OK != pCurrentEntry->s))
+    if ((IPS_OK != pCommit->s) || (IPS_OK != pMandatoryNumbers->s) || (IPS_OK != pBLOB->s) || (IPS_OK != pCurrentEntry->s))
     {
-        IDLog("ReadIncrementSyncPoint - Bad Commit, Mandatory numbers, Current entry state %s %s %s \n",
-            pstateStr(pCommit->s), pstateStr(pMandatoryNumbers->s), pstateStr(pCurrentEntry->s));
+        IDLog("ReadIncrementSyncPoint - Bad Commit/Mandatory numbers/Blob/Current entry state %s %s %s %s\n",
+                                                                        pstateStr(pCommit->s),
+                                                                        pstateStr(pMandatoryNumbers->s),
+                                                                        pstateStr(pBLOB->s),
+                                                                        pstateStr(pCurrentEntry->s));
         return false;
     }
 

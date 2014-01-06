@@ -60,12 +60,16 @@ public:
 
     enum AXISID { AXIS1 = 0, AXIS2 = 1 };
     bool TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr);
-    long BCDstr2long(std::string &string);
+    long BCDstr2long(std::string &String);
+    void Long2BCDstr(long Number, std::string &String);
     long AngleToStep(AXISID Axis, double AngleInRad);
     double StepToAngle(AXISID Axis, long Steps);
     long RadSpeedToInt(AXISID Axis, double RateInRad);
     bool CheckIfDCMotor();
     bool MCInit();
+    bool MCAxisStop(AXISID Axis);
+    bool MCAxisInstantStop(AXISID Axis);
+    bool MCSetAxisPosition(AXISID Axis, double Position);
     bool MCGetAxisPosition(AXISID Axis);
     bool MCGetAxisStatus(AXISID Axis);
     bool InquireMotorBoardVersion(AXISID Axis);
@@ -79,16 +83,24 @@ public:
     long MCVersion; // Motor control board firmware version
     long MountCode;
     bool IsDCMotor;
-    double FactorRadToStep[2];
-    double FactorStepToRad[2];
-    double FactorRadRateToInt[2];
-    AXISSTATUS AxesStatus[2];
+
+    // Values from mount
+    long GearRatio[2];
     long StepTimerFreq[2];
     long HighSpeedRatio[2];
     long PESteps[2];
-    double Positions[2];
+
+    // Calculated values
+    double FactorRadToStep[2];
+    double FactorStepToRad[2];
+    double FactorRadRateToInt[2];
     long LowSpeedGotoMargin[2];
     long BreakSteps[2];
+
+    // Encoder values
+    double Positions[2];
+
+    AXISSTATUS AxesStatus[2];
 private:
     enum TTY_ERROR { TTY_OK=0, TTY_READ_ERROR=-1, TTY_WRITE_ERROR=-2, TTY_SELECT_ERROR=-3, TTY_TIME_OUT=-4, TTY_PORT_FAILURE=-5, TTY_PARAM_ERROR=-6, TTY_ERRNO = -7};
     virtual int skywatcher_tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read) = 0;

@@ -14,10 +14,7 @@ Roger.
 
 4. Implement an example client program to load eqmod format databases into the alignment subsystem (50% complete).
 
-5. Finish design and implementation of blob support in the alignment database (10% complete).
-
-
-Q1. I want to use a robust matrix and vector math libary for the math plugins. My current candidates are Armadillo and GSL (GNU Scientific Library), both of which are readily available as packages on most major linux distributions. Comments and suggestions please.
+Q1. I want to use a robust matrix and vector math libary for the math plugins. My current candidates are Armadillo and GSL (GNU Scientific Library), both of which are readily available as packages on most major linux distributions. Comments and suggestions please. GSL also has support for SVD algorithms which will be very useful for a least squares approximation alternative to TAKI's simplistic alignment solution.
 
 
 

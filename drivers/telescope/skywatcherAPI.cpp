@@ -18,6 +18,8 @@
 #include <memory>
 #include <cmath>
 #include <cstdio>
+#include <sstream>
+#include <iomanip>
 
 void AXISSTATUS::SetFullStop()
 {
@@ -82,32 +84,50 @@ bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdData
             return false;
 
         if ((c == '=') || (c == '!'))
+        {
             StartReading = true;
+            continue;
+        }
+
+        if ((c == '\r') && StartReading)
+        {
+            EndReading = true;
+            continue;
+        }
 
         if (StartReading)
             responseStr.push_back(c);
-
-        if ((c == '\r') && StartReading)
-            EndReading = true;
     }
     MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis - good return Response (%s)", responseStr.c_str());
     return true;
 }
 
-long SkywatcherAPI::BCDstr2long(std::string &string)
+long SkywatcherAPI::BCDstr2long(std::string &String)
 {
 // =020782 => 8521474
     // Funny BCD :-) string is pairs of hex chars with each pair representing a 8 bit hex number. The whole
-    // string being treated as least significant heg digit pair first!
-    const char *str = string.c_str();
+    // string being treated as least significant hex digit pair first!
+    const char *str = String.c_str();
     long value = 0;
-    for (int i = 0; i < string.length(); i += 2)
+    for (int i = 0; i < String.length(); i += 2)
     {
         long hexpair;
         sscanf(str + i, "%2lx", &hexpair);
         value += hexpair << i * 4;
     }
     return value;
+}
+
+void SkywatcherAPI::Long2BCDstr(long Number, std::string &String)
+{
+    std::stringstream Temp;
+    const char *Debug;
+    Temp << std::hex << std::setfill('0') << std::uppercase
+        << std::setw(2) << (Number & 0xff)
+        << std::setw(2) << ((Number & 0xff00) >> 8)
+        << std::setw(2) << ((Number & 0xff0000) >> 16);
+    Debug = Temp.str().c_str();
+    String = Temp.str();
 }
 
 long SkywatcherAPI::AngleToStep(AXISID Axis, double AngleInRad)
@@ -221,6 +241,40 @@ bool SkywatcherAPI::MCInit()
     return true;
 }
 
+bool SkywatcherAPI::MCAxisStop(AXISID Axis)
+{
+    // Request a slow stop
+    MYDEBUG(INDI::Logger::DBG_SESSION, "MCAxisStop");
+    std::string Parameters, Response;
+    if (!TalkWithAxis(Axis, 'K', Parameters, Response))
+    	return false;
+}
+
+bool SkywatcherAPI::MCAxisInstantStop(AXISID Axis)
+{
+    // Request a slow stop
+    MYDEBUG(INDI::Logger::DBG_SESSION, "MCAxisStop");
+    std::string Parameters, Response;
+    if (!TalkWithAxis(Axis, 'L', Parameters, Response))
+    	return false;
+    AxesStatus[(int)Axis].SetFullStop();
+}
+
+bool SkywatcherAPI::MCSetAxisPosition(AXISID Axis, double Position)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "MCSetAxisPosition");
+    std::string Parameters, Response;
+
+    long Temp = Position;
+    Temp += 0x800000;
+    Long2BCDstr(Temp, Parameters);
+
+    if (!TalkWithAxis(Axis, 'L', Parameters, Response))
+    	return false;
+
+    return true;
+}
+
 bool SkywatcherAPI::MCGetAxisPosition(AXISID Axis)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "MCGetAxisPosition");
@@ -243,11 +297,11 @@ bool SkywatcherAPI::MCGetAxisStatus(AXISID Axis)
     if(!TalkWithAxis(Axis, 'f', Parameters, Response))
         return false;
 
-    if ((Response[2] & 0x01) != 0)
+    if ((Response[1] & 0x01) != 0)
     {
         // Axis is running
         AxesStatus[(int)Axis].FullStop = false;
-        if ((Response[1] & 0x01) != 0)
+        if ((Response[0] & 0x01) != 0)
         {
             AxesStatus[(int)Axis].Slewing = true;		// Axis in slewing(AstroMisc speed) mode.
             AxesStatus[(int)Axis].SlewingTo = false;
@@ -266,17 +320,17 @@ bool SkywatcherAPI::MCGetAxisStatus(AXISID Axis)
         AxesStatus[(int)Axis].SlewingTo = false;
    }
 
-    if ((Response[1] & 0x02) == 0)
+    if ((Response[0] & 0x02) == 0)
         AxesStatus[(int)Axis].SlewingForward = true;	// Angle increase = 1;
     else
         AxesStatus[(int)Axis].SlewingForward = false;
 
-    if ((Response[1] & 0x04) != 0)
+    if ((Response[0] & 0x04) != 0)
         AxesStatus[(int)Axis].HighSpeed = true; // HighSpeed running mode = 1;
     else
         AxesStatus[(int)Axis].HighSpeed = false;
 
-    if ((Response[3] & 1) == 0)
+    if ((Response[2] & 1) == 0)
         AxesStatus[(int)Axis].NotInitialized = true;	// MC is not initialized.
     else
         AxesStatus[(int)Axis].NotInitialized = false;
@@ -312,17 +366,19 @@ bool SkywatcherAPI::InquireGridPerRevolution(AXISID Axis)
         return false;
 
 
-    long GearRatio = BCDstr2long(Response);
+    long tmpGearRatio = BCDstr2long(Response);
 
     // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
     // Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
     if ((MCVersion & 0x0000FF) == 0x80)
-        GearRatio = 0x162B97;		// for 80GT mount
+        tmpGearRatio = 0x162B97;		// for 80GT mount
     if ((MCVersion & 0x0000FF) == 0x82)
-        GearRatio = 0x205318;		// for 114GT mount
+        tmpGearRatio = 0x205318;		// for 114GT mount
 
-    FactorRadToStep[(int)Axis] = GearRatio / (2 * M_PI);
-    FactorStepToRad[(int)Axis] = 2 * M_PI / GearRatio;
+    GearRatio[(int)Axis] = tmpGearRatio;
+
+    FactorRadToStep[(int)Axis] = tmpGearRatio / (2 * M_PI);
+    FactorStepToRad[(int)Axis] = 2 * M_PI / tmpGearRatio;
 
     return true;
 }
