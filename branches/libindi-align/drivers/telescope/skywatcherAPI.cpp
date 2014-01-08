@@ -50,7 +50,8 @@ SkywatcherAPI::SkywatcherAPI()
     MCVersion = 0;
     FactorStepToRad[AXIS1] = FactorStepToRad[AXIS2] = 0;
     FactorRadToStep[AXIS1] = FactorRadToStep[AXIS2] = 0;
-    Positions[AXIS1] = Positions[AXIS2] = 0;
+    CurrentPositions[AXIS1] = CurrentPositions[AXIS2] = 0;
+    InitialPositions[AXIS1] = InitialPositions[AXIS2] = 0;
 }
 
 SkywatcherAPI::~SkywatcherAPI()
@@ -227,6 +228,12 @@ bool SkywatcherAPI::MCInit()
     if (!MCGetAxisPosition(AXIS2))
         return false;
 
+    // Set initial axis posiitons
+    // These are used to define the arbitary zero position vector for the axis
+    InitialPositions[AXIS1] = CurrentPositions[AXIS1];
+    InitialPositions[AXIS2] = CurrentPositions[AXIS2];
+
+
     if (!InitializeMC())
         return false;
 
@@ -238,6 +245,7 @@ bool SkywatcherAPI::MCInit()
     BreakSteps[(int)AXIS1] = 3500;
     BreakSteps[(int)AXIS2] = 3500;
 
+
     return true;
 }
 
@@ -248,6 +256,7 @@ bool SkywatcherAPI::MCAxisStop(AXISID Axis)
     std::string Parameters, Response;
     if (!TalkWithAxis(Axis, 'K', Parameters, Response))
     	return false;
+    return true;
 }
 
 bool SkywatcherAPI::MCAxisInstantStop(AXISID Axis)
@@ -258,6 +267,7 @@ bool SkywatcherAPI::MCAxisInstantStop(AXISID Axis)
     if (!TalkWithAxis(Axis, 'L', Parameters, Response))
     	return false;
     AxesStatus[(int)Axis].SetFullStop();
+    return true;
 }
 
 bool SkywatcherAPI::MCSetAxisPosition(AXISID Axis, double Position)
@@ -284,7 +294,7 @@ bool SkywatcherAPI::MCGetAxisPosition(AXISID Axis)
 
     long iPosition = BCDstr2long(Response);
     iPosition -= 0x00800000;
-    Positions[(int)Axis] = StepToAngle(Axis, iPosition);
+    CurrentPositions[(int)Axis] = StepToAngle(Axis, iPosition);
 
     return true;
 }
@@ -338,6 +348,22 @@ bool SkywatcherAPI::MCGetAxisStatus(AXISID Axis)
 
     return true;
 }
+
+bool SkywatcherAPI::MCSetSwitch(bool OnOff)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "MCSetSwitch");
+    std::string Parameters, Response;
+
+    if (OnOff)
+        Parameters = "1";
+    else
+        Parameters = "0";
+
+    if(!TalkWithAxis(AXIS1, 'O', Parameters, Response))
+        return false;
+    return true;
+}
+
 
 /************************ MOTOR COMMAND SET ***************************/
 // Inquire Motor Board Version ":e(*1)", where *1: '1'= CH1, '2'= CH2, '3'= Both.

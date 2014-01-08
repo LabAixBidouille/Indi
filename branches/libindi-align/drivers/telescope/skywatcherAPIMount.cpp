@@ -20,6 +20,8 @@
 #include <cmath>
 #include <limits>
 
+using namespace INDI::AlignmentSubsystem;
+
 // We declare an auto pointer to SkywatcherAPIMount.
 std::auto_ptr<SkywatcherAPIMount> SkywatcherAPIMountPtr(0);
 
@@ -387,6 +389,24 @@ bool SkywatcherAPIMount::ReadScopeStatus()
     if (!MCGetAxisPosition(AXIS2))
         return false;
 
+    // Calculate new RA DEC
+    struct ln_hrz_posn AltAz;
+    AltAz.alt = StepToAngle(AXIS2, CurrentPositions[AXIS2] - InitialPositions[AXIS2]) * 180 / M_PI;
+    AltAz.az = StepToAngle(AXIS1, CurrentPositions[AXIS1] - InitialPositions[AXIS1]) * 180 / M_PI;
+    TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+    double RightAscension, Declination;
+    if (TransformTelescopeToCelestial( TDV, RightAscension, Declination))
+    {
+        NewRaDec(RightAscension, Declination);
+    }
+    else
+    {
+        // Conversion failed just pull the coordinates back into RADEC and hope for the best
+        struct ln_equ_posn EquatorialCoordinates;
+        EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
+        NewRaDec(EquatorialCoordinates.ra, EquatorialCoordinates.dec);
+    }
+
     return true;
 }
 
@@ -617,14 +637,14 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
             IDSetSwitch(&AxisTwoStateV, NULL);
 
     bool EncoderValuesHasChanged = false;
-    if (EncoderValues[0].value != Positions[0])
+    if (EncoderValues[0].value != CurrentPositions[AXIS1])
     {
-        EncoderValues[0].value = Positions[0];
+        EncoderValues[0].value = CurrentPositions[AXIS1];
         EncoderValuesHasChanged = true;
     }
-    if (EncoderValues[1].value != Positions[1])
+    if (EncoderValues[1].value != CurrentPositions[AXIS2])
     {
-        EncoderValues[1].value = Positions[1];
+        EncoderValues[1].value = CurrentPositions[AXIS2];
         EncoderValuesHasChanged = true;
     }
     if (EncoderValuesHasChanged && InformClient)
