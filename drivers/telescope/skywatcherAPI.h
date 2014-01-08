@@ -72,6 +72,7 @@ public:
     bool MCSetAxisPosition(AXISID Axis, double Position);
     bool MCGetAxisPosition(AXISID Axis);
     bool MCGetAxisStatus(AXISID Axis);
+    bool MCSetSwitch(bool OnOff);
     bool InquireMotorBoardVersion(AXISID Axis);
     bool InquireGridPerRevolution(AXISID Axis);
     bool InquireTimerInterruptFreq(AXISID Axis);
@@ -98,7 +99,8 @@ public:
     long BreakSteps[2];
 
     // Encoder values
-    double Positions[2];
+    double CurrentPositions[2];
+    double InitialPositions[2];
 
     AXISSTATUS AxesStatus[2];
 private:
