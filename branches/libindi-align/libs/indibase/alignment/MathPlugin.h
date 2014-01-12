@@ -29,6 +29,15 @@ namespace AlignmentSubsystem {
 class MathPlugin
 {
 public:
+
+    /** \enum MountAlignment
+        \brief Describe the alignment of a telescope axis. This is normally used to differentiate between
+        equatorial mounts in differnet hemispheres and altaz or dobsonian mounts.
+    */
+    typedef enum  MountAlignment { ZENITH, NORTH_CELESTIAL_POLE, SOUTH_CELESTIAL_POLE} MountAlignment_t;
+
+    MathPlugin(MountAlignment_t ApproximateAlignment = ZENITH) : ApproximateMountAlignment(ApproximateAlignment) {}
+
     virtual ~MathPlugin() {}
 
     /** \brief Initialise or re-initialise the math plugin. Re-reading the in memory database as necessary.
@@ -51,6 +60,15 @@ public:
         \return True if successful
     */
     virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination) = 0;
+
+    void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment) { ApproximateMountAlignment = ApproximateAlignment; }
+
+protected:
+    /** \brief Describe the approximate alignment of the mount. This information is normally used in a one star alignment
+        calculation.
+    */
+    MountAlignment_t ApproximateMountAlignment;
+
 };
 
 } // namespace AlignmentSubsystem

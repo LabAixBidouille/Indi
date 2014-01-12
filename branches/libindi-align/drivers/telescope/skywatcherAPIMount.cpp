@@ -357,6 +357,12 @@ bool SkywatcherAPIMount::updateProperties()
 }
 
 
+bool SkywatcherAPIMount::updateLocation(double latitude, double longitude, double elevation)
+{
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::updateLocation");
+    UpdateLocation(latitude, longitude, elevation);
+}
+
 bool SkywatcherAPIMount::ReadScopeStatus()
 {
     DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::ReadScopeStatus");
@@ -470,6 +476,18 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
     if (BasicMountInfo[MOUNT_CODE].value != MountCode)
     {
         BasicMountInfo[MOUNT_CODE].value = MountCode;
+        // Also tell the alignment subsystem
+        switch (MountCode)
+        {
+            case 0x82:
+            case 0x90:
+                SetApproximateMountAlignmentFromMountType(ALTAZ);
+                break;
+
+            default:
+                SetApproximateMountAlignmentFromMountType(EQUATORIAL);
+                break;
+        }
         BasicMountInfoHasChanged = true;
     }
     if (BasicMountInfo[IS_DC_MOTOR].value != IsDCMotor)

@@ -37,11 +37,10 @@ struct TelescopeDirectionVector
  */
 struct AlignmentDatabaseEntry
 {
-    AlignmentDatabaseEntry() : ObservationDate(0), ObservationTime(0),
-                                RightAscension(0), Declination(0), PrivateDataSize(0) {}
+    AlignmentDatabaseEntry() : ObservationJulianDate(0), RightAscension(0),
+                                Declination(0), PrivateDataSize(0) {}
 
-    AlignmentDatabaseEntry(const AlignmentDatabaseEntry& Source) : ObservationDate(Source.ObservationDate),
-                                                                    ObservationTime(Source.ObservationTime),
+    AlignmentDatabaseEntry(const AlignmentDatabaseEntry& Source) : ObservationJulianDate(Source.ObservationJulianDate),
                                                                     RightAscension(Source.RightAscension),
                                                                     Declination(Source.Declination),
                                                                     PrivateDataSize(Source.PrivateDataSize)
@@ -53,8 +52,7 @@ struct AlignmentDatabaseEntry
         }
     }
 
-    int ObservationDate;
-    double ObservationTime;
+    double ObservationJulianDate;
     double RightAscension;
     double Declination;
     TelescopeDirectionVector TelescopeDirection;
@@ -64,8 +62,7 @@ struct AlignmentDatabaseEntry
 
 enum AlignmentDatabaseActions { APPEND, INSERT, EDIT, DELETE, CLEAR, READ, READ_INCREMENT, LOAD_DATABASE, SAVE_DATABASE };
 
-enum AlignmentPointSetEnum {ENTRY_OBSERVATION_JULIAN_DATE, ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME,
-                                ENTRY_RA, ENTRY_DEC, ENTRY_VECTOR_X, ENTRY_VECTOR_Y, ENTRY_VECTOR_Z};
+enum AlignmentPointSetEnum {ENTRY_OBSERVATION_JULIAN_DATE, ENTRY_RA, ENTRY_DEC, ENTRY_VECTOR_X, ENTRY_VECTOR_Y, ENTRY_VECTOR_Z};
 
 } // namespace AlignmentSubsystem
 } // namespace INDI

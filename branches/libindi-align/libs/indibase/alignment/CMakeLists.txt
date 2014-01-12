@@ -1,3 +1,13 @@
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
+
+find_package(GSL REQUIRED)
+
+if (GSL_FOUND)
+	include_directories(${GSL_INCLUDE_DIRS})
+	set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS GSL_FOUND)
+	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${CMAKE_GSL_CXX_FLAGS})
+endif (GSL_FOUND)
+
 set(INDI_MATH_PLUGINS_DIRECTORY "${DATA_INSTALL_DIR}MathPlugins/" CACHE PATH "Path to Math Plugins directory")
 
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS INDI_MATH_PLUGINS_DIRECTORY="${INDI_MATH_PLUGINS_DIRECTORY}")
@@ -20,6 +30,9 @@ set (AlignmentDriver_SRCS
 
 add_library(AlignmentDriver SHARED ${AlignmentDriver_SRCS})
 target_link_libraries(AlignmentDriver dl)
+if (GSL_FOUND)
+	target_link_libraries(AlignmentDriver ${GSL_LIBRARIES})
+endif (GSL_FOUND)
 install(TARGETS AlignmentDriver LIBRARY DESTINATION ${LIB_DESTINATION})
 
 ##################################################

@@ -35,6 +35,7 @@ public:
     virtual bool initProperties();
     virtual void ISGetProperties (const char *dev);
     virtual bool updateProperties();
+    virtual bool updateLocation(double latitude, double longitude, double elevation);
     virtual const char *getDefaultName();
     virtual bool Connect();
     virtual bool ReadScopeStatus();

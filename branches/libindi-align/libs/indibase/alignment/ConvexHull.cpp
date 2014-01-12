@@ -1,5 +1,5 @@
 /*!
- * \file CovexHull.cpp
+ * \file ConvexHull.cpp
  *
  * \author Roger James
  * \date December 2013

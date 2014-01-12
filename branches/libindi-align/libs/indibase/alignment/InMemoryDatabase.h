@@ -11,6 +11,7 @@
 
 #include "Common.h"
 
+#include <libnova.h>
 #include <vector>
 
 namespace INDI {
@@ -23,7 +24,7 @@ namespace AlignmentSubsystem {
 class InMemoryDatabase
 {
 public:
-    InMemoryDatabase() : LoadDatabaseCallback(0) {}
+    InMemoryDatabase() : LoadDatabaseCallback(0), DatabaseReferencePositionIsValid(false) {}
     virtual ~InMemoryDatabase() {}
 
     typedef std::vector<AlignmentDatabaseEntry> AlignmentDatabaseType;
@@ -45,13 +46,19 @@ public:
     */
     bool SaveDatabase(const char* DeviceName);
 
-    typedef void (*LoadDatabaseCallbackPointer)(void *);
+    typedef void (*LoadDatabaseCallbackPointer_t)(void *);
 
-    void SetLoadDatabaseCallback(LoadDatabaseCallbackPointer CallbackPointer, void *ThisPointer);
+    void SetLoadDatabaseCallback(LoadDatabaseCallbackPointer_t CallbackPointer, void *ThisPointer);
+
+    void SetDatabaseReferencePosition(double Latitude, double Longitude);
+
+    bool GetDatabaseReferencePosition(ln_lnlat_posn& Position);
 
 private:
     AlignmentDatabaseType MySyncPoints;
-    LoadDatabaseCallbackPointer LoadDatabaseCallback;
+    ln_lnlat_posn DatabaseReferencePosition;
+    bool DatabaseReferencePositionIsValid;
+    LoadDatabaseCallbackPointer_t LoadDatabaseCallback;
     void *LoadDatabaseCallbackThisPointer;
 };
 

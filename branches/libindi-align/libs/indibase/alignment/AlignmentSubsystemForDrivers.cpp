@@ -56,6 +56,24 @@ void AlignmentSubsystemForDrivers::MyDatabaseLoadCallback(void *ThisPointer)
     ((AlignmentSubsystemForDrivers*)ThisPointer)->Initialise();
 }
 
+void AlignmentSubsystemForDrivers::SetApproximateMountAlignmentFromMountType(MountType_t Type)
+{
+    if (EQUATORIAL == Type)
+    {
+        ln_lnlat_posn Position;
+        if (GetDatabaseReferencePosition(Position))
+        {
+            if (Position.lat >= 0)
+                SetApproximateMountAlignment(NORTH_CELESTIAL_POLE);
+            else
+                SetApproximateMountAlignment(SOUTH_CELESTIAL_POLE);
+        }
+        //else
+        // TODO some kind of error!!!
+    }
+    else
+        SetApproximateMountAlignment(ZENITH);
+}
 
 } // namespace AlignmentSubsystem
 } // namespace INDI

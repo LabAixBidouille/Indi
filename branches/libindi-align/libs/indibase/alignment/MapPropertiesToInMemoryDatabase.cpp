@@ -18,14 +18,13 @@ namespace AlignmentSubsystem {
 void MapPropertiesToInMemoryDatabase::InitProperties(Telescope* pTelescope)
 {
 
-    IUFillNumber(&AlignmentPointSetEntry[0], "ALIGNMENT_POINT_ENTRY_OBSERVATION_JULIAN_DATE", "Observation Julian date", "%g", 0, 60000, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[1], "ALIGNMENT_POINT_ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME", "Observation local sidereal time (hh:mm:ss.ss)", "%010.9m", 0, 24, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[2], "ALIGNMENT_POINT_ENTRY_RA", "Right Ascension (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[3]," ALIGNMENT_POINT_ENTRY_DEC", "Declination (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[4], "ALIGNMENT_POINT_ENTRY_VECTOR_X", "Telescope direction vector x", "%g", -FLT_MAX, FLT_MAX, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[5]," ALIGNMENT_POINT_ENTRY_VECTOR_Y", "Telescope direction vector y", "%g", -FLT_MAX, FLT_MAX, 0, 0);
-    IUFillNumber(&AlignmentPointSetEntry[6]," ALIGNMENT_POINT_ENTRY_VECTOR_Z", "Telescope direction vector z", "%g", -FLT_MAX, FLT_MAX, 0, 0);
-    IUFillNumberVector(&AlignmentPointSetEntryV, AlignmentPointSetEntry, 7, pTelescope->getDeviceName(),
+    IUFillNumber(&AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE], "ALIGNMENT_POINT_ENTRY_OBSERVATION_JULIAN_DATE", "Observation Julian date", "%g", 0, 60000, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[ENTRY_RA], "ALIGNMENT_POINT_ENTRY_RA", "Right Ascension (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[ENTRY_DEC]," ALIGNMENT_POINT_ENTRY_DEC", "Declination (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[ENTRY_VECTOR_X], "ALIGNMENT_POINT_ENTRY_VECTOR_X", "Telescope direction vector x", "%g", -FLT_MAX, FLT_MAX, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[ENTRY_VECTOR_Y]," ALIGNMENT_POINT_ENTRY_VECTOR_Y", "Telescope direction vector y", "%g", -FLT_MAX, FLT_MAX, 0, 0);
+    IUFillNumber(&AlignmentPointSetEntry[ENTRY_VECTOR_Z]," ALIGNMENT_POINT_ENTRY_VECTOR_Z", "Telescope direction vector z", "%g", -FLT_MAX, FLT_MAX, 0, 0);
+    IUFillNumberVector(&AlignmentPointSetEntryV, AlignmentPointSetEntry, 6, pTelescope->getDeviceName(),
                     "ALIGNMENT_POINT_MANDATORY_NUMBERS", "Mandatory sync point numeric fields", ALIGNMENT_TAB, IP_RW, 60, IPS_IDLE);
     pTelescope->registerProperty(&AlignmentPointSetEntryV, INDI_NUMBER);
 
@@ -99,10 +98,9 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
 
         // Perform the database action
         AlignmentDatabaseEntry CurrentValues;
-        CurrentValues.ObservationDate = AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value;
-        CurrentValues.ObservationTime = AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value;
+        CurrentValues.ObservationJulianDate = AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value;
         CurrentValues.RightAscension = AlignmentPointSetEntry[ENTRY_RA].value;
-        CurrentValues.ObservationTime = AlignmentPointSetEntry[ENTRY_DEC].value;
+        CurrentValues.Declination = AlignmentPointSetEntry[ENTRY_DEC].value;
         CurrentValues.TelescopeDirection.x = AlignmentPointSetEntry[ENTRY_VECTOR_X].value;
         CurrentValues.TelescopeDirection.y = AlignmentPointSetEntry[ENTRY_VECTOR_Y].value;
         CurrentValues.TelescopeDirection.z = AlignmentPointSetEntry[ENTRY_VECTOR_Z].value;
@@ -172,10 +170,9 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
                 AlignmentPointSetCommitV.s=IPS_ALERT;
             else
             {
-                AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value = AlignmentDatabase[Offset].ObservationDate;
-                AlignmentPointSetEntry[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value = AlignmentDatabase[Offset].ObservationTime;
+                AlignmentPointSetEntry[ENTRY_OBSERVATION_JULIAN_DATE].value = AlignmentDatabase[Offset].ObservationJulianDate;
                 AlignmentPointSetEntry[ENTRY_RA].value = AlignmentDatabase[Offset].RightAscension;
-                AlignmentPointSetEntry[ENTRY_DEC].value = AlignmentDatabase[Offset].ObservationTime;
+                AlignmentPointSetEntry[ENTRY_DEC].value = AlignmentDatabase[Offset].Declination;
                 AlignmentPointSetEntry[ENTRY_VECTOR_X].value = AlignmentDatabase[Offset].TelescopeDirection.x;
                 AlignmentPointSetEntry[ENTRY_VECTOR_Y].value = AlignmentDatabase[Offset].TelescopeDirection.y;
                 AlignmentPointSetEntry[ENTRY_VECTOR_Z].value= AlignmentDatabase[Offset].TelescopeDirection.z;
@@ -236,6 +233,22 @@ void MapPropertiesToInMemoryDatabase::ProcessBlobProperties(Telescope* pTelescop
         }
     }
 }
+
+void MapPropertiesToInMemoryDatabase::UpdateLocation(double latitude, double longitude, double elevation)
+{
+    ln_lnlat_posn Position;
+    if (GetDatabaseReferencePosition(Position))
+    {
+        // Position is already valid
+        if ((latitude != Position.lat) || (longitude != Position.lng))
+        {
+            // Warn the user somehow
+        }
+    }
+    else
+        SetDatabaseReferencePosition(latitude, longitude);
+}
+
 
 } // namespace AlignmentSubsystem
 } // namespace INDI
