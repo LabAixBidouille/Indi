@@ -430,8 +430,7 @@ bool ClientAPIForAlignmentDatabase::ReadSyncPoint(unsigned int Offset, Alignment
     }
 
     // Read the entry data
-    CurrentValues.ObservationDate = pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value;
-    CurrentValues.ObservationTime = pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value;
+    CurrentValues.ObservationJulianDate = pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value;
     CurrentValues.RightAscension = pMandatoryNumbers->np[ENTRY_RA].value;
     CurrentValues.Declination = pMandatoryNumbers->np[ENTRY_DEC].value;
     CurrentValues.TelescopeDirection.x = pMandatoryNumbers->np[ENTRY_VECTOR_X].value;
@@ -485,8 +484,7 @@ bool ClientAPIForAlignmentDatabase::ReadIncrementSyncPoint(AlignmentDatabaseEntr
     }
 
     // Read the entry data
-    CurrentValues.ObservationDate = pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value;
-    CurrentValues.ObservationTime = pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value;
+    CurrentValues.ObservationJulianDate = pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value;
     CurrentValues.RightAscension = pMandatoryNumbers->np[ENTRY_RA].value;
     CurrentValues.Declination = pMandatoryNumbers->np[ENTRY_DEC].value;
     CurrentValues.TelescopeDirection.x = pMandatoryNumbers->np[ENTRY_VECTOR_X].value;
@@ -638,8 +636,7 @@ bool ClientAPIForAlignmentDatabase::SendEntryData(const AlignmentDatabaseEntry& 
     INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
     IBLOBVectorProperty   *pBLOB = OptionalBinaryBlob->getBLOB();
     // Send the entry data
-    pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationDate;
-    pMandatoryNumbers->np[ENTRY_OBSERVATION_LOCAL_SIDEREAL_TIME].value  = CurrentValues.ObservationTime;
+    pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value = CurrentValues.ObservationJulianDate;
     pMandatoryNumbers->np[ENTRY_RA].value  = CurrentValues.RightAscension;
     pMandatoryNumbers->np[ENTRY_DEC].value  = CurrentValues.Declination;
     pMandatoryNumbers->np[ENTRY_VECTOR_X].value  = CurrentValues.TelescopeDirection.x;

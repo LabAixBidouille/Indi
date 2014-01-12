@@ -28,6 +28,11 @@ class AlignmentSubsystemForDrivers : public MapPropertiesToInMemoryDatabase, pub
                                     public TelescopeDirectionVectorSupportFunctions
 {
 public:
+    /** \enum MountType
+        \brief Describes the basic type of the mount.
+    */
+    typedef  enum MountType { EQUATORIAL, ALTAZ } MountType_t;
+
     AlignmentSubsystemForDrivers();
     virtual ~AlignmentSubsystemForDrivers() {}
 
@@ -85,6 +90,17 @@ public:
      * \param[in] fp File pointer passed into saveConfigItems
     */
     void SaveConfigProperties(FILE *fp);
+
+    /** \brief Call this function to set the ApproximateMountAlignment property of the current
+        Math Plugin. The alignment database should be initialised before this function is called
+        so that it can use the DatabaseReferencePosition to determine which hemisphere the
+        current observing site is in. For equatorial the ApproximateMountAlignment property
+        will set to NORTH_CELESTIAL_POLE for sites in the northern hemisphere and SOUTH_CELESTIAL_POLE
+        for sites in the southern hemisphere. For altaz mounts the ApproximateMountAlignment will
+        be set to ZENITH.
+        \param[in] Type the mount type either EQUATORIAL or ALTAZ
+    */
+    void SetApproximateMountAlignmentFromMountType(MountType_t Type);
 
 private:
     /** \brief This static function is registered as a load database callback with

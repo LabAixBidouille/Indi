@@ -27,17 +27,28 @@ public:
     virtual ~TelescopeDirectionVectorSupportFunctions() {}
     /*!
      * \enum AzimuthAngleDirection
-     * The direction of measurement of an azimuth angle
+     * The direction of measurement of an azimuth angle.
+     * The following are the conventions for some coordinate systems.
+     * - Right Ascension is measured ANTI_CLOCKWISE from the vernal equinox.
+     * - Local Hour Angle is measured CLOCKWISE from the observer's meridian.
+     * - Greenwich Hour Angle is measured CLOCKWISE from the Greenwich meridian.
+     * - Azimuth (as in Altitude Azimuth coordinate systems ) is often measured CLOCKWISE\n
+     * from north. But ESO FITS (Clockwise from South) and SDSS FITS(Anticlockwise from South)\n
+     * have different conventions. Horizontal coordinates in libnova are measured clockwise from south.
      */
-    enum AzimuthAngleDirection{ CLOCKWISE, /*!< Angle is measured clockwise */
-                                ANTI_CLOCKWISE /*!< Angle is measured anti clockwise */};
+    typedef enum AzimuthAngleDirection{ CLOCKWISE, /*!< Angle is measured clockwise */
+                                ANTI_CLOCKWISE /*!< Angle is measured anti clockwise */} AzimuthAngleDirection_t;
 
     /*!
      * \enum PolarAngleDirection
-     * The direction of measurement of a polar angle
+     * The direction of measurement of a polar angle.
+     * The following are conventions for some coordinate systems
+     * - Declination is measured FROM_POLAR_AXIS.
+     * - Altitude is measured FROM_AZIMUTHAL_PLANE.
+     * - Altitude in libnova horizontal coordinates is measured FROM_AZIMUTHAL_PLANE.
      */
-    enum PolarAngleDirection{ FROM_POLAR_AXIS, /*!< Angle is measured down from the polar axis */
-                            FROM_AZIMUTHAL_PLANE /*!< Angle is measured upwards from the azimuthal plane */};
+    typedef enum PolarAngleDirection{ FROM_POLAR_AXIS, /*!< Angle is measured down from the polar axis */
+                            FROM_AZIMUTHAL_PLANE /*!< Angle is measured upwards from the azimuthal plane */} PolarAngleDirection_t;
 
     /*! \brief Calculates a telescope direction vector from the supplied spherical coordinate information
      * \param[in] AzimuthAngle The azimuth angle in radians
@@ -47,8 +58,8 @@ public:
      * \return A TelescopeDirectionVector
      * \note TelescopeDirectionVectors are always normalised and right handed.
      */
-    const TelescopeDirectionVector TelescopeDirectionVectorFromSphericalCoordinate(const double AzimuthAngle, AzimuthAngleDirection AzimuthAngleDirection,
-                                                                                            const double PolarAngle, PolarAngleDirection PolarAngleDirection);
+    const TelescopeDirectionVector TelescopeDirectionVectorFromSphericalCoordinate(const double AzimuthAngle, AzimuthAngleDirection_t AzimuthAngleDirection,
+                                                                                            const double PolarAngle, PolarAngleDirection_t PolarAngleDirection);
 
 
     /*! \brief Calculates a spherical coordinate from the supplied telescope direction vector
@@ -60,8 +71,8 @@ public:
      * \note TelescopeDirectionVectors are always normalised and right handed.
      */
     void SphericalCoordinateFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
-                                                                double& AzimuthAngle, AzimuthAngleDirection AzimuthAngleDirection,
-                                                                double& PolarAngle, PolarAngleDirection PolarAngleDirection);
+                                                                double& AzimuthAngle, AzimuthAngleDirection_t AzimuthAngleDirection,
+                                                                double& PolarAngle, PolarAngleDirection_t PolarAngleDirection);
 
 
     /*! \brief Calculates a telescope direction vector from the supplied equatorial coordinates.

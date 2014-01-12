@@ -24,8 +24,10 @@ bool InMemoryDatabase::LoadDatabase(const char* DeviceName)
     char DatabaseFileName[MAXRBUF];
     char Errmsg[MAXRBUF];
     XMLEle *FileRoot = NULL;
+    XMLEle *EntriesRoot = NULL;
     XMLEle *EntryRoot = NULL;
     XMLEle *Element = NULL;
+    XMLAtt *Attribute = NULL;
     LilXML *Parser = newLilXML();
 
     FILE *fp = NULL;
@@ -40,9 +42,7 @@ bool InMemoryDatabase::LoadDatabase(const char* DeviceName)
          return false;
     }
 
-    FileRoot = readXMLFile(fp, Parser, Errmsg);
-
-    if (FileRoot == NULL)
+    if (NULL == (FileRoot = readXMLFile(fp, Parser, Errmsg)))
     {
         snprintf(Errmsg, MAXRBUF, "Unable to parse database XML: %s", Errmsg);
         return false;
@@ -53,24 +53,44 @@ bool InMemoryDatabase::LoadDatabase(const char* DeviceName)
         return false;
     }
 
+    if (NULL == (EntriesRoot = findXMLEle(FileRoot, "DatabaseEntries")))
+    {
+        snprintf(Errmsg, MAXRBUF, "Cannot find DatabaseEntries element");
+        return false;
+    }
+
+    if (NULL != (Element = findXMLEle(FileRoot, "DatabaseReferenceLocation")))
+    {
+        if (NULL == (Attribute = findXMLAtt(Element, "latitude")))
+        {
+            snprintf(Errmsg, MAXRBUF, "Cannot find latitude attribute");
+            return false;
+        }
+        sscanf(valuXMLAtt(Attribute), "%lf", &DatabaseReferencePosition.lat);
+        if (NULL == (Attribute = findXMLAtt(Element, "longitude")))
+        {
+            snprintf(Errmsg, MAXRBUF, "Cannot find latitude attribute");
+            return false;
+        }
+        sscanf(valuXMLAtt(Attribute), "%lf", &DatabaseReferencePosition.lng);
+        DatabaseReferencePositionIsValid = true;
+    }
+
+
     MySyncPoints.clear();
 
-    for (EntryRoot = nextXMLEle (FileRoot, 1); EntryRoot != NULL; EntryRoot = nextXMLEle (FileRoot, 0))
+    for (EntryRoot = nextXMLEle (EntriesRoot, 1); EntryRoot != NULL; EntryRoot = nextXMLEle (EntriesRoot, 0))
     {
         AlignmentDatabaseEntry CurrentValues;
-        if (strcmp(tagXMLEle(EntryRoot), "INDIAlignmentDatabaseEntry") != 0)
+        if (strcmp(tagXMLEle(EntryRoot), "DatabaseEntry") != 0)
         {
             return false;
         }
         for (Element = nextXMLEle (EntryRoot, 1); Element != NULL; Element = nextXMLEle (EntryRoot, 0))
         {
-            if (strcmp(tagXMLEle(Element), "ObservationDate") == 0)
+            if (strcmp(tagXMLEle(Element), "ObservationJulianDate") == 0)
             {
-                sscanf(pcdataXMLEle(Element), "%d", &CurrentValues.ObservationDate);
-            }
-            else if (strcmp(tagXMLEle(Element), "ObservationTime") == 0)
-            {
-                f_scansexa(pcdataXMLEle(Element), &CurrentValues.ObservationTime);
+                sscanf(pcdataXMLEle(Element), "%lf", &CurrentValues.ObservationJulianDate);
             }
             else if (strcmp(tagXMLEle(Element), "RightAscension") == 0)
             {
@@ -100,8 +120,6 @@ bool InMemoryDatabase::LoadDatabase(const char* DeviceName)
 
     fclose(fp);
     delXMLEle(FileRoot);
-    delXMLEle(EntryRoot);
-    delXMLEle(Element);
     delLilXML(Parser);
 
     if (NULL != LoadDatabaseCallback)
@@ -140,24 +158,28 @@ bool InMemoryDatabase::SaveDatabase(const char* DeviceName)
 
     fprintf(fp, "<INDIAlignmentDatabase>\n");
 
+    if (DatabaseReferencePositionIsValid)
+        fprintf(fp, "   <DatabaseReferenceLocation latitude='%lf' longitude='%lf'/>\n",
+                            DatabaseReferencePosition.lat, DatabaseReferencePosition.lng);
+
+    fprintf(fp, "   <DatabaseEntries>\n");
     for (AlignmentDatabaseType::const_iterator Itr = MySyncPoints.begin(); Itr != MySyncPoints.end(); Itr++)
     {
         char SexaString[12]; // Long enough to hold xx:xx:xx.xx
-        fprintf(fp, "   <INDIAlignmentDatabaseEntry>\n");
+        fprintf(fp, "      <DatabaseEntry>\n");
 
-        fprintf(fp, "      <ObservationDate>%d</ObservationDate>\n", (*Itr).ObservationDate);
-        fs_sexa(SexaString, (*Itr).ObservationTime, 2, 360000);
-        fprintf(fp, "      <ObservationTime>%s</ObservationTime>\n", SexaString);
+        fprintf(fp, "         <ObservationJulianDate>%lf</ObservationJulianDate>\n", (*Itr).ObservationJulianDate);
         fs_sexa(SexaString, (*Itr).RightAscension, 2, 3600);
-        fprintf(fp, "      <RightAscension>%s</RightAscension>\n", SexaString);
+        fprintf(fp, "         <RightAscension>%s</RightAscension>\n", SexaString);
         fs_sexa(SexaString, (*Itr).Declination, 2, 3600);
-        fprintf(fp, "      <Declination>%s</Declination>\n", SexaString);
-        fprintf(fp, "      <TelescopeDirectionVectorX>%lf</TelescopeDirectionVectorX>\n", (*Itr).TelescopeDirection.x);
-        fprintf(fp, "      <TelescopeDirectionVectorY>%lf</TelescopeDirectionVectorY>\n", (*Itr).TelescopeDirection.y);
-        fprintf(fp, "      <TelescopeDirectionVectorZ>%lf</TelescopeDirectionVectorZ>\n", (*Itr).TelescopeDirection.z);
+        fprintf(fp, "         <Declination>%s</Declination>\n", SexaString);
+        fprintf(fp, "         <TelescopeDirectionVectorX>%lf</TelescopeDirectionVectorX>\n", (*Itr).TelescopeDirection.x);
+        fprintf(fp, "         <TelescopeDirectionVectorY>%lf</TelescopeDirectionVectorY>\n", (*Itr).TelescopeDirection.y);
+        fprintf(fp, "         <TelescopeDirectionVectorZ>%lf</TelescopeDirectionVectorZ>\n", (*Itr).TelescopeDirection.z);
 
-        fprintf(fp, "   </INDIAlignmentDatabaseEntry>\n");
+        fprintf(fp, "      </DatabaseEntry>\n");
     }
+    fprintf(fp, "   </DatabaseEntries>\n");
 
     fprintf(fp, "</INDIAlignmentDatabase>\n");
 
@@ -166,10 +188,28 @@ bool InMemoryDatabase::SaveDatabase(const char* DeviceName)
     return true;
 }
 
-void InMemoryDatabase::SetLoadDatabaseCallback(LoadDatabaseCallbackPointer CallbackPointer, void *ThisPointer)
+void InMemoryDatabase::SetLoadDatabaseCallback(LoadDatabaseCallbackPointer_t CallbackPointer, void *ThisPointer)
 {
     LoadDatabaseCallback = CallbackPointer;
     LoadDatabaseCallbackThisPointer = ThisPointer;
+}
+
+void InMemoryDatabase::SetDatabaseReferencePosition(double Latitude, double Longitude)
+{
+    DatabaseReferencePosition.lat = Latitude;
+    DatabaseReferencePosition.lng = Longitude;
+    DatabaseReferencePositionIsValid = true;
+}
+
+bool InMemoryDatabase::GetDatabaseReferencePosition(ln_lnlat_posn& Position)
+{
+    if (DatabaseReferencePositionIsValid)
+    {
+        Position = DatabaseReferencePosition;
+        return true;
+    }
+    else
+        return false;
 }
 
 

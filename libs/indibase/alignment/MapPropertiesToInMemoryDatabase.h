@@ -97,8 +97,7 @@ public:
     void ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
 
     /** \brief Call this function from within the ISNewBLOB processing path. The function will
-     * handle any alignment database related properties. The default implementation of this function will silently discard
-     * any data it receives.
+     * handle any alignment database related properties.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
      * \param[in] sizes
@@ -108,10 +107,17 @@ public:
      * \param[in] names
      * \param[in] n
     */
-    virtual void ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
+    void ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
+
+    /** \brief Call this function from within the updateLocation processing path
+     *  \param[in] latitude Site latitude in degrees.
+     *  \param[in] longitude Site latitude in degrees increasing eastward from Greenwich (0 to 360).
+     *  \param[in] elevation Site elevation in meters.
+    */
+    void UpdateLocation(double latitude, double longitude, double elevation);
 
 private:
-    INumber AlignmentPointSetEntry[7];
+    INumber AlignmentPointSetEntry[6];
     INumberVectorProperty AlignmentPointSetEntryV;
     IBLOB AlignmentPointSetPrivateBinaryData;
     IBLOBVectorProperty AlignmentPointSetPrivateBinaryDataV;

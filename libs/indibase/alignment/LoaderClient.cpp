@@ -76,9 +76,9 @@ void LoaderClient::Load()
     AppendSyncPoint(CurrentValues);
     AppendSyncPoint(CurrentValues);
     AppendSyncPoint(CurrentValues);
-    CurrentValues.ObservationDate = 128;
+    CurrentValues.ObservationJulianDate = 128;
     EditSyncPoint(2, CurrentValues);
-    CurrentValues.ObservationDate = 256;
+    CurrentValues.ObservationJulianDate = 256;
     InsertSyncPoint(2, CurrentValues);
     DeleteSyncPoint(0);
     CurrentValues.PrivateData.reset(new unsigned char[50]);
