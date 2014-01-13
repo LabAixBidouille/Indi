@@ -28,6 +28,18 @@ struct TelescopeDirectionVector
     double x;
     double y;
     double z;
+
+    // Override the * operator to return a cross product
+    const TelescopeDirectionVector operator * (const TelescopeDirectionVector &RHS) const
+    {
+        TelescopeDirectionVector Result;
+
+        Result.x = y * RHS.z - z * RHS.y;
+        Result.y = z * RHS.x - x * RHS.z;
+        Result.z = x * RHS.y - y * RHS.x;
+        return Result;
+    }
+
 };
 
 /*!
