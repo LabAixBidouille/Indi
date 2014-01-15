@@ -9,6 +9,10 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+/*!
+ * \class BuiltInMathPlugin
+ * \brief This class implements the default math plugin.
+ */
 class BuiltInMathPlugin : public AlignmentSubsystemForMathPlugins, public ConvexHull
 {
 public:
