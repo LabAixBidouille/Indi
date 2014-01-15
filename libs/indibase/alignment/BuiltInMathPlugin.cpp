@@ -20,12 +20,18 @@ BuiltInMathPlugin::~BuiltInMathPlugin()
 
 bool BuiltInMathPlugin::Initialise()
 {
-    // See how many entries there are in the in memory database.
-    // If just one compute local horizontal coordinate offsets.
-    // If two compute a dummy third entry and compute and store
-    // a transform matrix. If three compute a transform matrix.
-    // If four or more compute a convex hull, then matrices for each
-    // triangular facet of the hull.
+    /// See how many entries there are in the in memory database.
+    /// If just one compute offsets in the mounts frame of reference
+    /// which assumed to be an abitrarily aligned spherical coordinate
+    /// system, with rotational angle measured in a clockwise direction
+    /// and elevation angle measured upwards from the rotational plane.
+    /// The offsets are computed using a hint supplied as to the approximate
+    /// orientation of the mount. This can either be ZENITH, NORTH_CELESTIAL_POLE
+    /// or SOUTH_CELESTIAL_POLE,
+    /// If two compute a dummy third entry and compute and store
+    /// a transform matrix. If three compute a transform matrix.
+    /// If four or more compute a convex hull, then matrices for each
+    /// triangular facet of the hull.
     switch (GetAlignmentDatabase().size())
     {
         case 0:
@@ -57,8 +63,9 @@ bool BuiltInMathPlugin::Initialise()
                     break;
 
                 case NORTH_CELESTIAL_POLE:
+                {
+                    // THIS IS RUBBISH!!!!!!!! I need to review it.
                     // Equatorial in the northern hemisphere
-                case SOUTH_CELESTIAL_POLE: // TODO Check if I need to do anything different here.
                     ln_equ_posn AdjustedEquatorialCoordinate;
                     ln_equ_posn MountEquatorialCoordinate;
                     double GreenwichMeanSiderealTime = ln_get_mean_sidereal_time(Entry.ObservationJulianDate);
@@ -67,12 +74,24 @@ bool BuiltInMathPlugin::Initialise()
                     // Convert right ascension to local hour angle
                     // LHA = GMST + Longitude (positive east) - RA
                     AdjustedEquatorialCoordinate.ra = GreenwichMeanSiderealTime + Position.lng - RaDec.ra;
-                    AdjustedEquatorialCoordinate.dec = RaDec.dec;
                     // N.B. this has converted the ra value from ANTI_CLOCKWISE to CLOCKWISE
+
+                    // Convert declination to elevation measured from equatorial plane towards the north celestial pole
+                    // I am really guessing here !!!!!
+                    AdjustedEquatorialCoordinate.dec = 90.0 - RaDec.dec;
+
+
                     LocalHourAngleDeclinationFromTelescopeDirectionVector(Entry.TelescopeDirection, MountEquatorialCoordinate);
                     SinglePointsOffsetsRaDec.ra =  AdjustedEquatorialCoordinate.ra - MountEquatorialCoordinate.ra;
                     SinglePointsOffsetsRaDec.dec =  AdjustedEquatorialCoordinate.dec - MountEquatorialCoordinate.dec;
                     break;
+                }
+
+                case SOUTH_CELESTIAL_POLE:
+                    // My brain has stalled. I assume I reverse the rotation of the hour angle calc
+                    // and fudge the declination to elevation measured from the equatorial plane towards the south celestial pole
+                    return false;
+
             }
             return true;
         }
