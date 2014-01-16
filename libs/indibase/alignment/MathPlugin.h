@@ -51,7 +51,7 @@ public:
         \param[out] TelescopeDirectionVector Parameter to receive the corrected telescope direction
         \return True if successful
     */
-    virtual bool TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector) = 0;
+    virtual bool TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& ApparentTelescopeDirectionVector) = 0;
 
     /** \brief Get the true celestial coordinates for the supplied telescope pointing direction
         \param[in] TelescopeDirectionVector the telescope direction
@@ -59,7 +59,7 @@ public:
         \param[out] Declination Parameter to receive the Declination (Decimal Degrees).
         \return True if successful
     */
-    virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination) = 0;
+    virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination) = 0;
 
     void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment) { ApproximateMountAlignment = ApproximateAlignment; }
 
