@@ -2,6 +2,7 @@
 
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_linalg.h>
+#include <gsl/gsl_blas.h>
 
 namespace INDI {
 namespace AlignmentSubsystem {
@@ -21,16 +22,13 @@ BuiltInMathPlugin::~BuiltInMathPlugin()
 bool BuiltInMathPlugin::Initialise()
 {
     /// See how many entries there are in the in memory database.
-    /// If just one compute offsets in the mounts frame of reference
-    /// which assumed to be an abitrarily aligned spherical coordinate
-    /// system, with rotational angle measured in a clockwise direction
-    /// and elevation angle measured upwards from the rotational plane.
-    /// The offsets are computed using a hint supplied as to the approximate
-    /// orientation of the mount. This can either be ZENITH, NORTH_CELESTIAL_POLE
-    /// or SOUTH_CELESTIAL_POLE,
-    /// If two compute a dummy third entry and compute and store
-    /// a transform matrix. If three compute a transform matrix.
-    /// If four or more compute a convex hull, then matrices for each
+    /// - If just one use a hint to mounts approximate alignment, this can either be ZENITH,
+    /// NORTH_CELESTIAL_POLE or SOUTH_CELESTIAL_POLE. The hint is used to make a dummy second
+    /// entry. A dummy third entry is computed from the cross product of the first two. A transform
+    /// matrix is then computed.
+    /// - If two make the dummy third entry and compute a transform matrix.
+    /// - If three compute a transform matrix.
+    /// - If four or more compute a convex hull, then matrices for each
     /// triangular facet of the hull.
     switch (GetAlignmentDatabase().size())
     {
@@ -39,6 +37,7 @@ bool BuiltInMathPlugin::Initialise()
 
         case 1:
         {
+#if 0
             // Compute local horizontal coordinate offsets
             AlignmentDatabaseEntry& Entry = GetAlignmentDatabase()[0];
             ln_equ_posn RaDec;
@@ -94,8 +93,52 @@ bool BuiltInMathPlugin::Initialise()
 
             }
             return true;
-        }
+#else
+            // Compute local horizontal coordinate offsets
+            AlignmentDatabaseEntry& Entry1 = GetAlignmentDatabase()[0];
+            ln_equ_posn RaDec;
+            ln_hrz_posn ActualSyncPoint1;
+            ln_lnlat_posn Position;
+            if (!GetDatabaseReferencePosition(Position))
+                return false;
+            RaDec.dec = Entry1.Declination;
+            RaDec.ra = Entry1.RightAscension;
+            ln_get_hrz_from_equ(&RaDec, &Position, Entry1.ObservationJulianDate, &ActualSyncPoint1);
+            // Now express this coordinate as normalised direction vectors (a.k.a direction cosines)
+            TelescopeDirectionVector ActualDirectionCosine1 = TelescopeDirectionVectorFromAltitudeAzimuth(ActualSyncPoint1);
+            // Generate the second dummy sync point
+            ln_hrz_posn DummyAltAz;
+            ln_equ_posn DummyRaDec;
+            TelescopeDirectionVector DummyActualDirectionCosine2;
+            TelescopeDirectionVector DummyApparentDirectionCosine2;
+            switch (ApproximateMountAlignment)
+            {
+                case ZENITH:
+                    DummyAltAz.alt = 90.0;
+                    DummyAltAz.az = 0.0;
+                    break;
 
+                case NORTH_CELESTIAL_POLE:
+                    DummyRaDec.ra = 0.0;
+                    DummyRaDec.dec = 0.0;
+                    ln_get_hrz_from_equ(&RaDec, &Position, ln_get_julian_from_sys(), &DummyAltAz);
+                    break;
+
+                case SOUTH_CELESTIAL_POLE:
+                    DummyRaDec.ra = 0.0;
+                    DummyRaDec.dec = 180.0;
+                    ln_get_hrz_from_equ(&RaDec, &Position, ln_get_julian_from_sys(), &DummyAltAz);
+                    break;
+            }
+            DummyActualDirectionCosine2 = TelescopeDirectionVectorFromAltitudeAzimuth(DummyAltAz);
+            // Cheat - make actual and apparent the same
+            DummyApparentDirectionCosine2 = DummyActualDirectionCosine2;
+            CalculateTAKIMatrices(ActualDirectionCosine1, DummyActualDirectionCosine2, ActualDirectionCosine1 * DummyActualDirectionCosine2,
+                                Entry1.TelescopeDirection, DummyApparentDirectionCosine2, Entry1.TelescopeDirection * DummyApparentDirectionCosine2,
+                                pActualToApparentTransform, pApparentToActualTransform);
+            return true;
+#endif
+        }
         case 2:
         {
             // First compute local horizontal coordinates for the two sync points
@@ -196,28 +239,61 @@ void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& A
     gsl_matrix_set(pApparentMatrix, 2, 1, Apparent3.y);
     gsl_matrix_set(pApparentMatrix, 2, 2, Apparent3.z);
 
-    gsl_matrix_mul_elements(pApparentMatrix, pActualMatrix); // Result ends up in Apparent
+    MatrixMatrixMultipy(pApparentMatrix, pActualMatrix, pActualToApparent);
 
-    gsl_matrix_memcpy(pActualToApparent, pApparentMatrix);
+    // Use pApparent as temporary storage
+    gsl_matrix_memcpy(pApparentMatrix, pActualToApparent);
 
     // Invert the matrix to get the Apparent to Actual transform
-    gsl_permutation *pPermutation = gsl_permutation_alloc(3);
-    int Signum;
-    gsl_linalg_LU_decomp(pApparentMatrix, pPermutation, &Signum);
-    gsl_linalg_LU_invert(pApparentMatrix, pPermutation, pApparentToActual);
-
+    MatrixInvert3x3(pActualToApparent, pApparentToActual);
     // Clean up
     gsl_matrix_free(pApparentMatrix);
     gsl_matrix_free(pActualMatrix);
+}
+
+/// Use gsl blas support to multiply two matrices together and put the result in a third.
+/// For our purposes all the matrices should be 3 by 3.
+void BuiltInMathPlugin::MatrixMatrixMultipy(gsl_matrix *pA, gsl_matrix *pB, gsl_matrix *pC)
+{
+    // Zeroise the output matrix
+    gsl_matrix_set_zero(pC);
+
+    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, pA, pB, 0.0, pC);
+}
+
+void BuiltInMathPlugin::MatrixVectorMultipy(gsl_matrix *pA, gsl_vector *pB, gsl_vector *pC)
+{
+    // Zeroise the output matrix
+    gsl_vector_set_zero(pC);
+
+    gsl_blas_dgemv(CblasNoTrans, 1.0, pA, pB, 0.0, pC);
+}
+
+
+/// Use gsl to compute the inverse of a 3x3 matrix
+void BuiltInMathPlugin::MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion)
+{
+    gsl_permutation *pPermutation = gsl_permutation_alloc(3);
+    gsl_matrix *pDecomp = gsl_matrix_alloc(3,3);
+    int Signum;
+
+    gsl_matrix_memcpy(pDecomp, pInput);
+    gsl_linalg_LU_decomp(pDecomp, pPermutation, &Signum);
+    gsl_linalg_LU_invert(pDecomp, pPermutation, pInversion);
+
+    gsl_matrix_free(pDecomp);
     gsl_permutation_free(pPermutation);
 }
 
 
-bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector)
+bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& ApparentTelescopeDirectionVector)
 {
     ln_equ_posn ActualRaDec;
     ActualRaDec.ra = RightAscension;
     ActualRaDec.dec = Declination;
+    ln_lnlat_posn Position;
+    if (!GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+        return false;
 
     switch (GetAlignmentDatabase().size())
     {
@@ -225,6 +301,7 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
             // No alignment points
             return false;
 
+#if 0
         case 1:
             // 1 alignment point. Use the stored single point offsets
             switch (ApproximateMountAlignment)
@@ -249,20 +326,77 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
                     break;
             }
             break;
-
+#else
+        case 1:
+#endif
         case 2:
         case 3:
+        {
+            ln_hrz_posn ActualAltAz;
+            ln_hrz_posn ApparentAltAz;
+            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys(), &ActualAltAz);
+            TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
+            gsl_vector *pGSLActualVector = gsl_vector_alloc(3);
+            gsl_vector_set(pGSLActualVector, 0, ActualVector.x);
+            gsl_vector_set(pGSLActualVector, 1, ActualVector.y);
+            gsl_vector_set(pGSLActualVector, 2, ActualVector.z);
+            gsl_vector *pGSLApparentVector = gsl_vector_alloc(3);
+            MatrixVectorMultipy(pActualToApparentTransform, pGSLActualVector, pGSLApparentVector);
+            ApparentTelescopeDirectionVector.x = gsl_vector_get(pGSLApparentVector, 0);
+            ApparentTelescopeDirectionVector.y = gsl_vector_get(pGSLApparentVector, 1);
+            ApparentTelescopeDirectionVector.z = gsl_vector_get(pGSLApparentVector, 2);
+            ApparentTelescopeDirectionVector.Normalise();
             break;
+        }
 
         default:
+            // Convex hull stuff to go in here
             return false;
     }
     return true;
 }
 
-bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination)
+bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination)
 {
-    return false;
+    ln_lnlat_posn Position;
+    if (!GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+        return false;
+
+    switch (GetAlignmentDatabase().size())
+    {
+        case 0:
+            // No alignment points
+            return false;
+
+        case 1:
+        case 2:
+        case 3:
+        {
+            gsl_vector *pGSLApparentVector = gsl_vector_alloc(3);
+            gsl_vector_set(pGSLApparentVector, 0, ApparentTelescopeDirectionVector.x);
+            gsl_vector_set(pGSLApparentVector, 1, ApparentTelescopeDirectionVector.y);
+            gsl_vector_set(pGSLApparentVector, 2, ApparentTelescopeDirectionVector.z);
+            gsl_vector *pGSLActualVector = gsl_vector_alloc(3);
+            MatrixVectorMultipy(pApparentToActualTransform, pGSLApparentVector, pGSLActualVector);
+            TelescopeDirectionVector ActualTelescopeDirectionVector;
+            ActualTelescopeDirectionVector.x = gsl_vector_get(pGSLActualVector, 0);
+            ActualTelescopeDirectionVector.y = gsl_vector_get(pGSLActualVector, 1);
+            ActualTelescopeDirectionVector.z = gsl_vector_get(pGSLActualVector, 2);
+            ActualTelescopeDirectionVector.Normalise();
+            ln_hrz_posn ActualAltAz;
+            AltitudeAzimuthFromNormalisedDirectionVector(ActualTelescopeDirectionVector, ActualAltAz);
+            ln_equ_posn ActualRaDec;
+            ln_get_equ_from_hrz(&ActualAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
+            RightAscension = ActualRaDec.ra;
+            Declination = ActualRaDec.dec;
+            break;
+        }
+
+        default:
+            // Convex hull stuff to go in here
+            return false;
+    }
+    return true;
 }
 
 } // namespace AlignmentSubsystem

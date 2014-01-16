@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <cstring>
+#include <cmath>
 
 namespace INDI {
 namespace AlignmentSubsystem {
@@ -40,6 +41,13 @@ struct TelescopeDirectionVector
         return Result;
     }
 
+    inline void Normalise()
+    {
+        double length =  sqrt(x * x + y * y + z * z);
+        x /= length;
+        y /= length;
+        z /= length;
+    }
 };
 
 /*!
