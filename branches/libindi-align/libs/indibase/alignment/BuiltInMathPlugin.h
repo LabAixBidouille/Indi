@@ -30,9 +30,9 @@ private:
                             const TelescopeDirectionVector& Apparent1, const TelescopeDirectionVector& Apparent2, const TelescopeDirectionVector& Apparent3,
                             gsl_matrix *pActualToApparent, gsl_matrix *pApparentToActual);
 
+    void MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion);
     void MatrixMatrixMultipy(gsl_matrix *pA, gsl_matrix *pB, gsl_matrix *pC);
     void MatrixVectorMultipy(gsl_matrix *pA, gsl_vector *pB, gsl_vector *pC);
-    void MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion);
 
 #if 0
     // Offsets for single point alignment

@@ -7,17 +7,23 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+// Constructors
+
 BuiltInMathPlugin::BuiltInMathPlugin()
 {
     pActualToApparentTransform = gsl_matrix_alloc(3,3);
     pApparentToActualTransform = gsl_matrix_alloc(3,3);
 }
 
+// Destructor
+
 BuiltInMathPlugin::~BuiltInMathPlugin()
 {
     gsl_matrix_free(pActualToApparentTransform);
     gsl_matrix_free(pApparentToActualTransform);
 }
+
+// Public methods
 
 bool BuiltInMathPlugin::Initialise()
 {
@@ -212,80 +218,6 @@ bool BuiltInMathPlugin::Initialise()
     }
 }
 
-void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& Actual1, const TelescopeDirectionVector& Actual2, const TelescopeDirectionVector& Actual3,
-                            const TelescopeDirectionVector& Apparent1, const TelescopeDirectionVector& Apparent2, const TelescopeDirectionVector& Apparent3,
-                            gsl_matrix *pActualToApparent, gsl_matrix *pApparentToActual)
-{
-    // Derive the Actual to Apparent transformation matrix using TAKI's method
-    gsl_matrix *pActualMatrix = gsl_matrix_alloc(3, 3);
-    gsl_matrix_set(pActualMatrix, 0, 0, Actual1.x);
-    gsl_matrix_set(pActualMatrix, 0, 1, Actual1.y);
-    gsl_matrix_set(pActualMatrix, 0, 2, Actual1.z);
-    gsl_matrix_set(pActualMatrix, 1, 0, Actual2.x);
-    gsl_matrix_set(pActualMatrix, 1, 1, Actual2.y);
-    gsl_matrix_set(pActualMatrix, 1, 2, Actual2.z);
-    gsl_matrix_set(pActualMatrix, 2, 0, Actual3.x);
-    gsl_matrix_set(pActualMatrix, 2, 1, Actual3.y);
-    gsl_matrix_set(pActualMatrix, 2, 2, Actual3.z);
-
-    gsl_matrix *pApparentMatrix = gsl_matrix_alloc(3, 3);
-    gsl_matrix_set(pApparentMatrix, 0, 0, Apparent1.x);
-    gsl_matrix_set(pApparentMatrix, 0, 1, Apparent1.y);
-    gsl_matrix_set(pApparentMatrix, 0, 2, Apparent1.z);
-    gsl_matrix_set(pApparentMatrix, 1, 0, Apparent2.x);
-    gsl_matrix_set(pApparentMatrix, 1, 1, Apparent2.y);
-    gsl_matrix_set(pApparentMatrix, 1, 2, Apparent2.z);
-    gsl_matrix_set(pApparentMatrix, 2, 0, Apparent3.x);
-    gsl_matrix_set(pApparentMatrix, 2, 1, Apparent3.y);
-    gsl_matrix_set(pApparentMatrix, 2, 2, Apparent3.z);
-
-    MatrixMatrixMultipy(pApparentMatrix, pActualMatrix, pActualToApparent);
-
-    // Use pApparent as temporary storage
-    gsl_matrix_memcpy(pApparentMatrix, pActualToApparent);
-
-    // Invert the matrix to get the Apparent to Actual transform
-    MatrixInvert3x3(pActualToApparent, pApparentToActual);
-    // Clean up
-    gsl_matrix_free(pApparentMatrix);
-    gsl_matrix_free(pActualMatrix);
-}
-
-/// Use gsl blas support to multiply two matrices together and put the result in a third.
-/// For our purposes all the matrices should be 3 by 3.
-void BuiltInMathPlugin::MatrixMatrixMultipy(gsl_matrix *pA, gsl_matrix *pB, gsl_matrix *pC)
-{
-    // Zeroise the output matrix
-    gsl_matrix_set_zero(pC);
-
-    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, pA, pB, 0.0, pC);
-}
-
-void BuiltInMathPlugin::MatrixVectorMultipy(gsl_matrix *pA, gsl_vector *pB, gsl_vector *pC)
-{
-    // Zeroise the output matrix
-    gsl_vector_set_zero(pC);
-
-    gsl_blas_dgemv(CblasNoTrans, 1.0, pA, pB, 0.0, pC);
-}
-
-
-/// Use gsl to compute the inverse of a 3x3 matrix
-void BuiltInMathPlugin::MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion)
-{
-    gsl_permutation *pPermutation = gsl_permutation_alloc(3);
-    gsl_matrix *pDecomp = gsl_matrix_alloc(3,3);
-    int Signum;
-
-    gsl_matrix_memcpy(pDecomp, pInput);
-    gsl_linalg_LU_decomp(pDecomp, pPermutation, &Signum);
-    gsl_linalg_LU_invert(pDecomp, pPermutation, pInversion);
-
-    gsl_matrix_free(pDecomp);
-    gsl_permutation_free(pPermutation);
-}
-
-
 bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& ApparentTelescopeDirectionVector)
 {
     ln_equ_posn ActualRaDec;
@@ -346,6 +278,8 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
             ApparentTelescopeDirectionVector.y = gsl_vector_get(pGSLApparentVector, 1);
             ApparentTelescopeDirectionVector.z = gsl_vector_get(pGSLApparentVector, 2);
             ApparentTelescopeDirectionVector.Normalise();
+            gsl_vector_free(pGSLActualVector);
+            gsl_vector_free(pGSLApparentVector);
             break;
         }
 
@@ -384,11 +318,13 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
             ActualTelescopeDirectionVector.z = gsl_vector_get(pGSLActualVector, 2);
             ActualTelescopeDirectionVector.Normalise();
             ln_hrz_posn ActualAltAz;
-            AltitudeAzimuthFromNormalisedDirectionVector(ActualTelescopeDirectionVector, ActualAltAz);
+            AltitudeAzimuthFromTelescopeDirectionVector(ActualTelescopeDirectionVector, ActualAltAz);
             ln_equ_posn ActualRaDec;
             ln_get_equ_from_hrz(&ActualAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
             RightAscension = ActualRaDec.ra;
             Declination = ActualRaDec.dec;
+            gsl_vector_free(pGSLActualVector);
+            gsl_vector_free(pGSLApparentVector);
             break;
         }
 
@@ -398,6 +334,84 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
     }
     return true;
 }
+
+// Private methods
+
+void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& Actual1, const TelescopeDirectionVector& Actual2, const TelescopeDirectionVector& Actual3,
+                            const TelescopeDirectionVector& Apparent1, const TelescopeDirectionVector& Apparent2, const TelescopeDirectionVector& Apparent3,
+                            gsl_matrix *pActualToApparent, gsl_matrix *pApparentToActual)
+{
+    // Derive the Actual to Apparent transformation matrix using TAKI's method
+    gsl_matrix *pActualMatrix = gsl_matrix_alloc(3, 3);
+    gsl_matrix_set(pActualMatrix, 0, 0, Actual1.x);
+    gsl_matrix_set(pActualMatrix, 0, 1, Actual1.y);
+    gsl_matrix_set(pActualMatrix, 0, 2, Actual1.z);
+    gsl_matrix_set(pActualMatrix, 1, 0, Actual2.x);
+    gsl_matrix_set(pActualMatrix, 1, 1, Actual2.y);
+    gsl_matrix_set(pActualMatrix, 1, 2, Actual2.z);
+    gsl_matrix_set(pActualMatrix, 2, 0, Actual3.x);
+    gsl_matrix_set(pActualMatrix, 2, 1, Actual3.y);
+    gsl_matrix_set(pActualMatrix, 2, 2, Actual3.z);
+
+    gsl_matrix *pApparentMatrix = gsl_matrix_alloc(3, 3);
+    gsl_matrix_set(pApparentMatrix, 0, 0, Apparent1.x);
+    gsl_matrix_set(pApparentMatrix, 0, 1, Apparent1.y);
+    gsl_matrix_set(pApparentMatrix, 0, 2, Apparent1.z);
+    gsl_matrix_set(pApparentMatrix, 1, 0, Apparent2.x);
+    gsl_matrix_set(pApparentMatrix, 1, 1, Apparent2.y);
+    gsl_matrix_set(pApparentMatrix, 1, 2, Apparent2.z);
+    gsl_matrix_set(pApparentMatrix, 2, 0, Apparent3.x);
+    gsl_matrix_set(pApparentMatrix, 2, 1, Apparent3.y);
+    gsl_matrix_set(pApparentMatrix, 2, 2, Apparent3.z);
+
+    MatrixMatrixMultipy(pApparentMatrix, pActualMatrix, pActualToApparent);
+
+    // Use pApparent as temporary storage
+    gsl_matrix_memcpy(pApparentMatrix, pActualToApparent);
+
+    // Invert the matrix to get the Apparent to Actual transform
+    MatrixInvert3x3(pActualToApparent, pApparentToActual);
+    // Clean up
+    gsl_matrix_free(pApparentMatrix);
+    gsl_matrix_free(pActualMatrix);
+}
+
+/// Use gsl to compute the inverse of a 3x3 matrix
+void BuiltInMathPlugin::MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion)
+{
+    gsl_permutation *pPermutation = gsl_permutation_alloc(3);
+    gsl_matrix *pDecomp = gsl_matrix_alloc(3,3);
+    int Signum;
+
+    gsl_matrix_memcpy(pDecomp, pInput);
+    gsl_linalg_LU_decomp(pDecomp, pPermutation, &Signum);
+    gsl_linalg_LU_invert(pDecomp, pPermutation, pInversion);
+
+    gsl_matrix_free(pDecomp);
+    gsl_permutation_free(pPermutation);
+}
+
+/// Use gsl blas support to multiply two matrices together and put the result in a third.
+/// For our purposes all the matrices should be 3 by 3.
+void BuiltInMathPlugin::MatrixMatrixMultipy(gsl_matrix *pA, gsl_matrix *pB, gsl_matrix *pC)
+{
+    // Zeroise the output matrix
+    gsl_matrix_set_zero(pC);
+
+    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, pA, pB, 0.0, pC);
+}
+
+/// Use gsl blas support to multiply a matrix by a vector and put the result in another vector
+/// For our purposes the the matrix should be 3x3 and vector 3.
+void BuiltInMathPlugin::MatrixVectorMultipy(gsl_matrix *pA, gsl_vector *pB, gsl_vector *pC)
+{
+    // Zeroise the output matrix
+    gsl_vector_set_zero(pC);
+
+    gsl_blas_dgemv(CblasNoTrans, 1.0, pA, pB, 0.0, pC);
+}
+
+
 
 } // namespace AlignmentSubsystem
 } // namespace INDI

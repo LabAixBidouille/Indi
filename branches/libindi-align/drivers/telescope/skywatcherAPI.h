@@ -53,32 +53,40 @@ struct AXISSTATUS
 class SkywatcherAPI
 {
 public:
+    enum AXISID { AXIS1 = 0, AXIS2 = 1 };
+
+
     SkywatcherAPI();
     virtual ~SkywatcherAPI();
 
-    void SetSerialPort(int port) { MyPortFD = port; }
 
-    enum AXISID { AXIS1 = 0, AXIS2 = 1 };
-    bool TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr);
-    long BCDstr2long(std::string &String);
-    void Long2BCDstr(long Number, std::string &String);
     long AngleToStep(AXISID Axis, double AngleInRad);
-    double StepToAngle(AXISID Axis, long Steps);
-    long RadSpeedToInt(AXISID Axis, double RateInRad);
+    long BCDstr2long(std::string &String);
     bool CheckIfDCMotor();
-    bool MCInit();
-    bool MCAxisStop(AXISID Axis);
-    bool MCAxisInstantStop(AXISID Axis);
-    bool MCSetAxisPosition(AXISID Axis, double Position);
-    bool MCGetAxisPosition(AXISID Axis);
-    bool MCGetAxisStatus(AXISID Axis);
-    bool MCSetSwitch(bool OnOff);
-    bool InquireMotorBoardVersion(AXISID Axis);
-    bool InquireGridPerRevolution(AXISID Axis);
-    bool InquireTimerInterruptFreq(AXISID Axis);
-    bool InquireHighSpeedRatio(AXISID Axis);
-    bool InquirePECPeriod(AXISID Axis);
+    bool GetGridPerRevolution(AXISID Axis);
+    bool GetHighSpeedRatio(AXISID Axis);
+    bool GetMotorBoardVersion(AXISID Axis);
+    bool GetPosition(AXISID Axis);
+    bool GetStatus(AXISID Axis);
+    bool GetTimerInterruptFreq(AXISID Axis);
     bool InitializeMC();
+    bool InitMount();
+    bool GetPECPeriod(AXISID Axis);
+    bool InstantStop(AXISID Axis);
+    void Long2BCDstr(long Number, std::string &String);
+    long RadSpeedToInt(AXISID Axis, double RateInRad);
+    bool SetBreakPointIncrement(AXISID Axis, long StepsCount);
+    bool SetBreakSteps(AXISID Axis, long NewBrakeSteps);
+    bool SetGotoTargetIncrement(AXISID Axis, long StepsCount);
+    bool SetMotionMode(AXISID Axis, char Func, char Direction);
+    bool SetPosition(AXISID Axis, double Position);
+    void SetSerialPort(int port) { MyPortFD = port; }
+    bool SetStepPeriod(AXISID Axis, long StepsCount);
+    bool SetSwitch(bool OnOff);
+    bool StartMotion(AXISID Axis);
+    double StepToAngle(AXISID Axis, long Steps);
+    bool Stop(AXISID Axis);
+    bool TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr);
 
     // Skywatcher mount status variables
     long MCVersion; // Motor control board firmware version

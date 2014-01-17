@@ -28,23 +28,27 @@ public:
     virtual ~SkywatcherAPIMount();
 
     //  overrides of base class virtual functions
-    virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
-    virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
-    virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
-    virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
+    virtual bool Abort();
+    virtual bool canSync();
+    virtual bool Connect();
+    virtual const char *getDefaultName();
+    virtual bool Goto(double,double);
     virtual bool initProperties();
     virtual void ISGetProperties (const char *dev);
-    virtual bool updateProperties();
-    virtual bool updateLocation(double latitude, double longitude, double elevation);
-    virtual const char *getDefaultName();
-    virtual bool Connect();
-    virtual bool ReadScopeStatus();
-    virtual bool Goto(double,double);
+    virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
+    virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
+    virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
+    virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
+    virtual bool MoveNS(TelescopeMotionNS dir);
+    virtual bool MoveWE(TelescopeMotionWE dir);
     virtual bool Park();
-    virtual bool Abort();
-    virtual bool saveConfigItems(FILE *fp);
+    virtual bool ReadScopeStatus();
+    virtual bool Sync(double ra, double dec);
     // For the time being stop the timer path being used
     virtual void TimerHit() {}
+    virtual bool saveConfigItems(FILE *fp);
+    virtual bool updateLocation(double latitude, double longitude, double elevation);
+    virtual bool updateProperties();
 
 private:
     // Overrides for the pure virtual functions in SkyWatcherAPI

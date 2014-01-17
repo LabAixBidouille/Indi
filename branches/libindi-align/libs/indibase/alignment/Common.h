@@ -16,6 +16,10 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+enum AlignmentDatabaseActions { APPEND, INSERT, EDIT, DELETE, CLEAR, READ, READ_INCREMENT, LOAD_DATABASE, SAVE_DATABASE };
+
+enum AlignmentPointSetEnum {ENTRY_OBSERVATION_JULIAN_DATE, ENTRY_RA, ENTRY_DEC, ENTRY_VECTOR_X, ENTRY_VECTOR_Y, ENTRY_VECTOR_Z};
+
 /*!
  * \struct TelescopeDirectionVector
  * \brief Holds a nomalised direction vector (direction cosines)
@@ -79,10 +83,6 @@ struct AlignmentDatabaseEntry
     std::auto_ptr<unsigned char> PrivateData;
     int PrivateDataSize;
 };
-
-enum AlignmentDatabaseActions { APPEND, INSERT, EDIT, DELETE, CLEAR, READ, READ_INCREMENT, LOAD_DATABASE, SAVE_DATABASE };
-
-enum AlignmentPointSetEnum {ENTRY_OBSERVATION_JULIAN_DATE, ENTRY_RA, ENTRY_DEC, ENTRY_VECTOR_X, ENTRY_VECTOR_Y, ENTRY_VECTOR_Z};
 
 } // namespace AlignmentSubsystem
 } // namespace INDI
