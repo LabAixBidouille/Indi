@@ -76,6 +76,8 @@ void ISSnoopDevice (XMLEle *root)
 
 const char * SkywatcherAPIMount::DetailedMountInfoPage = "Detailed Mount Information";
 
+// Constructor
+
 SkywatcherAPIMount::SkywatcherAPIMount()
 {
     // We add an additional debug level so we can log verbose scope status
@@ -84,58 +86,49 @@ SkywatcherAPIMount::SkywatcherAPIMount()
     pChildTelescope = this;
 }
 
+// destructor
+
 SkywatcherAPIMount::~SkywatcherAPIMount()
 {
-    //dtor
 }
 
-bool SkywatcherAPIMount::ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n)
+// Public methods
+
+bool  SkywatcherAPIMount::Abort()
 {
-    if(strcmp(dev,getDeviceName())==0)
-    {
-        ProcessTextProperties(this, name, texts, names, n);
-    }
-    // Pass it up the chain
-    return INDI::Telescope::ISNewText(dev, name, texts, names, n);
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Abort");
+    return false;
 }
 
-bool SkywatcherAPIMount::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
+bool SkywatcherAPIMount::canSync()
 {
-    if(strcmp(dev,getDeviceName())==0)
-    {
-        // It is for us
-        ProcessNumberProperties(this, name, values, names, n);
-    }
-    // Pass it up the chain
-    return INDI::Telescope::ISNewNumber(dev, name, values, names, n);
+    return true;
 }
 
-bool SkywatcherAPIMount::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
+bool  SkywatcherAPIMount::Connect()
 {
-    if(strcmp(dev,getDeviceName())==0)
-    {
-        // It is for us
-        ProcessSwitchProperties(this, name, states, names, n);
-    }
-    // Pass it up the chain
-    return INDI::Telescope::ISNewSwitch(dev, name, states, names, n);
-}
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Connect");
 
-bool SkywatcherAPIMount::ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
-{
-    if(strcmp(dev,getDeviceName())==0)
-    {
-        // It is for us
-        ProcessBlobProperties(this, name, sizes, blobsizes, blobs, formats, names, n);
-    }
-    // Pass it up the chain
-    return INDI::Telescope::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+	if (!INDI::Telescope::Connect())
+		return false;
+
+    // Tell SkywatcherAPI about the serial port
+    //SetSerialPort(PortFD); Hacked in ReadScopeStatus
+
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Connect - Call MCInit");
+	return InitMount();
 }
 
 const char * SkywatcherAPIMount::getDefaultName()
 {
     //DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::getDefaultName\n");
     return "skywatcherAPIMount";
+}
+
+bool SkywatcherAPIMount::Goto(double ra,double dec)
+{
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Goto");
+    return false;
 }
 
 bool SkywatcherAPIMount::initProperties()
@@ -317,6 +310,136 @@ void SkywatcherAPIMount::ISGetProperties (const char *dev)
     return;
 }
 
+bool SkywatcherAPIMount::ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+{
+    if(strcmp(dev,getDeviceName())==0)
+    {
+        // It is for us
+        ProcessBlobProperties(this, name, sizes, blobsizes, blobs, formats, names, n);
+    }
+    // Pass it up the chain
+    return INDI::Telescope::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+}
+
+bool SkywatcherAPIMount::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
+{
+    if(strcmp(dev,getDeviceName())==0)
+    {
+        // It is for us
+        ProcessNumberProperties(this, name, values, names, n);
+    }
+    // Pass it up the chain
+    return INDI::Telescope::ISNewNumber(dev, name, values, names, n);
+}
+
+bool SkywatcherAPIMount::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    if(strcmp(dev,getDeviceName())==0)
+    {
+        // It is for us
+        ProcessSwitchProperties(this, name, states, names, n);
+    }
+    // Pass it up the chain
+    return INDI::Telescope::ISNewSwitch(dev, name, states, names, n);
+}
+
+bool SkywatcherAPIMount::ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    if(strcmp(dev,getDeviceName())==0)
+    {
+        ProcessTextProperties(this, name, texts, names, n);
+    }
+    // Pass it up the chain
+    return INDI::Telescope::ISNewText(dev, name, texts, names, n);
+}
+
+bool SkywatcherAPIMount::MoveNS(TelescopeMotionNS dir)
+{
+    return false;
+}
+
+bool SkywatcherAPIMount::MoveWE(TelescopeMotionWE dir)
+{
+    return false;
+}
+
+bool SkywatcherAPIMount::Park()
+{
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Park");
+    return false;
+}
+
+bool SkywatcherAPIMount::ReadScopeStatus()
+{
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::ReadScopeStatus");
+
+    // Horrible hack to get over the fact that the base class calls ReadScopeStatus from inside Connect
+    // before I have a chance to set up the serial port
+    SetSerialPort(PortFD);
+
+    // leave the following stuff in for the time being it is mostly harmless
+
+    // Quick check of the mount
+    if (!GetMotorBoardVersion(AXIS1))
+        return false;
+
+    if (!GetStatus(AXIS1))
+        return false;
+
+    if (!GetStatus(AXIS2))
+        return false;
+
+    if(TrackState==SCOPE_SLEWING)
+    {
+        if ((AxesStatus[AXIS1].FullStop) && (AxesStatus[AXIS2].FullStop))
+            TrackState = SCOPE_IDLE;
+    }
+
+    // Update Axis Position
+    if (!GetPosition(AXIS1))
+        return false;
+    if (!GetPosition(AXIS2))
+        return false;
+
+    // Calculate new RA DEC
+    struct ln_hrz_posn AltAz;
+    AltAz.alt = StepToAngle(AXIS2, CurrentPositions[AXIS2] - InitialPositions[AXIS2]) * 180 / M_PI;
+    AltAz.az = StepToAngle(AXIS1, CurrentPositions[AXIS1] - InitialPositions[AXIS1]) * 180 / M_PI;
+    TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+    double RightAscension, Declination;
+    if (TransformTelescopeToCelestial( TDV, RightAscension, Declination))
+    {
+        NewRaDec(RightAscension, Declination);
+    }
+    else
+    {
+        // Conversion failed just pull the coordinates back into RADEC and hope for the best
+        struct ln_equ_posn EquatorialCoordinates;
+        EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
+        NewRaDec(EquatorialCoordinates.ra, EquatorialCoordinates.dec);
+    }
+
+    return true;
+}
+
+bool SkywatcherAPIMount::Sync(double ra, double dec)
+{
+    return false;
+}
+
+bool SkywatcherAPIMount::saveConfigItems(FILE *fp)
+{
+    SaveConfigProperties(fp);
+
+    return INDI::Telescope::saveConfigItems(fp);
+}
+
+bool SkywatcherAPIMount::updateLocation(double latitude, double longitude, double elevation)
+{
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::updateLocation");
+    UpdateLocation(latitude, longitude, elevation);
+}
+
 bool SkywatcherAPIMount::updateProperties()
 {
     INDI::Telescope::updateProperties();
@@ -356,104 +479,7 @@ bool SkywatcherAPIMount::updateProperties()
     }
 }
 
-
-bool SkywatcherAPIMount::updateLocation(double latitude, double longitude, double elevation)
-{
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::updateLocation");
-    UpdateLocation(latitude, longitude, elevation);
-}
-
-bool SkywatcherAPIMount::ReadScopeStatus()
-{
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::ReadScopeStatus");
-
-    // Horrible hack to get over the fact that the base class calls ReadScopeStatus from inside Connect
-    // before I have a chance to set up the serial port
-    SetSerialPort(PortFD);
-
-    // leave the following stuff in for the time being it is mostly harmless
-
-    // Quick check of the mount
-    if (!InquireMotorBoardVersion(AXIS1))
-        return false;
-
-    if (!MCGetAxisStatus(AXIS1))
-        return false;
-
-    if (!MCGetAxisStatus(AXIS2))
-        return false;
-
-    if(TrackState==SCOPE_SLEWING)
-    {
-        if ((AxesStatus[AXIS1].FullStop) && (AxesStatus[AXIS2].FullStop))
-            TrackState = SCOPE_IDLE;
-    }
-
-    // Update Axis Position
-    if (!MCGetAxisPosition(AXIS1))
-        return false;
-    if (!MCGetAxisPosition(AXIS2))
-        return false;
-
-    // Calculate new RA DEC
-    struct ln_hrz_posn AltAz;
-    AltAz.alt = StepToAngle(AXIS2, CurrentPositions[AXIS2] - InitialPositions[AXIS2]) * 180 / M_PI;
-    AltAz.az = StepToAngle(AXIS1, CurrentPositions[AXIS1] - InitialPositions[AXIS1]) * 180 / M_PI;
-    TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
-    double RightAscension, Declination;
-    if (TransformTelescopeToCelestial( TDV, RightAscension, Declination))
-    {
-        NewRaDec(RightAscension, Declination);
-    }
-    else
-    {
-        // Conversion failed just pull the coordinates back into RADEC and hope for the best
-        struct ln_equ_posn EquatorialCoordinates;
-        EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
-        NewRaDec(EquatorialCoordinates.ra, EquatorialCoordinates.dec);
-    }
-
-    return true;
-}
-
-bool  SkywatcherAPIMount::Connect()
-{
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Connect");
-
-	if (!INDI::Telescope::Connect())
-		return false;
-
-    // Tell SkywatcherAPI about the serial port
-    //SetSerialPort(PortFD); Hacked in ReadScopeStatus
-
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Connect - Call MCInit");
-	return MCInit();
-}
-
-bool SkywatcherAPIMount::Goto(double ra,double dec)
-{
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Goto");
-    return false;
-}
-
-bool SkywatcherAPIMount::Park()
-{
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Park");
-    return false;
-}
-
-bool  SkywatcherAPIMount::Abort()
-{
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Abort");
-    return false;
-}
-
-bool SkywatcherAPIMount::saveConfigItems(FILE *fp)
-{
-    SaveConfigProperties(fp);
-
-    return INDI::Telescope::saveConfigItems(fp);
-}
+// Private methods
 
 int SkywatcherAPIMount::skywatcher_tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read)
 {

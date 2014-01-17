@@ -45,6 +45,8 @@ void AXISSTATUS::SetSlewingTo(bool forward, bool highspeed)
     HighSpeed = highspeed;
 }
 
+// Constructor
+
 SkywatcherAPI::SkywatcherAPI()
 {
     MCVersion = 0;
@@ -54,53 +56,17 @@ SkywatcherAPI::SkywatcherAPI()
     InitialPositions[AXIS1] = InitialPositions[AXIS2] = 0;
 }
 
+// Destructor
+
 SkywatcherAPI::~SkywatcherAPI()
 {
-    //dtor
 }
 
-bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr)
+// Public methods
+
+long SkywatcherAPI::AngleToStep(AXISID Axis, double AngleInRad)
 {
-    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis Command %c Data (%s)", Command, cmdDataStr.c_str());
-
-    std::string SendBuffer;
-    int bytesWritten;
-    int bytesRead;
-    bool StartReading = false;
-    bool EndReading = false;
-
-    SendBuffer.push_back(':');
-    SendBuffer.push_back(Command);
-    SendBuffer.push_back(Axis == AXIS1 ? '1' : '2');
-    SendBuffer.append(cmdDataStr);
-    SendBuffer.push_back('\r');
-    skywatcher_tty_write(MyPortFD, SendBuffer.c_str(), SendBuffer.size(), &bytesWritten);
-
-    while (!EndReading)
-    {
-        char c;
-
-        int rc = skywatcher_tty_read(MyPortFD, &c, 1, 10, &bytesRead);
-        if ((rc != TTY_OK) || (bytesRead != 1))
-            return false;
-
-        if ((c == '=') || (c == '!'))
-        {
-            StartReading = true;
-            continue;
-        }
-
-        if ((c == '\r') && StartReading)
-        {
-            EndReading = true;
-            continue;
-        }
-
-        if (StartReading)
-            responseStr.push_back(c);
-    }
-    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis - good return Response (%s)", responseStr.c_str());
-    return true;
+    return (long)(AngleInRad * FactorRadToStep[(int)Axis]);
 }
 
 long SkywatcherAPI::BCDstr2long(std::string &String)
@@ -117,33 +83,6 @@ long SkywatcherAPI::BCDstr2long(std::string &String)
         value += hexpair << i * 4;
     }
     return value;
-}
-
-void SkywatcherAPI::Long2BCDstr(long Number, std::string &String)
-{
-    std::stringstream Temp;
-    const char *Debug;
-    Temp << std::hex << std::setfill('0') << std::uppercase
-        << std::setw(2) << (Number & 0xff)
-        << std::setw(2) << ((Number & 0xff00) >> 8)
-        << std::setw(2) << ((Number & 0xff0000) >> 16);
-    Debug = Temp.str().c_str();
-    String = Temp.str();
-}
-
-long SkywatcherAPI::AngleToStep(AXISID Axis, double AngleInRad)
-{
-    return (long)(AngleInRad * FactorRadToStep[(int)Axis]);
-}
-
-double SkywatcherAPI::StepToAngle(AXISID Axis, long Steps)
-{
-    return Steps * FactorStepToRad[(int)Axis];
-}
-
-long SkywatcherAPI::RadSpeedToInt(AXISID Axis, double RateInRad)
-{
-    return (long)(RateInRad * FactorRadRateToInt[(int)Axis]);
 }
 
 bool SkywatcherAPI::CheckIfDCMotor()
@@ -182,112 +121,78 @@ bool SkywatcherAPI::CheckIfDCMotor()
 	return false;
 }
 
-bool SkywatcherAPI::MCInit()
+bool SkywatcherAPI::GetGridPerRevolution(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "MCInit");
-
-	if (!CheckIfDCMotor())
-		return false;
-
-    if (!InquireMotorBoardVersion(AXIS1))
-        return false;
-
-    MountCode = MCVersion & 0xFF;
-
-    //// NOTE: Simulator settings, Mount dependent Settings
-
-    // Inquire Gear Rate
-    if (!InquireGridPerRevolution(AXIS1))
-        return false;
-    if (!InquireGridPerRevolution(AXIS2))
-        return false;
-
-    // Inquire motor timer interrup frequency
-    if (!InquireTimerInterruptFreq(AXIS1))
-        return false;
-    if (!InquireTimerInterruptFreq(AXIS2))
-        return false;
-
-    // Inquire motor high speed ratio
-    if (!InquireHighSpeedRatio(AXIS1))
-        return false;
-    if (!InquireHighSpeedRatio(AXIS2))
-        return false;
-
-    // Inquire PEC period
-    // DC motor controller does not support PEC
-    if (!IsDCMotor)
-    {
-//        if (!InquirePECPeriod(AXIS1);
-//        if (!InquirePECPeriod(AXIS2);
-    }
-
-    // Inquire Axis Position
-    if (!MCGetAxisPosition(AXIS1))
-        return false;
-    if (!MCGetAxisPosition(AXIS2))
-        return false;
-
-    // Set initial axis posiitons
-    // These are used to define the arbitary zero position vector for the axis
-    InitialPositions[AXIS1] = CurrentPositions[AXIS1];
-    InitialPositions[AXIS2] = CurrentPositions[AXIS2];
-
-
-    if (!InitializeMC())
-        return false;
-
-    // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
-    LowSpeedGotoMargin[(int)AXIS1] = (long)(640 * CONSTANT::SIDEREALRATE * FactorRadToStep[(int)AXIS1]);
-    LowSpeedGotoMargin[(int)AXIS2] = (long)(640 * CONSTANT::SIDEREALRATE * FactorRadToStep[(int)AXIS2]);
-
-    // Default break steps
-    BreakSteps[(int)AXIS1] = 3500;
-    BreakSteps[(int)AXIS2] = 3500;
-
-
-    return true;
-}
-
-bool SkywatcherAPI::MCAxisStop(AXISID Axis)
-{
-    // Request a slow stop
-    MYDEBUG(INDI::Logger::DBG_SESSION, "MCAxisStop");
-    std::string Parameters, Response;
-    if (!TalkWithAxis(Axis, 'K', Parameters, Response))
-    	return false;
-    return true;
-}
-
-bool SkywatcherAPI::MCAxisInstantStop(AXISID Axis)
-{
-    // Request a slow stop
-    MYDEBUG(INDI::Logger::DBG_SESSION, "MCAxisStop");
-    std::string Parameters, Response;
-    if (!TalkWithAxis(Axis, 'L', Parameters, Response))
-    	return false;
-    AxesStatus[(int)Axis].SetFullStop();
-    return true;
-}
-
-bool SkywatcherAPI::MCSetAxisPosition(AXISID Axis, double Position)
-{
-    MYDEBUG(INDI::Logger::DBG_SESSION, "MCSetAxisPosition");
+    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireGridPerRevolution");
     std::string Parameters, Response;
 
-    long Temp = Position;
-    Temp += 0x800000;
-    Long2BCDstr(Temp, Parameters);
+    if (!TalkWithAxis(Axis, 'a', Parameters, Response))
+        return false;
 
-    if (!TalkWithAxis(Axis, 'L', Parameters, Response))
-    	return false;
+
+    long tmpGearRatio = BCDstr2long(Response);
+
+    // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
+    // Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
+    if ((MCVersion & 0x0000FF) == 0x80)
+        tmpGearRatio = 0x162B97;		// for 80GT mount
+    if ((MCVersion & 0x0000FF) == 0x82)
+        tmpGearRatio = 0x205318;		// for 114GT mount
+
+    GearRatio[(int)Axis] = tmpGearRatio;
+
+    FactorRadToStep[(int)Axis] = tmpGearRatio / (2 * M_PI);
+    FactorStepToRad[(int)Axis] = 2 * M_PI / tmpGearRatio;
 
     return true;
 }
 
-bool SkywatcherAPI::MCGetAxisPosition(AXISID Axis)
+bool SkywatcherAPI::GetHighSpeedRatio(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "MCGetAxisPosition");
+    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireHighSpeedRatio");
+    std::string Parameters, Response;
+
+    if (!TalkWithAxis(Axis, 'g', Parameters, Response))
+        return false;
+
+    long highSpeedRatio = BCDstr2long(Response);
+    HighSpeedRatio[(int)Axis] = highSpeedRatio;
+
+    return true;
+}
+
+bool SkywatcherAPI::GetPECPeriod(AXISID Axis)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "InquirePECPeriod");
+    std::string Parameters, Response;
+
+    if (!TalkWithAxis(Axis, 's', Parameters, Response))
+        return false;
+
+    long PECPeriod = BCDstr2long(Response);
+    PESteps[(int)Axis] = PECPeriod;
+
+    return true;
+}
+
+bool SkywatcherAPI::GetMotorBoardVersion(AXISID Axis)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireMotorBoardVersion");
+    std::string Parameters, Response;
+
+    if (!TalkWithAxis(Axis, 'e', Parameters, Response))
+        return false;
+
+    long tmpMCVersion = BCDstr2long(Response);
+
+    MCVersion = ((tmpMCVersion & 0xFF) << 16) | ((tmpMCVersion & 0xFF00)) | ((tmpMCVersion & 0xFF0000) >> 16);
+
+    return true;
+}
+
+bool SkywatcherAPI::GetPosition(AXISID Axis)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "GetPosition");
     std::string Parameters, Response;
     if (!TalkWithAxis(Axis, 'j', Parameters, Response))
     	return false;
@@ -299,9 +204,25 @@ bool SkywatcherAPI::MCGetAxisPosition(AXISID Axis)
     return true;
 }
 
-bool SkywatcherAPI::MCGetAxisStatus(AXISID Axis)
+bool SkywatcherAPI::GetTimerInterruptFreq(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "MCGetAxisStatus");
+    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireTimerInterruptFreq");
+    std::string Parameters, Response;
+
+    if (!TalkWithAxis(Axis, 'b', Parameters, Response))
+        return false;
+
+    long TimeFreq = BCDstr2long(Response);
+    StepTimerFreq[(int)Axis] = TimeFreq;
+
+    FactorRadRateToInt[(int)Axis] = (double)(StepTimerFreq[(int)Axis]) / FactorRadToStep[(int)Axis];
+
+    return true;
+}
+
+bool SkywatcherAPI::GetStatus(AXISID Axis)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "GetStatus");
     std::string Parameters, Response;
 
     if(!TalkWithAxis(Axis, 'f', Parameters, Response))
@@ -349,7 +270,155 @@ bool SkywatcherAPI::MCGetAxisStatus(AXISID Axis)
     return true;
 }
 
-bool SkywatcherAPI::MCSetSwitch(bool OnOff)
+// Set initialization done ":F3", where '3'= Both CH1 and CH2.
+bool SkywatcherAPI::InitializeMC()
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "InitializeMC");
+    std::string Parameters, Response;
+
+    if (!TalkWithAxis(AXIS1, 'F', Parameters, Response))
+        return false;
+    if (!TalkWithAxis(AXIS2, 'F', Parameters, Response))
+        return false;
+    return true;
+}
+
+bool SkywatcherAPI::InitMount()
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "InitMount");
+
+	if (!CheckIfDCMotor())
+		return false;
+
+    if (!GetMotorBoardVersion(AXIS1))
+        return false;
+
+    MountCode = MCVersion & 0xFF;
+
+    //// NOTE: Simulator settings, Mount dependent Settings
+
+    // Inquire Gear Rate
+    if (!GetGridPerRevolution(AXIS1))
+        return false;
+    if (!GetGridPerRevolution(AXIS2))
+        return false;
+
+    // Inquire motor timer interrup frequency
+    if (!GetTimerInterruptFreq(AXIS1))
+        return false;
+    if (!GetTimerInterruptFreq(AXIS2))
+        return false;
+
+    // Inquire motor high speed ratio
+    if (!GetHighSpeedRatio(AXIS1))
+        return false;
+    if (!GetHighSpeedRatio(AXIS2))
+        return false;
+
+    // Inquire PEC period
+    // DC motor controller does not support PEC
+    if (!IsDCMotor)
+    {
+//        if (!InquirePECPeriod(AXIS1);
+//        if (!InquirePECPeriod(AXIS2);
+    }
+
+    // Inquire Axis Position
+    if (!GetPosition(AXIS1))
+        return false;
+    if (!GetPosition(AXIS2))
+        return false;
+
+    // Set initial axis posiitons
+    // These are used to define the arbitary zero position vector for the axis
+    InitialPositions[AXIS1] = CurrentPositions[AXIS1];
+    InitialPositions[AXIS2] = CurrentPositions[AXIS2];
+
+
+    if (!InitializeMC())
+        return false;
+
+    // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
+    LowSpeedGotoMargin[(int)AXIS1] = (long)(640 * CONSTANT::SIDEREALRATE * FactorRadToStep[(int)AXIS1]);
+    LowSpeedGotoMargin[(int)AXIS2] = (long)(640 * CONSTANT::SIDEREALRATE * FactorRadToStep[(int)AXIS2]);
+
+    // Default break steps
+    BreakSteps[(int)AXIS1] = 3500;
+    BreakSteps[(int)AXIS2] = 3500;
+
+
+    return true;
+}
+
+bool SkywatcherAPI::InstantStop(AXISID Axis)
+{
+    // Request a slow stop
+    MYDEBUG(INDI::Logger::DBG_SESSION, "InstantStop");
+    std::string Parameters, Response;
+    if (!TalkWithAxis(Axis, 'L', Parameters, Response))
+    	return false;
+    AxesStatus[(int)Axis].SetFullStop();
+    return true;
+}
+
+void SkywatcherAPI::Long2BCDstr(long Number, std::string &String)
+{
+    std::stringstream Temp;
+    const char *Debug;
+    Temp << std::hex << std::setfill('0') << std::uppercase
+        << std::setw(2) << (Number & 0xff)
+        << std::setw(2) << ((Number & 0xff00) >> 8)
+        << std::setw(2) << ((Number & 0xff0000) >> 16);
+    Debug = Temp.str().c_str();
+    String = Temp.str();
+}
+
+long SkywatcherAPI::RadSpeedToInt(AXISID Axis, double RateInRad)
+{
+    return (long)(RateInRad * FactorRadRateToInt[(int)Axis]);
+}
+
+bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long StepsCount)
+{
+    return false;
+}
+
+bool SkywatcherAPI::SetBreakSteps(AXISID Axis, long NewBrakeSteps)
+{
+    return false;
+}
+
+bool SkywatcherAPI::SetGotoTargetIncrement(AXISID Axis, long StepsCount)
+{
+    return false;
+}
+
+bool SkywatcherAPI::SetMotionMode(AXISID Axis, char Func, char Direction)
+{
+    return false;
+}
+
+bool SkywatcherAPI::SetPosition(AXISID Axis, double Position)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "SetPosition");
+    std::string Parameters, Response;
+
+    long Temp = Position;
+    Temp += 0x800000;
+    Long2BCDstr(Temp, Parameters);
+
+    if (!TalkWithAxis(Axis, 'L', Parameters, Response))
+    	return false;
+
+    return true;
+}
+
+bool SkywatcherAPI::SetStepPeriod(AXISID Axis, long StepsCount)
+{
+    return false;
+}
+
+bool SkywatcherAPI::SetSwitch(bool OnOff)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "MCSetSwitch");
     std::string Parameters, Response;
@@ -364,107 +433,66 @@ bool SkywatcherAPI::MCSetSwitch(bool OnOff)
     return true;
 }
 
-
-/************************ MOTOR COMMAND SET ***************************/
-// Inquire Motor Board Version ":e(*1)", where *1: '1'= CH1, '2'= CH2, '3'= Both.
-bool SkywatcherAPI::InquireMotorBoardVersion(AXISID Axis)
+bool SkywatcherAPI::StartMotion(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireMotorBoardVersion");
+    return false;
+}
+
+double SkywatcherAPI::StepToAngle(AXISID Axis, long Steps)
+{
+    return Steps * FactorStepToRad[(int)Axis];
+}
+
+bool SkywatcherAPI::Stop(AXISID Axis)
+{
+    // Request a slow stop
+    MYDEBUG(INDI::Logger::DBG_SESSION, "Stop");
     std::string Parameters, Response;
-
-    if (!TalkWithAxis(Axis, 'e', Parameters, Response))
-        return false;
-
-    long tmpMCVersion = BCDstr2long(Response);
-
-    MCVersion = ((tmpMCVersion & 0xFF) << 16) | ((tmpMCVersion & 0xFF00)) | ((tmpMCVersion & 0xFF0000) >> 16);
-
+    if (!TalkWithAxis(Axis, 'K', Parameters, Response))
+    	return false;
     return true;
 }
 
-// Inquire Grid Per Revolution ":a(*2)", where *2: '1'= CH1, '2' = CH2.
-bool SkywatcherAPI::InquireGridPerRevolution(AXISID Axis)
+bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireGridPerRevolution");
-    std::string Parameters, Response;
+    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis Command %c Data (%s)", Command, cmdDataStr.c_str());
 
-    if (!TalkWithAxis(Axis, 'a', Parameters, Response))
-        return false;
+    std::string SendBuffer;
+    int bytesWritten;
+    int bytesRead;
+    bool StartReading = false;
+    bool EndReading = false;
 
+    SendBuffer.push_back(':');
+    SendBuffer.push_back(Command);
+    SendBuffer.push_back(Axis == AXIS1 ? '1' : '2');
+    SendBuffer.append(cmdDataStr);
+    SendBuffer.push_back('\r');
+    skywatcher_tty_write(MyPortFD, SendBuffer.c_str(), SendBuffer.size(), &bytesWritten);
 
-    long tmpGearRatio = BCDstr2long(Response);
+    while (!EndReading)
+    {
+        char c;
 
-    // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
-    // Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
-    if ((MCVersion & 0x0000FF) == 0x80)
-        tmpGearRatio = 0x162B97;		// for 80GT mount
-    if ((MCVersion & 0x0000FF) == 0x82)
-        tmpGearRatio = 0x205318;		// for 114GT mount
+        int rc = skywatcher_tty_read(MyPortFD, &c, 1, 10, &bytesRead);
+        if ((rc != TTY_OK) || (bytesRead != 1))
+            return false;
 
-    GearRatio[(int)Axis] = tmpGearRatio;
+        if ((c == '=') || (c == '!'))
+        {
+            StartReading = true;
+            continue;
+        }
 
-    FactorRadToStep[(int)Axis] = tmpGearRatio / (2 * M_PI);
-    FactorStepToRad[(int)Axis] = 2 * M_PI / tmpGearRatio;
+        if ((c == '\r') && StartReading)
+        {
+            EndReading = true;
+            continue;
+        }
 
-    return true;
-}
-
-// Inquire Timer Interrupt Freq ":b1".
-bool SkywatcherAPI::InquireTimerInterruptFreq(AXISID Axis)
-{
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireTimerInterruptFreq");
-    std::string Parameters, Response;
-
-    if (!TalkWithAxis(Axis, 'b', Parameters, Response))
-        return false;
-
-    long TimeFreq = BCDstr2long(Response);
-    StepTimerFreq[(int)Axis] = TimeFreq;
-
-    FactorRadRateToInt[(int)Axis] = (double)(StepTimerFreq[(int)Axis]) / FactorRadToStep[(int)Axis];
-
-    return true;
-}
-
-// Inquire high speed ratio ":g(*2)", where *2: '1'= CH1, '2' = CH2.
-bool SkywatcherAPI::InquireHighSpeedRatio(AXISID Axis)
-{
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireHighSpeedRatio");
-    std::string Parameters, Response;
-
-    if (!TalkWithAxis(Axis, 'g', Parameters, Response))
-        return false;
-
-    long highSpeedRatio = BCDstr2long(Response);
-    HighSpeedRatio[(int)Axis] = highSpeedRatio;
-
-    return true;
-}
-
-// Inquire PEC Period ":s(*1)", where *1: '1'= CH1, '2'= CH2, '3'= Both.
-bool SkywatcherAPI::InquirePECPeriod(AXISID Axis)
-{
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquirePECPeriod");
-    std::string Parameters, Response;
-
-    if (!TalkWithAxis(Axis, 's', Parameters, Response))
-        return false;
-
-    long PECPeriod = BCDstr2long(Response);
-    PESteps[(int)Axis] = PECPeriod;
-
-    return true;
-}
-
-// Set initialization done ":F3", where '3'= Both CH1 and CH2.
-bool SkywatcherAPI::InitializeMC()
-{
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InitializeMC");
-    std::string Parameters, Response;
-
-    if (!TalkWithAxis(AXIS1, 'F', Parameters, Response))
-        return false;
-    if (!TalkWithAxis(AXIS2, 'F', Parameters, Response))
-        return false;
+        if (StartReading)
+            responseStr.push_back(c);
+    }
+    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis - good return Response (%s)", responseStr.c_str());
     return true;
 }
