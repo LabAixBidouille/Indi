@@ -380,22 +380,54 @@ long SkywatcherAPI::RadSpeedToInt(AXISID Axis, double RateInRad)
 
 bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long StepsCount)
 {
-    return false;
+    MYDEBUG(INDI::Logger::DBG_SESSION, "SetBreakPointIncrement");
+    std::string Parameters, Response;
+
+    Long2BCDstr(StepsCount, Parameters);
+
+    if (!TalkWithAxis(Axis, 'M', Parameters, Response))
+    	return false;
+
+    return true;
 }
 
 bool SkywatcherAPI::SetBreakSteps(AXISID Axis, long NewBrakeSteps)
 {
-    return false;
+    MYDEBUG(INDI::Logger::DBG_SESSION, "SetBreakSteps");
+    std::string Parameters, Response;
+
+    Long2BCDstr(NewBrakeSteps, Parameters);
+
+    if (!TalkWithAxis(Axis, 'U', Parameters, Response))
+    	return false;
+
+    return true;
 }
 
 bool SkywatcherAPI::SetGotoTargetIncrement(AXISID Axis, long StepsCount)
 {
-    return false;
+    MYDEBUG(INDI::Logger::DBG_SESSION, "SetGotoTargetIncrement");
+    std::string Parameters, Response;
+
+    Long2BCDstr(StepsCount, Parameters);
+
+    if (!TalkWithAxis(Axis, 'H', Parameters, Response))
+    	return false;
+
+    return true;
 }
 
 bool SkywatcherAPI::SetMotionMode(AXISID Axis, char Func, char Direction)
 {
-    return false;
+    MYDEBUG(INDI::Logger::DBG_SESSION, "SetMotionMode");
+    std::string Parameters, Response;
+
+    Parameters = Func + Direction;
+
+    if (!TalkWithAxis(Axis, 'G', Parameters, Response))
+    	return false;
+
+    return true;
 }
 
 bool SkywatcherAPI::SetPosition(AXISID Axis, double Position)
@@ -415,7 +447,15 @@ bool SkywatcherAPI::SetPosition(AXISID Axis, double Position)
 
 bool SkywatcherAPI::SetStepPeriod(AXISID Axis, long StepsCount)
 {
-    return false;
+    MYDEBUG(INDI::Logger::DBG_SESSION, "SetStepPeriod");
+    std::string Parameters, Response;
+
+    Long2BCDstr(StepsCount, Parameters);
+
+    if (!TalkWithAxis(Axis, 'H', Parameters, Response))
+    	return false;
+
+    return true;
 }
 
 bool SkywatcherAPI::SetSwitch(bool OnOff)
@@ -435,7 +475,11 @@ bool SkywatcherAPI::SetSwitch(bool OnOff)
 
 bool SkywatcherAPI::StartMotion(AXISID Axis)
 {
-    return false;
+    MYDEBUG(INDI::Logger::DBG_SESSION, "StartMotion");
+    std::string Parameters, Response;
+    if (!TalkWithAxis(Axis, 'J', Parameters, Response))
+    	return false;
+    return true;
 }
 
 double SkywatcherAPI::StepToAngle(AXISID Axis, long Steps)
