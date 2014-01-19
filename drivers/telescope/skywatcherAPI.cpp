@@ -56,8 +56,10 @@ const double SkywatcherAPI::LOW_SPEED_MARGIN = 128.0 * SIDEREALRATE;
 SkywatcherAPI::SkywatcherAPI()
 {
     MCVersion = 0;
-    FactorStepToRad[AXIS1] = FactorStepToRad[AXIS2] = 0;
-    FactorRadToStep[AXIS1] = FactorRadToStep[AXIS2] = 0;
+    RadiansPerMicrostep[AXIS1] = RadiansPerMicrostep[AXIS2] = 0;
+    MicrostepsPerRadian[AXIS1] = MicrostepsPerRadian[AXIS2] = 0;
+    DegreesPerMicrostep[AXIS1] = DegreesPerMicrostep[AXIS2] = 0;
+    MicrostepsPerDegree[AXIS1] = MicrostepsPerDegree[AXIS2] = 0;
     CurrentPositions[AXIS1] = CurrentPositions[AXIS2] = 0;
     InitialPositions[AXIS1] = InitialPositions[AXIS2] = 0;
     SlewingSpeed[AXIS1] = SlewingSpeed[AXIS2] = 0;
@@ -70,11 +72,6 @@ SkywatcherAPI::~SkywatcherAPI()
 }
 
 // Public methods
-
-long SkywatcherAPI::AngleToStep(AXISID Axis, double AngleInRadians)
-{
-    return (long)(AngleInRadians * FactorRadToStep[(int)Axis]);
-}
 
 long SkywatcherAPI::BCDstr2long(std::string &String)
 {
@@ -128,6 +125,18 @@ bool SkywatcherAPI::CheckIfDCMotor()
 	return false;
 }
 
+long SkywatcherAPI::DegreesPerSecondToClocksTicksPerMicrostep(AXISID Axis, double DegreesPerSecond)
+{
+    double MicrostepsPerSecond = DegreesPerSecond * MicrostepsPerDegree[Axis];
+
+    return long((double(StepperClockFrequency[Axis]) / MicrostepsPerSecond));
+}
+
+long SkywatcherAPI::DegreesToMicrosteps(AXISID Axis, double AngleInDegrees)
+{
+    return (long)(AngleInDegrees * MicrostepsPerDegree[(int)Axis]);
+}
+
 bool SkywatcherAPI::GetHighSpeedRatio(AXISID Axis)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "InquireHighSpeedRatio");
@@ -162,8 +171,10 @@ bool SkywatcherAPI::GetMicrostepsPerRevolution(AXISID Axis)
 
     MicrostepsPerRevolution[(int)Axis] = tmpMicrostepsPerRevolution;
 
-    FactorRadToStep[(int)Axis] = tmpMicrostepsPerRevolution / (2 * M_PI);
-    FactorStepToRad[(int)Axis] = 2 * M_PI / tmpMicrostepsPerRevolution;
+    MicrostepsPerRadian[(int)Axis] = tmpMicrostepsPerRevolution / (2 * M_PI);
+    RadiansPerMicrostep[(int)Axis] = 2 * M_PI / tmpMicrostepsPerRevolution;
+    MicrostepsPerDegree[(int)Axis] = tmpMicrostepsPerRevolution / 360.0;
+    DegreesPerMicrostep[(int)Axis] = 360.0 / tmpMicrostepsPerRevolution;
 
     return true;
 }
@@ -206,7 +217,7 @@ bool SkywatcherAPI::GetPosition(AXISID Axis)
 
     long iPosition = BCDstr2long(Response);
     iPosition -= 0x00800000;
-    CurrentPositions[(int)Axis] = StepToAngle(Axis, iPosition);
+    CurrentPositions[(int)Axis] = MicrostepsToRadians(Axis, iPosition);
 
     return true;
 }
@@ -233,7 +244,7 @@ bool SkywatcherAPI::GetStepperClockFrequency(AXISID Axis)
 
     StepperClockFrequency[(int)Axis] = BCDstr2long(Response);
 
-    FactorRadRateToInt[(int)Axis] = (double)(StepperClockFrequency[(int)Axis]) / FactorRadToStep[(int)Axis];
+    FactorRadRateToInt[(int)Axis] = (double)(StepperClockFrequency[(int)Axis]) / MicrostepsPerRadian[(int)Axis];
 
     return true;
 }
@@ -357,8 +368,8 @@ bool SkywatcherAPI::InitMount()
         return false;
 
     // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
-    LowSpeedGotoMargin[(int)AXIS1] = (long)(640 * SIDEREALRATE * FactorRadToStep[(int)AXIS1]);
-    LowSpeedGotoMargin[(int)AXIS2] = (long)(640 * SIDEREALRATE * FactorRadToStep[(int)AXIS2]);
+    LowSpeedGotoMargin[(int)AXIS1] = (long)(640 * SIDEREALRATE * MicrostepsPerRadian[(int)AXIS1]);
+    LowSpeedGotoMargin[(int)AXIS2] = (long)(640 * SIDEREALRATE * MicrostepsPerRadian[(int)AXIS2]);
 
     // Default break steps
     BreakSteps[(int)AXIS1] = 3500;
@@ -389,6 +400,16 @@ void SkywatcherAPI::Long2BCDstr(long Number, std::string &String)
         << std::setw(2) << ((Number & 0xff0000) >> 16);
     Debug = Temp.str().c_str();
     String = Temp.str();
+}
+
+double SkywatcherAPI::MicrostepsToDegrees(AXISID Axis, long Microsteps)
+{
+    return Microsteps * DegreesPerMicrostep[(int)Axis];
+}
+
+double SkywatcherAPI::MicrostepsToRadians(AXISID Axis, long Microsteps)
+{
+    return Microsteps * RadiansPerMicrostep[(int)Axis];
 }
 
 void SkywatcherAPI::PrepareForSlewing(AXISID Axis, double Speed)
@@ -439,6 +460,18 @@ void SkywatcherAPI::PrepareForSlewing(AXISID Axis, double Speed)
         SetMotionMode(Axis, '3', Direction);
     else
         SetMotionMode(Axis, '1', Direction);
+}
+
+long SkywatcherAPI::RadiansPerSecondToClocksTicksPerMicrostep(AXISID Axis, double RadiansPerSecond)
+{
+    double MicrostepsPerSecond = RadiansPerSecond * MicrostepsPerRadian[Axis];
+
+    return long((double(StepperClockFrequency[Axis]) / MicrostepsPerSecond));
+}
+
+long SkywatcherAPI::RadiansToMicrosteps(AXISID Axis, double AngleInRadians)
+{
+    return (long)(AngleInRadians * MicrostepsPerRadian[(int)Axis]);
 }
 
 long SkywatcherAPI::RadSpeedToInt(AXISID Axis, double RateInSecondsPerRadian)
@@ -603,11 +636,6 @@ bool SkywatcherAPI::StartMotion(AXISID Axis)
     if (!TalkWithAxis(Axis, 'J', Parameters, Response))
     	return false;
     return true;
-}
-
-double SkywatcherAPI::StepToAngle(AXISID Axis, long Steps)
-{
-    return Steps * FactorStepToRad[(int)Axis];
 }
 
 bool SkywatcherAPI::Stop(AXISID Axis)
