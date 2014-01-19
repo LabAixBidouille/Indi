@@ -56,14 +56,21 @@ public:
     SkywatcherAPI();
     virtual ~SkywatcherAPI();
 
-    /// \brief Convert angle to microsteps
-    /// \param[in] Axis - The axis to use.
-    /// \param[in] AngleInRadians - the angle in radians.
-    /// \return the number of microsteps
-    long AngleToStep(AXISID Axis, double AngleInRadians);
-
     long BCDstr2long(std::string &String);
     bool CheckIfDCMotor();
+
+    /// \brief Convert a slewing rate in degrees per second into the required
+    /// clock ticks per microstep setting.
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] DegreesPerSecond - Slewing rate in degrees per second
+    /// \return Clock ticks per microstep for the requested rate
+    long DegreesPerSecondToClocksTicksPerMicrostep(AXISID Axis, double DegreesPerSecond);
+
+    /// \brief Convert angle in degrees to microsteps
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] AngleInRadians - the angle in degrees.
+    /// \return the number of microsteps
+    long DegreesToMicrosteps(AXISID Axis, double AngleInDegrees);
 
     /// \brief Set the HighSpeedRatio status variable to the ratio between
     /// high and low speed stepping modes.
@@ -103,7 +110,33 @@ public:
     bool GetPECPeriod(AXISID Axis);
     bool InstantStop(AXISID Axis);
     void Long2BCDstr(long Number, std::string &String);
+
+    /// \brief Convert microsteps to angle in degrees
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] Microsteps
+    /// \return the angle in degrees
+    double MicrostepsToDegrees(AXISID Axis, long Microsteps);
+
+    /// \brief Convert microsteps to angle in radians
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] Microsteps
+    /// \return the angle in radians
+    double MicrostepsToRadians(AXISID Axis, long Microsteps);
+
     void PrepareForSlewing(AXISID Axis, double Speed);
+
+    /// \brief Convert a slewing rate in degrees per second into the required
+    /// clock ticks per microstep setting.
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] DegreesPerSecond - Slewing rate in degrees per second
+    /// \return Clock ticks per microstep for the requested rate
+    long RadiansPerSecondToClocksTicksPerMicrostep(AXISID Axis, double RadiansPerSecond);
+
+    /// \brief Convert angle in radians to microsteps
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] AngleInRadians - the angle in radians.
+    /// \return the number of microsteps
+    long RadiansToMicrosteps(AXISID Axis, double AngleInRadians);
 
     /// \brief Convert a speed in seconds per radian to microsteps per second
     /// \param[in] RateInSecondsPerRadian
@@ -124,7 +157,8 @@ public:
     bool SetSwitch(bool OnOff);
     void Slew(AXISID Axis, double SpeedInRadiansPerSecond);
     bool StartMotion(AXISID Axis);
-    double StepToAngle(AXISID Axis, long Steps);
+
+
     bool Stop(AXISID Axis);
     bool TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr);
 
@@ -142,8 +176,10 @@ public:
     long PESteps[2]; // Number of microsteps for one revolution of the worm gear.
 
     // Calculated values
-    double FactorRadToStep[2];
-    double FactorStepToRad[2];
+    double RadiansPerMicrostep[2];
+    double MicrostepsPerRadian[2];
+    double DegreesPerMicrostep[2];
+    double MicrostepsPerDegree[2];
     double FactorRadRateToInt[2];
     long LowSpeedGotoMargin[2];
     long BreakSteps[2];

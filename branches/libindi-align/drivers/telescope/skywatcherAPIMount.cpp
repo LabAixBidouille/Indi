@@ -486,8 +486,8 @@ bool SkywatcherAPIMount::ReadScopeStatus()
 
     // Calculate new RA DEC
     struct ln_hrz_posn AltAz;
-    AltAz.alt = StepToAngle(AXIS2, CurrentPositions[AXIS2] - InitialPositions[AXIS2]) * 180 / M_PI;
-    AltAz.az = StepToAngle(AXIS1, CurrentPositions[AXIS1] - InitialPositions[AXIS1]) * 180 / M_PI;
+    AltAz.alt = MicrostepsToRadians(AXIS2, CurrentPositions[AXIS2] - InitialPositions[AXIS2]) * 180 / M_PI;
+    AltAz.az = MicrostepsToRadians(AXIS1, CurrentPositions[AXIS1] - InitialPositions[AXIS1]) * 180 / M_PI;
     TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
     double RightAscension, Declination;
     if (TransformTelescopeToCelestial( TDV, RightAscension, Declination))
