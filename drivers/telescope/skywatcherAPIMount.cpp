@@ -184,15 +184,15 @@ bool SkywatcherAPIMount::initProperties()
     IUFillSwitchVector(&MountTypeV, MountType, 9, getDeviceName(), "MOUNT_TYPE", "Mount type", DetailedMountInfoPage, IP_RO,
                         ISR_ATMOST1, 60, IPS_IDLE);
 
-    IUFillNumber(&AxisOneInfo[GEAR_RATIO], "GEAR_RATIO",
+    IUFillNumber(&AxisOneInfo[MICROSTEPS_PER_REVOLUTION], "MICROSTEPS_PER_REVOLUTION",
                                                             "Microsteps per revolution",
                                                             "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
                                                             0);
-    IUFillNumber(&AxisOneInfo[STEP_TIMER_FREQUENCY], "STEP_TIMER_FREQUENCY",
-                                                            "Step timer frequency",
+    IUFillNumber(&AxisOneInfo[STEPPER_CLOCK_FREQUENCY], "STEPPER_CLOCK_FREQUENCY",
+                                                            "Stepper clock frequency",
                                                             "%.0f",
                                                             0,
                                                             0xFFFFFF,
@@ -225,14 +225,14 @@ bool SkywatcherAPIMount::initProperties()
     IUFillSwitchVector(&AxisOneStateV, AxisOneState, 6, getDeviceName(), "AXIS_ONE_STATE", "Axis one state", DetailedMountInfoPage, IP_RO,
                         ISR_NOFMANY, 60, IPS_IDLE);
 
-    IUFillNumber(&AxisTwoInfo[GEAR_RATIO], "GEAR_RATIO",
+    IUFillNumber(&AxisTwoInfo[MICROSTEPS_PER_REVOLUTION], "MICROSTEPS_PER_REVOLUTION",
                                                             "Microsteps per revolution",
                                                             "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
                                                             0);
-    IUFillNumber(&AxisTwoInfo[STEP_TIMER_FREQUENCY], "STEP_TIMER_FREQUENCY",
+    IUFillNumber(&AxisTwoInfo[STEPPER_CLOCK_FREQUENCY], "STEPPER_CLOCK_FREQUENCY",
                                                             "Step timer frequency",
                                                             "%.0f",
                                                             0,
@@ -401,6 +401,45 @@ bool SkywatcherAPIMount::MoveNS(TelescopeMotionNS dir)
 
 bool SkywatcherAPIMount::MoveWE(TelescopeMotionWE dir)
 {
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::MoveWE");
+    switch (dir)
+    {
+        case MOTION_WEST:
+            if (PreviousWEMotion != PREVIOUS_WE_MOTION_WEST)
+            {
+                DEBUG(INDI::Logger::DBG_SESSION, "Starting Slew West");
+                Slew(AXIS1, LOW_SPEED_MARGIN / 2);
+                PreviousWEMotion = PREVIOUS_WE_MOTION_WEST;
+            }
+            else
+            {
+                DEBUG(INDI::Logger::DBG_SESSION, "Stopping Slew West");
+                Stop(AXIS1);
+                PreviousWEMotion = PREVIOUS_WE_MOTION_UNKNOWN;
+                IUResetSwitch(&MovementWESP);
+                MovementWESP.s = IPS_IDLE;
+                IDSetSwitch(&MovementWESP, NULL);
+            }
+            break;
+
+        case MOTION_EAST:
+            if (PreviousWEMotion != PREVIOUS_WE_MOTION_EAST)
+            {
+                DEBUG(INDI::Logger::DBG_SESSION, "Starting Slew East");
+                Slew(AXIS1, -LOW_SPEED_MARGIN / 2);
+                PreviousWEMotion = PREVIOUS_WE_MOTION_EAST;
+            }
+            else
+            {
+                DEBUG(INDI::Logger::DBG_SESSION, "Stopping Slew East");
+                Stop(AXIS1);
+                PreviousWEMotion = PREVIOUS_WE_MOTION_UNKNOWN;
+                IUResetSwitch(&MovementWESP);
+                MovementWESP.s = IPS_IDLE;
+                IDSetSwitch(&MovementWESP, NULL);
+            }
+            break;
+    }
     return false;
 }
 
@@ -549,8 +588,8 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
         // Also tell the alignment subsystem
         switch (MountCode)
         {
-            case 0x82:
-            case 0x90:
+            case _114GT:
+            case DOB:
                 SetApproximateMountAlignmentFromMountType(ALTAZ);
                 break;
 
@@ -609,14 +648,14 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
     }
 
     bool AxisOneInfoHasChanged = false;
-    if (AxisOneInfo[GEAR_RATIO].value != GearRatio[0])
+    if (AxisOneInfo[MICROSTEPS_PER_REVOLUTION].value != MicrostepsPerRevolution[0])
     {
-        AxisOneInfo[GEAR_RATIO].value = GearRatio[0];
+        AxisOneInfo[MICROSTEPS_PER_REVOLUTION].value = MicrostepsPerRevolution[0];
         AxisOneInfoHasChanged = true;
     }
-    if (AxisOneInfo[STEP_TIMER_FREQUENCY].value != StepTimerFreq[0])
+    if (AxisOneInfo[STEPPER_CLOCK_FREQUENCY].value != StepperClockFrequency[0])
     {
-        AxisOneInfo[STEP_TIMER_FREQUENCY].value = StepTimerFreq[0];
+        AxisOneInfo[STEPPER_CLOCK_FREQUENCY].value = StepperClockFrequency[0];
         AxisOneInfoHasChanged = true;
     }
     if (AxisOneInfo[HIGH_SPEED_RATIO].value != HighSpeedRatio[0])
@@ -667,14 +706,14 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
             IDSetSwitch(&AxisOneStateV, NULL);
 
     bool AxisTwoInfoHasChanged = false;
-    if (AxisTwoInfo[GEAR_RATIO].value != GearRatio[1])
+    if (AxisTwoInfo[MICROSTEPS_PER_REVOLUTION].value != MicrostepsPerRevolution[1])
     {
-        AxisTwoInfo[GEAR_RATIO].value = GearRatio[1];
+        AxisTwoInfo[MICROSTEPS_PER_REVOLUTION].value = MicrostepsPerRevolution[1];
         AxisTwoInfoHasChanged = true;
     }
-    if (AxisTwoInfo[STEP_TIMER_FREQUENCY].value != StepTimerFreq[1])
+    if (AxisTwoInfo[STEPPER_CLOCK_FREQUENCY].value != StepperClockFrequency[1])
     {
-        AxisTwoInfo[STEP_TIMER_FREQUENCY].value = StepTimerFreq[1];
+        AxisTwoInfo[STEPPER_CLOCK_FREQUENCY].value = StepperClockFrequency[1];
         AxisTwoInfoHasChanged = true;
     }
     if (AxisTwoInfo[HIGH_SPEED_RATIO].value != HighSpeedRatio[1])
