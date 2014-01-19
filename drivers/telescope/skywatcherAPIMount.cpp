@@ -84,6 +84,8 @@ SkywatcherAPIMount::SkywatcherAPIMount()
     DBG_SCOPE = INDI::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
     // Set up the logging pointer in SkyWatcherAPI
     pChildTelescope = this;
+    PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
+    PreviousWEMotion = PREVIOUS_WE_MOTION_UNKNOWN;
 }
 
 // destructor
@@ -183,29 +185,29 @@ bool SkywatcherAPIMount::initProperties()
                         ISR_ATMOST1, 60, IPS_IDLE);
 
     IUFillNumber(&AxisOneInfo[GEAR_RATIO], "GEAR_RATIO",
-                                                            "Gear Ratio",
-                                                            "%g",
+                                                            "Microsteps per revolution",
+                                                            "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
                                                             0);
     IUFillNumber(&AxisOneInfo[STEP_TIMER_FREQUENCY], "STEP_TIMER_FREQUENCY",
                                                             "Step timer frequency",
-                                                            "%g",
+                                                            "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
                                                             0);
     IUFillNumber(&AxisOneInfo[HIGH_SPEED_RATIO], "HIGH_SPEED_RATIO",
                                                             "High speed ratio",
-                                                            "%g",
+                                                            "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
                                                             0);
     IUFillNumber(&AxisOneInfo[PE_PERIOD], "PE_PERIOD",
                                                             "PE period",
-                                                            "%g",
+                                                            "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
@@ -224,29 +226,29 @@ bool SkywatcherAPIMount::initProperties()
                         ISR_NOFMANY, 60, IPS_IDLE);
 
     IUFillNumber(&AxisTwoInfo[GEAR_RATIO], "GEAR_RATIO",
-                                                            "Gear Ratio",
-                                                            "%g",
+                                                            "Microsteps per revolution",
+                                                            "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
                                                             0);
     IUFillNumber(&AxisTwoInfo[STEP_TIMER_FREQUENCY], "STEP_TIMER_FREQUENCY",
                                                             "Step timer frequency",
-                                                            "%g",
+                                                            "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
                                                             0);
     IUFillNumber(&AxisTwoInfo[HIGH_SPEED_RATIO], "HIGH_SPEED_RATIO",
                                                             "High speed ratio",
-                                                            "%g",
+                                                            "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
                                                             0);
     IUFillNumber(&AxisTwoInfo[PE_PERIOD], "PE_PERIOD",
                                                             "PE period",
-                                                            "%g",
+                                                            "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
@@ -355,6 +357,45 @@ bool SkywatcherAPIMount::ISNewText (const char *dev, const char *name, char *tex
 
 bool SkywatcherAPIMount::MoveNS(TelescopeMotionNS dir)
 {
+    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::MoveNS");
+    switch (dir)
+    {
+        case MOTION_NORTH:
+            if (PreviousNSMotion != PREVIOUS_NS_MOTION_NORTH)
+            {
+                DEBUG(INDI::Logger::DBG_SESSION, "Starting Slew North");
+                Slew(AXIS2, LOW_SPEED_MARGIN / 2);
+                PreviousNSMotion = PREVIOUS_NS_MOTION_NORTH;
+            }
+            else
+            {
+                DEBUG(INDI::Logger::DBG_SESSION, "Stopping Slew North");
+                Stop(AXIS2);
+                PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
+                IUResetSwitch(&MovementNSSP);
+                MovementNSSP.s = IPS_IDLE;
+                IDSetSwitch(&MovementNSSP, NULL);
+            }
+            break;
+
+        case MOTION_SOUTH:
+            if (PreviousNSMotion != PREVIOUS_NS_MOTION_SOUTH)
+            {
+                DEBUG(INDI::Logger::DBG_SESSION, "Starting Slew South");
+                Slew(AXIS2, -LOW_SPEED_MARGIN / 2);
+                PreviousNSMotion = PREVIOUS_NS_MOTION_SOUTH;
+            }
+            else
+            {
+                DEBUG(INDI::Logger::DBG_SESSION, "Stopping Slew South");
+                Stop(AXIS2);
+                PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
+                IUResetSwitch(&MovementNSSP);
+                MovementNSSP.s = IPS_IDLE;
+                IDSetSwitch(&MovementNSSP, NULL);
+            }
+            break;
+    }
     return false;
 }
 
@@ -389,6 +430,7 @@ bool SkywatcherAPIMount::ReadScopeStatus()
     if (!GetStatus(AXIS2))
         return false;
 
+
     if(TrackState==SCOPE_SLEWING)
     {
         if ((AxesStatus[AXIS1].FullStop) && (AxesStatus[AXIS2].FullStop))
@@ -400,6 +442,8 @@ bool SkywatcherAPIMount::ReadScopeStatus()
         return false;
     if (!GetPosition(AXIS2))
         return false;
+
+    UpdateDetailedMountInformation(true);
 
     // Calculate new RA DEC
     struct ln_hrz_posn AltAz;

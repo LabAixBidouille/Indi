@@ -45,7 +45,7 @@ public:
     virtual bool ReadScopeStatus();
     virtual bool Sync(double ra, double dec);
     // For the time being stop the timer path being used
-    virtual void TimerHit() {}
+    //virtual void TimerHit() {}
     virtual bool saveConfigItems(FILE *fp);
     virtual bool updateLocation(double latitude, double longitude, double elevation);
     virtual bool updateProperties();
@@ -81,6 +81,16 @@ private:
     ISwitchVectorProperty AxisTwoStateV;
     INumber EncoderValues[2];
     INumberVectorProperty EncoderValuesV;
+
+    // Previous motion direction
+    typedef enum { PREVIOUS_NS_MOTION_NORTH = MOTION_NORTH,
+                    PREVIOUS_NS_MOTION_SOUTH = MOTION_SOUTH,
+                    PREVIOUS_NS_MOTION_UNKNOWN = -1} PreviousNSMotion_t;
+    PreviousNSMotion_t PreviousNSMotion;
+    typedef enum { PREVIOUS_WE_MOTION_WEST = MOTION_WEST,
+                    PREVIOUS_WE_MOTION_EAST = MOTION_EAST,
+                    PREVIOUS_WE_MOTION_UNKNOWN = -1} PreviousWEMotion_t;
+    PreviousWEMotion_t PreviousWEMotion;
 };
 
 #endif // SKYWATCHERAPIMOUNT_H

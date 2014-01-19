@@ -29,12 +29,6 @@
 #define MYDEBUGF(priority, msg, ...)
 #endif
 
-class CONSTANT
-{
-    public:
-         static const double SIDEREALRATE = (2 * M_PI / 86164.09065);
-};
-
 struct AXISSTATUS
 {
     AXISSTATUS() : FullStop(false), Slewing(false), SlewingTo(false), SlewingForward(false), HighSpeed(false), NotInitialized(true) {}
@@ -55,34 +49,66 @@ class SkywatcherAPI
 public:
     enum AXISID { AXIS1 = 0, AXIS2 = 1 };
 
+    static const double SIDEREALRATE = (2 * M_PI / 86164.09065); // Radians per second
+    static const double MAX_SPEED = 500; // Radians per second
+    static const double LOW_SPEED_MARGIN; // Radians per second
 
     SkywatcherAPI();
     virtual ~SkywatcherAPI();
 
+    /// \brief Convert angle to microsteps
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] AngleInRadians - the angle in radians.
+    /// \return the number of microsteps
+    long AngleToStep(AXISID Axis, double AngleInRadians);
 
-    long AngleToStep(AXISID Axis, double AngleInRad);
     long BCDstr2long(std::string &String);
     bool CheckIfDCMotor();
+
+    /// \brief Set the GearRatio status variable to the number of microsteps
+    /// for a 360 degree revolution of the axis.
+    /// \param[in] Axis - The axis to use.
+    /// \return false failure
     bool GetGridPerRevolution(AXISID Axis);
+
+    /// \brief Set the HighSpeedRatio status variable to the ratio between
+    /// high and low speed stepping modes.
     bool GetHighSpeedRatio(AXISID Axis);
+
     bool GetMotorBoardVersion(AXISID Axis);
     bool GetPosition(AXISID Axis);
     bool GetStatus(AXISID Axis);
+
+    /// \brief Set the StepTimerFreq status variable to fixed PIC timer interrupt
+    /// frequency (ticks per second).
+    /// \return false failure
     bool GetTimerInterruptFreq(AXISID Axis);
+
     bool InitializeMC();
     bool InitMount();
     bool GetPECPeriod(AXISID Axis);
     bool InstantStop(AXISID Axis);
     void Long2BCDstr(long Number, std::string &String);
-    long RadSpeedToInt(AXISID Axis, double RateInRad);
+    void PrepareForSlewing(AXISID Axis, double Speed);
+
+    /// \brief Convert a speed in seconds per radian to microsteps per second
+    /// \param[in] RateInSecondsPerRadian
+    /// \return Microsteps per second
+    long RadSpeedToInt(AXISID Axis, double RateInSecondsPerRadian);
+
     bool SetBreakPointIncrement(AXISID Axis, long StepsCount);
-    bool SetBreakSteps(AXISID Axis, long NewBrakeSteps);
+    bool SetBreakSteps(AXISID Axis, long NewBreakSteps);
     bool SetGotoTargetIncrement(AXISID Axis, long StepsCount);
     bool SetMotionMode(AXISID Axis, char Func, char Direction);
     bool SetPosition(AXISID Axis, double Position);
     void SetSerialPort(int port) { MyPortFD = port; }
-    bool SetStepPeriod(AXISID Axis, long StepsCount);
+
+    /// \brief Set the PIC internal divider variable which determines
+    /// how many clock interrupts have to occur between each microstep
+    bool SetStepPeriod(AXISID Axis, long ClockTicksPerMicrostep);
+
     bool SetSwitch(bool OnOff);
+    void Slew(AXISID Axis, double SpeedInRadiansPerSecond);
     bool StartMotion(AXISID Axis);
     double StepToAngle(AXISID Axis, long Steps);
     bool Stop(AXISID Axis);
@@ -94,10 +120,11 @@ public:
     bool IsDCMotor;
 
     // Values from mount
-    long GearRatio[2];
-    long StepTimerFreq[2];
-    long HighSpeedRatio[2];
-    long PESteps[2];
+    long GearRatio[2]; // Number of microsteps for 360 degree revolution
+    long StepTimerFreq[2]; // The interrupt frequency of the axis PIC - this divided by
+                            // the current StepPeriod gives the microstepping rate per second
+    long HighSpeedRatio[2]; // This is the speed multiplier for high speed mode.
+    long PESteps[2]; // Number of microsteps for one revolution of the worm gear.
 
     // Calculated values
     double FactorRadToStep[2];
@@ -111,6 +138,7 @@ public:
     double InitialPositions[2];
 
     AXISSTATUS AxesStatus[2];
+    double SlewingSpeed[2];
 private:
     enum TTY_ERROR { TTY_OK=0, TTY_READ_ERROR=-1, TTY_WRITE_ERROR=-2, TTY_SELECT_ERROR=-3, TTY_TIME_OUT=-4, TTY_PORT_FAILURE=-5, TTY_PARAM_ERROR=-6, TTY_ERRNO = -7};
     virtual int skywatcher_tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read) = 0;

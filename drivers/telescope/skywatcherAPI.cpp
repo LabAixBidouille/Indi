@@ -20,6 +20,9 @@
 #include <cstdio>
 #include <sstream>
 #include <iomanip>
+//#include <thread>
+//#include <chrono>
+#include <unistd.h>
 
 void AXISSTATUS::SetFullStop()
 {
@@ -45,6 +48,9 @@ void AXISSTATUS::SetSlewingTo(bool forward, bool highspeed)
     HighSpeed = highspeed;
 }
 
+const double SkywatcherAPI::LOW_SPEED_MARGIN = 128.0 * SIDEREALRATE;
+
+
 // Constructor
 
 SkywatcherAPI::SkywatcherAPI()
@@ -54,6 +60,7 @@ SkywatcherAPI::SkywatcherAPI()
     FactorRadToStep[AXIS1] = FactorRadToStep[AXIS2] = 0;
     CurrentPositions[AXIS1] = CurrentPositions[AXIS2] = 0;
     InitialPositions[AXIS1] = InitialPositions[AXIS2] = 0;
+    SlewingSpeed[AXIS1] = SlewingSpeed[AXIS2] = 0;
 }
 
 // Destructor
@@ -64,9 +71,9 @@ SkywatcherAPI::~SkywatcherAPI()
 
 // Public methods
 
-long SkywatcherAPI::AngleToStep(AXISID Axis, double AngleInRad)
+long SkywatcherAPI::AngleToStep(AXISID Axis, double AngleInRadians)
 {
-    return (long)(AngleInRad * FactorRadToStep[(int)Axis]);
+    return (long)(AngleInRadians * FactorRadToStep[(int)Axis]);
 }
 
 long SkywatcherAPI::BCDstr2long(std::string &String)
@@ -339,8 +346,8 @@ bool SkywatcherAPI::InitMount()
         return false;
 
     // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
-    LowSpeedGotoMargin[(int)AXIS1] = (long)(640 * CONSTANT::SIDEREALRATE * FactorRadToStep[(int)AXIS1]);
-    LowSpeedGotoMargin[(int)AXIS2] = (long)(640 * CONSTANT::SIDEREALRATE * FactorRadToStep[(int)AXIS2]);
+    LowSpeedGotoMargin[(int)AXIS1] = (long)(640 * SIDEREALRATE * FactorRadToStep[(int)AXIS1]);
+    LowSpeedGotoMargin[(int)AXIS2] = (long)(640 * SIDEREALRATE * FactorRadToStep[(int)AXIS2]);
 
     // Default break steps
     BreakSteps[(int)AXIS1] = 3500;
@@ -373,9 +380,59 @@ void SkywatcherAPI::Long2BCDstr(long Number, std::string &String)
     String = Temp.str();
 }
 
-long SkywatcherAPI::RadSpeedToInt(AXISID Axis, double RateInRad)
+void SkywatcherAPI::PrepareForSlewing(AXISID Axis, double Speed)
 {
-    return (long)(RateInRad * FactorRadRateToInt[(int)Axis]);
+    // Update the axis status
+    if (!GetStatus(Axis))
+        return;
+
+    if (!AxesStatus[Axis].FullStop)
+    {
+        // Axis is running
+        if ((AxesStatus[Axis].SlewingTo) // slew to (GOTO) in progress
+            || (AxesStatus[Axis].HighSpeed) // currently high speed slewing
+            || (std::abs(Speed) >= LOW_SPEED_MARGIN) // I am about to request high speed
+            || ((AxesStatus[Axis].SlewingForward) && (Speed < 0)) // Direction change
+            || (!(AxesStatus[Axis].SlewingForward) && (Speed > 0))) // Direction change
+        {
+            // I need to stop the axis first
+            Stop(Axis);
+        }
+        else
+            return; // NO need change motion mode
+
+        // Horrible bit A POLLING LOOP !!!!!!!!!!
+        while (true)
+        {
+            // Update status
+            GetStatus(Axis);
+
+            if (AxesStatus[Axis].FullStop)
+                break;
+
+            //std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Sleep for 1/10 second
+            usleep(1000);
+        }
+    }
+
+    char Direction;
+    if (Speed > 0.0)
+        Direction = '0';
+    else
+    {
+        Direction = '1';
+        Speed = -Speed;
+    }
+
+    if (Speed > LOW_SPEED_MARGIN)
+        SetMotionMode(Axis, '3', Direction);
+    else
+        SetMotionMode(Axis, '1', Direction);
+}
+
+long SkywatcherAPI::RadSpeedToInt(AXISID Axis, double RateInSecondsPerRadian)
+{
+    return (long)(RateInSecondsPerRadian * FactorRadRateToInt[(int)Axis]);
 }
 
 bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long StepsCount)
@@ -391,12 +448,12 @@ bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long StepsCount)
     return true;
 }
 
-bool SkywatcherAPI::SetBreakSteps(AXISID Axis, long NewBrakeSteps)
+bool SkywatcherAPI::SetBreakSteps(AXISID Axis, long NewBreakSteps)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "SetBreakSteps");
     std::string Parameters, Response;
 
-    Long2BCDstr(NewBrakeSteps, Parameters);
+    Long2BCDstr(NewBreakSteps, Parameters);
 
     if (!TalkWithAxis(Axis, 'U', Parameters, Response))
     	return false;
@@ -417,12 +474,17 @@ bool SkywatcherAPI::SetGotoTargetIncrement(AXISID Axis, long StepsCount)
     return true;
 }
 
+/// Func - 0 Low speed slew to mode (goto)
+/// Func - 1 Low speed slew mode
+/// Func - 2 High speed slew to mode (goto)
+/// Func - 3 High speed slew mode
 bool SkywatcherAPI::SetMotionMode(AXISID Axis, char Func, char Direction)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "SetMotionMode");
     std::string Parameters, Response;
 
-    Parameters = Func + Direction;
+    Parameters.push_back(Func);
+    Parameters.push_back(Direction);
 
     if (!TalkWithAxis(Axis, 'G', Parameters, Response))
     	return false;
@@ -445,14 +507,14 @@ bool SkywatcherAPI::SetPosition(AXISID Axis, double Position)
     return true;
 }
 
-bool SkywatcherAPI::SetStepPeriod(AXISID Axis, long StepsCount)
+bool SkywatcherAPI::SetStepPeriod(AXISID Axis, long ClockTicksPerMicrostep)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "SetStepPeriod");
     std::string Parameters, Response;
 
-    Long2BCDstr(StepsCount, Parameters);
+    Long2BCDstr(ClockTicksPerMicrostep, Parameters);
 
-    if (!TalkWithAxis(Axis, 'H', Parameters, Response))
+    if (!TalkWithAxis(Axis, 'I', Parameters, Response))
     	return false;
 
     return true;
@@ -471,6 +533,56 @@ bool SkywatcherAPI::SetSwitch(bool OnOff)
     if(!TalkWithAxis(AXIS1, 'O', Parameters, Response))
         return false;
     return true;
+}
+
+void SkywatcherAPI::Slew(AXISID Axis, double SpeedInRadiansPerSecond)
+{
+    // Clamp to MAX_SPEED
+    if (SpeedInRadiansPerSecond > MAX_SPEED)
+        SpeedInRadiansPerSecond = MAX_SPEED;
+    else if (SpeedInRadiansPerSecond < -MAX_SPEED)
+        SpeedInRadiansPerSecond = -MAX_SPEED;
+
+    double InternalSpeed = SpeedInRadiansPerSecond;
+
+    if (std::abs(InternalSpeed)<= SIDEREALRATE / 1000.0)
+    {
+        Stop(Axis);
+        return;
+    }
+
+    // Stop motor and set motion mode if necessary
+    PrepareForSlewing(Axis, InternalSpeed);
+
+    bool Forward;
+    if (InternalSpeed > 0.0)
+        Forward = true;
+    else
+    {
+        InternalSpeed = - InternalSpeed;
+        Forward = false;
+    }
+
+    bool HighSpeed = false;
+    if (InternalSpeed > LOW_SPEED_MARGIN)
+    {
+        InternalSpeed = InternalSpeed / (double)HighSpeedRatio[Axis];
+        HighSpeed = true;
+    }
+    InternalSpeed = 1 / InternalSpeed; // Convert to seconds per radian
+                                        // When I get everything working I will make some more sensible conversion routines
+                                        // so I don't have to do so many conversions along the way.
+    long SpeedInt = RadSpeedToInt(Axis, InternalSpeed);
+    if ((MCVersion == 0x010600) || (MCVersion == 0x0010601))  // Cribbed from Mount_Skywatcher.cs
+        SpeedInt -= 3;
+    if (SpeedInt < 6)
+        SpeedInt = 6;
+    SetStepPeriod(Axis, SpeedInt);
+
+    StartMotion(Axis);
+
+    AxesStatus[Axis].SetSlewing(Forward, HighSpeed);
+    SlewingSpeed[Axis] = SpeedInRadiansPerSecond;
 }
 
 bool SkywatcherAPI::StartMotion(AXISID Axis)
@@ -499,13 +611,14 @@ bool SkywatcherAPI::Stop(AXISID Axis)
 
 bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr)
 {
-    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis Command %c Data (%s)", Command, cmdDataStr.c_str());
+    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis Axis %d Command %c Data (%s)", Axis, Command, cmdDataStr.c_str());
 
     std::string SendBuffer;
     int bytesWritten;
     int bytesRead;
     bool StartReading = false;
     bool EndReading = false;
+    bool mount_response = false;
 
     SendBuffer.push_back(':');
     SendBuffer.push_back(Command);
@@ -524,6 +637,10 @@ bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdData
 
         if ((c == '=') || (c == '!'))
         {
+            if (c == '=')
+                mount_response = true;
+            else
+                mount_response = false;
             StartReading = true;
             continue;
         }
@@ -537,6 +654,6 @@ bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdData
         if (StartReading)
             responseStr.push_back(c);
     }
-    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis - good return Response (%s)", responseStr.c_str());
+    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis - %s Response (%s)", mount_response ? "Good" : "Bad", responseStr.c_str());
     return true;
 }
