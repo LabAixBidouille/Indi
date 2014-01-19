@@ -7,11 +7,12 @@
  * \date 13th November 2013
  *
  * This file contains the definitions for a C++ implementatiom of the Skywatcher API.
- * It is based on work from three sources.
+ * It is based on work from four sources.
  * A C++ implementation of the API by Roger James.
  * The indi_eqmod driver by Jean-Luc Geehalel.
  * The synscanmount driver by Gerry Rozema.
- */
+ * The C# implementation published by Skywatcher/Synta
+*/
 
 #ifndef SKYWATCHERAPI_H
 #define SKYWATCHERAPI_H
@@ -82,6 +83,12 @@ public:
     /// \return false failure
     bool GetMicrostepsPerRevolution(AXISID Axis);
 
+    /// \brief Set the MicrostepsPermWormRevolution status variable to the number of microsteps
+    /// for a 360 degree revolution of the worm gear.
+    /// \param[in] Axis - The axis to use.
+    /// \return false failure
+    bool GetMicrostepsPerWormRevolution(AXISID Axis);
+
     bool GetMotorBoardVersion(AXISID Axis);
 
     bool GetPosition(AXISID Axis);
@@ -107,7 +114,6 @@ public:
 
     bool InitializeMC();
     bool InitMount();
-    bool GetPECPeriod(AXISID Axis);
     bool InstantStop(AXISID Axis);
     void Long2BCDstr(long Number, std::string &String);
 
@@ -125,7 +131,7 @@ public:
 
     void PrepareForSlewing(AXISID Axis, double Speed);
 
-    /// \brief Convert a slewing rate in degrees per second into the required
+    /// \brief Convert a slewing rate in radians per second into the required
     /// clock ticks per microstep setting.
     /// \param[in] Axis - The axis to use.
     /// \param[in] DegreesPerSecond - Slewing rate in degrees per second
@@ -137,11 +143,6 @@ public:
     /// \param[in] AngleInRadians - the angle in radians.
     /// \return the number of microsteps
     long RadiansToMicrosteps(AXISID Axis, double AngleInRadians);
-
-    /// \brief Convert a speed in seconds per radian to microsteps per second
-    /// \param[in] RateInSecondsPerRadian
-    /// \return Microsteps per second
-    long RadSpeedToInt(AXISID Axis, double RateInSecondsPerRadian);
 
     bool SetBreakPointIncrement(AXISID Axis, long StepsCount);
     bool SetBreakSteps(AXISID Axis, long NewBreakSteps);
@@ -173,14 +174,13 @@ public:
     long MicrostepsPerRevolution[2]; // Number of microsteps for 360 degree revolution
     long StepperClockFrequency[2]; // The stepper clock timer interrupt frequency in ticks per second
     long HighSpeedRatio[2]; // The speed multiplier for high speed mode.
-    long PESteps[2]; // Number of microsteps for one revolution of the worm gear.
+    long MicrostepsPerWormRevolution[2]; // Number of microsteps for one revolution of the worm gear.
 
     // Calculated values
     double RadiansPerMicrostep[2];
     double MicrostepsPerRadian[2];
     double DegreesPerMicrostep[2];
     double MicrostepsPerDegree[2];
-    double FactorRadRateToInt[2];
     long LowSpeedGotoMargin[2];
     long BreakSteps[2];
 

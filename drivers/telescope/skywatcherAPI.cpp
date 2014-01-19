@@ -6,11 +6,12 @@
  * \author Jean-Luc Geehalel
  * \date 13th November 2013
  *
- * This file contains the implementation in C++ of the Skywatcher API.
- * It is based on work from three sources.
+ * This file contains an implementation in C++ of the Skywatcher API.
+ * It is based on work from four sources.
  * A C++ implementation of the API by Roger James.
  * The indi_eqmod driver by Jean-Luc Geehalel.
  * The synscanmount driver by Gerry Rozema.
+ * The C# implementation published by Skywatcher/Synta
  */
 
 #include "skywatcherAPI.h"
@@ -20,8 +21,10 @@
 #include <cstdio>
 #include <sstream>
 #include <iomanip>
-//#include <thread>
-//#include <chrono>
+#if __cplusplus >= 201103L
+#include <thread>
+#include <chrono>
+#endif
 #include <unistd.h>
 
 void AXISSTATUS::SetFullStop()
@@ -179,23 +182,22 @@ bool SkywatcherAPI::GetMicrostepsPerRevolution(AXISID Axis)
     return true;
 }
 
-bool SkywatcherAPI::GetPECPeriod(AXISID Axis)
+bool SkywatcherAPI::GetMicrostepsPerWormRevolution(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquirePECPeriod");
+    MYDEBUG(INDI::Logger::DBG_SESSION, "GetMicrostepsPerWormRevolution");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 's', Parameters, Response))
         return false;
 
-    long PECPeriod = BCDstr2long(Response);
-    PESteps[(int)Axis] = PECPeriod;
+    MicrostepsPerWormRevolution[(int)Axis] = BCDstr2long(Response);
 
     return true;
 }
 
 bool SkywatcherAPI::GetMotorBoardVersion(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireMotorBoardVersion");
+    MYDEBUG(INDI::Logger::DBG_SESSION, "GetMotorBoardVersion");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'e', Parameters, Response))
@@ -243,8 +245,6 @@ bool SkywatcherAPI::GetStepperClockFrequency(AXISID Axis)
         return false;
 
     StepperClockFrequency[(int)Axis] = BCDstr2long(Response);
-
-    FactorRadRateToInt[(int)Axis] = (double)(StepperClockFrequency[(int)Axis]) / MicrostepsPerRadian[(int)Axis];
 
     return true;
 }
@@ -348,8 +348,8 @@ bool SkywatcherAPI::InitMount()
     // DC motor controller does not support PEC
     if (!IsDCMotor)
     {
-//        if (!InquirePECPeriod(AXIS1);
-//        if (!InquirePECPeriod(AXIS2);
+        GetMicrostepsPerWormRevolution(AXIS1);
+        GetMicrostepsPerWormRevolution(AXIS2);
     }
 
     // Inquire Axis Position
@@ -442,8 +442,11 @@ void SkywatcherAPI::PrepareForSlewing(AXISID Axis, double Speed)
             if (AxesStatus[Axis].FullStop)
                 break;
 
-            //std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Sleep for 1/10 second
+#if __cplusplus >= 201103L
+            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Sleep for 1/10 second
+#else
             usleep(1000);
+#endif
         }
     }
 
@@ -472,11 +475,6 @@ long SkywatcherAPI::RadiansPerSecondToClocksTicksPerMicrostep(AXISID Axis, doubl
 long SkywatcherAPI::RadiansToMicrosteps(AXISID Axis, double AngleInRadians)
 {
     return (long)(AngleInRadians * MicrostepsPerRadian[(int)Axis]);
-}
-
-long SkywatcherAPI::RadSpeedToInt(AXISID Axis, double RateInSecondsPerRadian)
-{
-    return (long)(RateInSecondsPerRadian * FactorRadRateToInt[(int)Axis]);
 }
 
 bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long StepsCount)
@@ -613,10 +611,7 @@ void SkywatcherAPI::Slew(AXISID Axis, double SpeedInRadiansPerSecond)
         InternalSpeed = InternalSpeed / (double)HighSpeedRatio[Axis];
         HighSpeed = true;
     }
-    InternalSpeed = 1 / InternalSpeed; // Convert to seconds per radian
-                                        // When I get everything working I will make some more sensible conversion routines
-                                        // so I don't have to do so many conversions along the way.
-    long SpeedInt = RadSpeedToInt(Axis, InternalSpeed);
+    long SpeedInt = RadiansPerSecondToClocksTicksPerMicrostep(Axis, InternalSpeed);
     if ((MCVersion == 0x010600) || (MCVersion == 0x0010601))  // Cribbed from Mount_Skywatcher.cs
         SpeedInt -= 3;
     if (SpeedInt < 6)
