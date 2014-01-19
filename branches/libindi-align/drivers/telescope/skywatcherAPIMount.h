@@ -69,7 +69,7 @@ private:
     enum { MT_EQ6, MT_HEQ5, MT_EQ5, MT_EQ3, MT_GT, MT_MF, MT_114GT, MT_DOB, MT_UNKNOWN };
     ISwitch MountType[9];
     ISwitchVectorProperty MountTypeV;
-    enum { GEAR_RATIO, STEP_TIMER_FREQUENCY, HIGH_SPEED_RATIO, PE_PERIOD };
+    enum { MICROSTEPS_PER_REVOLUTION, STEPPER_CLOCK_FREQUENCY, HIGH_SPEED_RATIO, PE_PERIOD };
     INumber AxisOneInfo[4];
     INumberVectorProperty AxisOneInfoV;
     INumber AxisTwoInfo[4];

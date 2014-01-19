@@ -128,32 +128,6 @@ bool SkywatcherAPI::CheckIfDCMotor()
 	return false;
 }
 
-bool SkywatcherAPI::GetGridPerRevolution(AXISID Axis)
-{
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireGridPerRevolution");
-    std::string Parameters, Response;
-
-    if (!TalkWithAxis(Axis, 'a', Parameters, Response))
-        return false;
-
-
-    long tmpGearRatio = BCDstr2long(Response);
-
-    // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
-    // Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
-    if ((MCVersion & 0x0000FF) == 0x80)
-        tmpGearRatio = 0x162B97;		// for 80GT mount
-    if ((MCVersion & 0x0000FF) == 0x82)
-        tmpGearRatio = 0x205318;		// for 114GT mount
-
-    GearRatio[(int)Axis] = tmpGearRatio;
-
-    FactorRadToStep[(int)Axis] = tmpGearRatio / (2 * M_PI);
-    FactorStepToRad[(int)Axis] = 2 * M_PI / tmpGearRatio;
-
-    return true;
-}
-
 bool SkywatcherAPI::GetHighSpeedRatio(AXISID Axis)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "InquireHighSpeedRatio");
@@ -164,6 +138,32 @@ bool SkywatcherAPI::GetHighSpeedRatio(AXISID Axis)
 
     long highSpeedRatio = BCDstr2long(Response);
     HighSpeedRatio[(int)Axis] = highSpeedRatio;
+
+    return true;
+}
+
+bool SkywatcherAPI::GetMicrostepsPerRevolution(AXISID Axis)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "GetMicrostepsPerRevolution");
+    std::string Parameters, Response;
+
+    if (!TalkWithAxis(Axis, 'a', Parameters, Response))
+        return false;
+
+
+    long tmpMicrostepsPerRevolution = BCDstr2long(Response);
+
+    // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
+    // Overwrite the MicrostepsPerRevolution reported by the MC for 80GT mount and 114GT mount.
+    if (MountCode == GT)
+        tmpMicrostepsPerRevolution = 0x162B97;		// for 80GT mount
+    if (MountCode == _114GT)
+        tmpMicrostepsPerRevolution = 0x205318;		// for 114GT mount
+
+    MicrostepsPerRevolution[(int)Axis] = tmpMicrostepsPerRevolution;
+
+    FactorRadToStep[(int)Axis] = tmpMicrostepsPerRevolution / (2 * M_PI);
+    FactorStepToRad[(int)Axis] = 2 * M_PI / tmpMicrostepsPerRevolution;
 
     return true;
 }
@@ -211,18 +211,29 @@ bool SkywatcherAPI::GetPosition(AXISID Axis)
     return true;
 }
 
-bool SkywatcherAPI::GetTimerInterruptFreq(AXISID Axis)
+const SkywatcherAPI::PositiveRotationSense_t SkywatcherAPI::GetPositiveRotationDirection(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireTimerInterruptFreq");
+    switch (MountCode)
+    {
+        _114GT:
+            return CLOCKWISE;
+
+        default:
+            return ANTICLOCKWISE;
+    }
+}
+
+bool SkywatcherAPI::GetStepperClockFrequency(AXISID Axis)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "GetStepperClockFrequency");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'b', Parameters, Response))
         return false;
 
-    long TimeFreq = BCDstr2long(Response);
-    StepTimerFreq[(int)Axis] = TimeFreq;
+    StepperClockFrequency[(int)Axis] = BCDstr2long(Response);
 
-    FactorRadRateToInt[(int)Axis] = (double)(StepTimerFreq[(int)Axis]) / FactorRadToStep[(int)Axis];
+    FactorRadRateToInt[(int)Axis] = (double)(StepperClockFrequency[(int)Axis]) / FactorRadToStep[(int)Axis];
 
     return true;
 }
@@ -305,15 +316,15 @@ bool SkywatcherAPI::InitMount()
     //// NOTE: Simulator settings, Mount dependent Settings
 
     // Inquire Gear Rate
-    if (!GetGridPerRevolution(AXIS1))
+    if (!GetMicrostepsPerRevolution(AXIS1))
         return false;
-    if (!GetGridPerRevolution(AXIS2))
+    if (!GetMicrostepsPerRevolution(AXIS2))
         return false;
 
-    // Inquire motor timer interrup frequency
-    if (!GetTimerInterruptFreq(AXIS1))
+    // Get stepper clock frequency
+    if (!GetStepperClockFrequency(AXIS1))
         return false;
-    if (!GetTimerInterruptFreq(AXIS2))
+    if (!GetStepperClockFrequency(AXIS2))
         return false;
 
     // Inquire motor high speed ratio
@@ -507,7 +518,7 @@ bool SkywatcherAPI::SetPosition(AXISID Axis, double Position)
     return true;
 }
 
-bool SkywatcherAPI::SetStepPeriod(AXISID Axis, long ClockTicksPerMicrostep)
+bool SkywatcherAPI::SetClockTicksPerMicrostep(AXISID Axis, long ClockTicksPerMicrostep)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "SetStepPeriod");
     std::string Parameters, Response;
@@ -577,7 +588,7 @@ void SkywatcherAPI::Slew(AXISID Axis, double SpeedInRadiansPerSecond)
         SpeedInt -= 3;
     if (SpeedInt < 6)
         SpeedInt = 6;
-    SetStepPeriod(Axis, SpeedInt);
+    SetClockTicksPerMicrostep(Axis, SpeedInt);
 
     StartMotion(Axis);
 

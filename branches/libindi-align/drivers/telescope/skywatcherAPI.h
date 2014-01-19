@@ -65,24 +65,38 @@ public:
     long BCDstr2long(std::string &String);
     bool CheckIfDCMotor();
 
-    /// \brief Set the GearRatio status variable to the number of microsteps
-    /// for a 360 degree revolution of the axis.
-    /// \param[in] Axis - The axis to use.
-    /// \return false failure
-    bool GetGridPerRevolution(AXISID Axis);
-
     /// \brief Set the HighSpeedRatio status variable to the ratio between
     /// high and low speed stepping modes.
     bool GetHighSpeedRatio(AXISID Axis);
 
+    /// \brief Set the MicrostepsPerRevolution status variable to the number of microsteps
+    /// for a 360 degree revolution of the axis.
+    /// \param[in] Axis - The axis to use.
+    /// \return false failure
+    bool GetMicrostepsPerRevolution(AXISID Axis);
+
     bool GetMotorBoardVersion(AXISID Axis);
+
     bool GetPosition(AXISID Axis);
+
+    typedef enum { CLOCKWISE, ANTICLOCKWISE} PositiveRotationSense_t;
+
+    /// \brief Returns the rotation direction for a positive step on the
+    /// designated axis.
+    /// \param[in] Axis - The axis to use.
+    /// \return The rotation sense clockwise or anticlockwise.
+    ///
+    /// Rotation directions are given looking down the axis towards the  motorised pier
+    /// for an altitude or declination axis. Or down the pier towards the mount base
+    /// for an azimuth or right ascension axis
+    const PositiveRotationSense_t GetPositiveRotationDirection(AXISID Axis);
+
     bool GetStatus(AXISID Axis);
 
-    /// \brief Set the StepTimerFreq status variable to fixed PIC timer interrupt
+    /// \brief Set the StepperClockFrequency status variable to fixed PIC timer interrupt
     /// frequency (ticks per second).
     /// \return false failure
-    bool GetTimerInterruptFreq(AXISID Axis);
+    bool GetStepperClockFrequency(AXISID Axis);
 
     bool InitializeMC();
     bool InitMount();
@@ -105,7 +119,7 @@ public:
 
     /// \brief Set the PIC internal divider variable which determines
     /// how many clock interrupts have to occur between each microstep
-    bool SetStepPeriod(AXISID Axis, long ClockTicksPerMicrostep);
+    bool SetClockTicksPerMicrostep(AXISID Axis, long ClockTicksPerMicrostep);
 
     bool SetSwitch(bool OnOff);
     void Slew(AXISID Axis, double SpeedInRadiansPerSecond);
@@ -116,14 +130,15 @@ public:
 
     // Skywatcher mount status variables
     long MCVersion; // Motor control board firmware version
+
+    enum MountType { EQ6=0x00, HEQ5=0x01, EQ5=0x02, EQ3=0x03, GT=0x80, MF=0x81, _114GT=0x82, DOB=0x90 };
     long MountCode;
     bool IsDCMotor;
 
     // Values from mount
-    long GearRatio[2]; // Number of microsteps for 360 degree revolution
-    long StepTimerFreq[2]; // The interrupt frequency of the axis PIC - this divided by
-                            // the current StepPeriod gives the microstepping rate per second
-    long HighSpeedRatio[2]; // This is the speed multiplier for high speed mode.
+    long MicrostepsPerRevolution[2]; // Number of microsteps for 360 degree revolution
+    long StepperClockFrequency[2]; // The stepper clock timer interrupt frequency in ticks per second
+    long HighSpeedRatio[2]; // The speed multiplier for high speed mode.
     long PESteps[2]; // Number of microsteps for one revolution of the worm gear.
 
     // Calculated values
