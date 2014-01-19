@@ -205,8 +205,8 @@ bool SkywatcherAPIMount::initProperties()
                                                             0xFFFFFF,
                                                             1,
                                                             0);
-    IUFillNumber(&AxisOneInfo[PE_PERIOD], "PE_PERIOD",
-                                                            "PE period",
+    IUFillNumber(&AxisOneInfo[MICROSTEPS_PER_WORM_REVOLUTION], "MICROSTEPS_PER_WORM_REVOLUTION",
+                                                            "Microsteps per worm revolution",
                                                             "%.0f",
                                                             0,
                                                             0xFFFFFF,
@@ -246,8 +246,8 @@ bool SkywatcherAPIMount::initProperties()
                                                             0xFFFFFF,
                                                             1,
                                                             0);
-    IUFillNumber(&AxisTwoInfo[PE_PERIOD], "PE_PERIOD",
-                                                            "PE period",
+    IUFillNumber(&AxisTwoInfo[MICROSTEPS_PER_WORM_REVOLUTION], "MICROSTEPS_PER_WORM_REVOLUTION",
+                                                            "Mictosteps per worm revolution",
                                                             "%.0f",
                                                             0,
                                                             0xFFFFFF,
@@ -663,9 +663,9 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
         AxisOneInfo[HIGH_SPEED_RATIO].value = HighSpeedRatio[0];
         AxisOneInfoHasChanged = true;
     }
-    if (AxisOneInfo[PE_PERIOD].value != PESteps[0])
+    if (AxisOneInfo[MICROSTEPS_PER_WORM_REVOLUTION].value != MicrostepsPerWormRevolution[0])
     {
-        AxisOneInfo[PE_PERIOD].value = PESteps[0];
+        AxisOneInfo[MICROSTEPS_PER_WORM_REVOLUTION].value = MicrostepsPerWormRevolution[0];
         AxisOneInfoHasChanged = true;
     }
     if (AxisOneInfoHasChanged && InformClient)
@@ -721,9 +721,9 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
         AxisTwoInfo[HIGH_SPEED_RATIO].value = HighSpeedRatio[1];
         AxisTwoInfoHasChanged = true;
     }
-    if (AxisTwoInfo[PE_PERIOD].value != PESteps[1])
+    if (AxisTwoInfo[MICROSTEPS_PER_WORM_REVOLUTION].value != MicrostepsPerWormRevolution[1])
     {
-        AxisTwoInfo[PE_PERIOD].value = PESteps[1];
+        AxisTwoInfo[MICROSTEPS_PER_WORM_REVOLUTION].value = MicrostepsPerWormRevolution[1];
         AxisTwoInfoHasChanged = true;
     }
     if (AxisTwoInfoHasChanged && InformClient)
