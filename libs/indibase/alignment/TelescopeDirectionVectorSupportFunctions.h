@@ -92,7 +92,7 @@ public:
     {
         double AzimuthAngle;
         double PolarAngle;
-        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_POLAR_AXIS);
         EquatorialCoordinates.ra = ln_rad_to_deg(AzimuthAngle);
         EquatorialCoordinates.dec = ln_rad_to_deg(PolarAngle);
     };
@@ -108,7 +108,7 @@ public:
     {
         double AzimuthAngle;
         double PolarAngle;
-        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_POLAR_AXIS);
         ln_rad_to_hms(AzimuthAngle, &EquatorialCoordinates.ra);
         ln_rad_to_dms(PolarAngle, &EquatorialCoordinates.dec);
     };
@@ -124,7 +124,7 @@ public:
     {
         double AzimuthAngle;
         double PolarAngle;
-        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_POLAR_AXIS);
         EquatorialCoordinates.ra = ln_rad_to_deg(AzimuthAngle);
         EquatorialCoordinates.dec = ln_rad_to_deg(PolarAngle);
     };
@@ -140,7 +140,7 @@ public:
     {
         double AzimuthAngle;
         double PolarAngle;
-        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_POLAR_AXIS);
         ln_rad_to_hms(AzimuthAngle, &EquatorialCoordinates.ra);
         ln_rad_to_dms(PolarAngle, &EquatorialCoordinates.dec);
     };
@@ -187,7 +187,7 @@ public:
      */
     const TelescopeDirectionVector TelescopeDirectionVectorFromEquatorialCoordinates(struct ln_equ_posn EquatorialCoordinates)
     {
-        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_POLAR_AXIS);
     };
 
     /*! \brief Calculates a telescope direction vector from the supplied equatorial coordinates.
@@ -197,7 +197,7 @@ public:
      */
     const TelescopeDirectionVector TelescopeDirectionVectorFromEquatorialCoordinates(struct lnh_equ_posn EquatorialCoordinates)
     {
-        return TelescopeDirectionVectorFromSphericalCoordinate(ln_hms_to_rad(&EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_dms_to_rad(&EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_hms_to_rad(&EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_dms_to_rad(&EquatorialCoordinates.dec), FROM_POLAR_AXIS);
     };
 
     /*! \brief Calculates a telescope direction vector from the supplied local hour angle and declination.
@@ -207,7 +207,7 @@ public:
      */
     const TelescopeDirectionVector TelescopeDirectionVectorFromLocalHourAngleDeclination(struct ln_equ_posn EquatorialCoordinates)
     {
-        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_POLAR_AXIS);
     };
 
     /*! \brief Calculates a telescope direction vector from the supplied spherical coordinate information

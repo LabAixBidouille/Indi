@@ -57,9 +57,6 @@ private:
 
     void UpdateDetailedMountInformation(bool InformClient);
 
-    // Custom debug level
-    unsigned int DBG_SCOPE;
-
     // Properties
 
     static const char* DetailedMountInfoPage;
