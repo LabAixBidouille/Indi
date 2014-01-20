@@ -80,8 +80,6 @@ const char * SkywatcherAPIMount::DetailedMountInfoPage = "Detailed Mount Informa
 
 SkywatcherAPIMount::SkywatcherAPIMount()
 {
-    // We add an additional debug level so we can log verbose scope status
-    DBG_SCOPE = INDI::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
     // Set up the logging pointer in SkyWatcherAPI
     pChildTelescope = this;
     PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
@@ -98,7 +96,7 @@ SkywatcherAPIMount::~SkywatcherAPIMount()
 
 bool  SkywatcherAPIMount::Abort()
 {
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Abort");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Abort");
     return false;
 }
 
@@ -109,7 +107,7 @@ bool SkywatcherAPIMount::canSync()
 
 bool  SkywatcherAPIMount::Connect()
 {
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Connect");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Connect");
 
 	if (!INDI::Telescope::Connect())
 		return false;
@@ -117,19 +115,19 @@ bool  SkywatcherAPIMount::Connect()
     // Tell SkywatcherAPI about the serial port
     //SetSerialPort(PortFD); Hacked in ReadScopeStatus
 
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Connect - Call MCInit");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Connect - Call MCInit");
 	return InitMount();
 }
 
 const char * SkywatcherAPIMount::getDefaultName()
 {
-    //DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::getDefaultName\n");
+    //DEBUG(DBG_SCOPE, "SkywatcherAPIMount::getDefaultName\n");
     return "skywatcherAPIMount";
 }
 
 bool SkywatcherAPIMount::Goto(double ra,double dec)
 {
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Goto");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Goto");
 
     SlewTo(AXIS2, DegreesToMicrosteps(AXIS1, 30));
 
@@ -361,19 +359,19 @@ bool SkywatcherAPIMount::ISNewText (const char *dev, const char *name, char *tex
 
 bool SkywatcherAPIMount::MoveNS(TelescopeMotionNS dir)
 {
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::MoveNS");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::MoveNS");
     switch (dir)
     {
         case MOTION_NORTH:
             if (PreviousNSMotion != PREVIOUS_NS_MOTION_NORTH)
             {
-                DEBUG(INDI::Logger::DBG_SESSION, "Starting Slew North");
+                DEBUG(DBG_SCOPE, "Starting Slew North");
                 Slew(AXIS2, LOW_SPEED_MARGIN / 2);
                 PreviousNSMotion = PREVIOUS_NS_MOTION_NORTH;
             }
             else
             {
-                DEBUG(INDI::Logger::DBG_SESSION, "Stopping Slew North");
+                DEBUG(DBG_SCOPE, "Stopping Slew North");
                 Stop(AXIS2);
                 PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
                 IUResetSwitch(&MovementNSSP);
@@ -385,13 +383,13 @@ bool SkywatcherAPIMount::MoveNS(TelescopeMotionNS dir)
         case MOTION_SOUTH:
             if (PreviousNSMotion != PREVIOUS_NS_MOTION_SOUTH)
             {
-                DEBUG(INDI::Logger::DBG_SESSION, "Starting Slew South");
+                DEBUG(DBG_SCOPE, "Starting Slew South");
                 Slew(AXIS2, -LOW_SPEED_MARGIN / 2);
                 PreviousNSMotion = PREVIOUS_NS_MOTION_SOUTH;
             }
             else
             {
-                DEBUG(INDI::Logger::DBG_SESSION, "Stopping Slew South");
+                DEBUG(DBG_SCOPE, "Stopping Slew South");
                 Stop(AXIS2);
                 PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
                 IUResetSwitch(&MovementNSSP);
@@ -405,19 +403,19 @@ bool SkywatcherAPIMount::MoveNS(TelescopeMotionNS dir)
 
 bool SkywatcherAPIMount::MoveWE(TelescopeMotionWE dir)
 {
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::MoveWE");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::MoveWE");
     switch (dir)
     {
         case MOTION_WEST:
             if (PreviousWEMotion != PREVIOUS_WE_MOTION_WEST)
             {
-                DEBUG(INDI::Logger::DBG_SESSION, "Starting Slew West");
+                DEBUG(DBG_SCOPE, "Starting Slew West");
                 Slew(AXIS1, LOW_SPEED_MARGIN / 2);
                 PreviousWEMotion = PREVIOUS_WE_MOTION_WEST;
             }
             else
             {
-                DEBUG(INDI::Logger::DBG_SESSION, "Stopping Slew West");
+                DEBUG(DBG_SCOPE, "Stopping Slew West");
                 Stop(AXIS1);
                 PreviousWEMotion = PREVIOUS_WE_MOTION_UNKNOWN;
                 IUResetSwitch(&MovementWESP);
@@ -429,13 +427,13 @@ bool SkywatcherAPIMount::MoveWE(TelescopeMotionWE dir)
         case MOTION_EAST:
             if (PreviousWEMotion != PREVIOUS_WE_MOTION_EAST)
             {
-                DEBUG(INDI::Logger::DBG_SESSION, "Starting Slew East");
+                DEBUG(DBG_SCOPE, "Starting Slew East");
                 Slew(AXIS1, -LOW_SPEED_MARGIN / 2);
                 PreviousWEMotion = PREVIOUS_WE_MOTION_EAST;
             }
             else
             {
-                DEBUG(INDI::Logger::DBG_SESSION, "Stopping Slew East");
+                DEBUG(DBG_SCOPE, "Stopping Slew East");
                 Stop(AXIS1);
                 PreviousWEMotion = PREVIOUS_WE_MOTION_UNKNOWN;
                 IUResetSwitch(&MovementWESP);
@@ -449,13 +447,13 @@ bool SkywatcherAPIMount::MoveWE(TelescopeMotionWE dir)
 
 bool SkywatcherAPIMount::Park()
 {
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Park");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Park");
     return false;
 }
 
 bool SkywatcherAPIMount::ReadScopeStatus()
 {
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::ReadScopeStatus");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::ReadScopeStatus");
 
     // Horrible hack to get over the fact that the base class calls ReadScopeStatus from inside Connect
     // before I have a chance to set up the serial port
@@ -490,13 +488,18 @@ bool SkywatcherAPIMount::ReadScopeStatus()
 
     // Calculate new RA DEC
     struct ln_hrz_posn AltAz;
-    AltAz.alt = MicrostepsToRadians(AXIS2, CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]) * 180 / M_PI;
-    AltAz.az = MicrostepsToRadians(AXIS1, CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]) * 180 / M_PI;
+    AltAz.alt = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]);
+    DEBUGF(DBG_SCOPE, "Axis2 encoder %ld initial %ld alt(degrees) %lf", CurrentEncoders[AXIS2], InitialEncoders[AXIS2], AltAz.alt);
+    AltAz.az = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]);
+    DEBUGF(DBG_SCOPE, "Axis1 encoder %ld initial %ld az(degrees) %lf", CurrentEncoders[AXIS1], InitialEncoders[AXIS1], AltAz.az);
     TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+    DEBUGF(DBG_SCOPE, "TDV x %lf y %lf z %lf", TDV.x, TDV.y, TDV.z);
+
     double RightAscension, Declination;
     if (TransformTelescopeToCelestial( TDV, RightAscension, Declination))
     {
         NewRaDec(RightAscension, Declination);
+        DEBUGF(DBG_SCOPE, "Conversion OK RA %lf DEC %lf", RightAscension, Declination);
     }
     else
     {
@@ -504,7 +507,8 @@ bool SkywatcherAPIMount::ReadScopeStatus()
         struct ln_equ_posn EquatorialCoordinates;
         EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
         NewRaDec(EquatorialCoordinates.ra, EquatorialCoordinates.dec);
-    }
+        DEBUGF(DBG_SCOPE, "Conversion failed RA %lf DEC %lf", EquatorialCoordinates.ra, EquatorialCoordinates.dec);
+   }
 
     return true;
 }
@@ -523,7 +527,7 @@ bool SkywatcherAPIMount::saveConfigItems(FILE *fp)
 
 bool SkywatcherAPIMount::updateLocation(double latitude, double longitude, double elevation)
 {
-    DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::updateLocation");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::updateLocation");
     UpdateLocation(latitude, longitude, elevation);
 }
 

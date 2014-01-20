@@ -195,11 +195,16 @@ public:
     long BreakMicrosteps[2];
 
     // Encoder values
-    double CurrentEncoders[2]; // Current encoder value (microsteps).
-    double InitialEncoders[2]; // Initial encoder value (microsteps).
+    long CurrentEncoders[2]; // Current encoder value (microsteps).
+    long InitialEncoders[2]; // Initial encoder value (microsteps).
 
     AXISSTATUS AxesStatus[2];
     double SlewingSpeed[2];
+
+protected:
+    // Custom debug level
+    unsigned int DBG_SCOPE;
+
 private:
     enum TTY_ERROR { TTY_OK=0, TTY_READ_ERROR=-1, TTY_WRITE_ERROR=-2, TTY_SELECT_ERROR=-3, TTY_TIME_OUT=-4, TTY_PORT_FAILURE=-5, TTY_PARAM_ERROR=-6, TTY_ERRNO = -7};
     virtual int skywatcher_tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read) = 0;

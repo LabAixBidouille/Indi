@@ -58,7 +58,10 @@ const double SkywatcherAPI::LOW_SPEED_MARGIN = 128.0 * SIDEREALRATE;
 
 SkywatcherAPI::SkywatcherAPI()
 {
+    // I add an additional debug level so I can log verbose scope status
+    DBG_SCOPE = INDI::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
     MCVersion = 0;
+
     RadiansPerMicrostep[AXIS1] = RadiansPerMicrostep[AXIS2] = 0;
     MicrostepsPerRadian[AXIS1] = MicrostepsPerRadian[AXIS2] = 0;
     DegreesPerMicrostep[AXIS1] = DegreesPerMicrostep[AXIS2] = 0;
@@ -94,7 +97,7 @@ long SkywatcherAPI::BCDstr2long(std::string &String)
 
 bool SkywatcherAPI::CheckIfDCMotor()
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "CheckIfDCMotor");
+    MYDEBUG(DBG_SCOPE, "CheckIfDCMotor");
 	// Flush the tty read buffer
 	char input[20];
 	int rc;
@@ -142,7 +145,7 @@ long SkywatcherAPI::DegreesToMicrosteps(AXISID Axis, double AngleInDegrees)
 
 bool SkywatcherAPI::GetEncoder(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "GetEncoder");
+    MYDEBUG(DBG_SCOPE, "GetEncoder");
     std::string Parameters, Response;
     if (!TalkWithAxis(Axis, 'j', Parameters, Response))
     	return false;
@@ -155,7 +158,7 @@ bool SkywatcherAPI::GetEncoder(AXISID Axis)
 
 bool SkywatcherAPI::GetHighSpeedRatio(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InquireHighSpeedRatio");
+    MYDEBUG(DBG_SCOPE, "InquireHighSpeedRatio");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'g', Parameters, Response))
@@ -169,7 +172,7 @@ bool SkywatcherAPI::GetHighSpeedRatio(AXISID Axis)
 
 bool SkywatcherAPI::GetMicrostepsPerRevolution(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "GetMicrostepsPerRevolution");
+    MYDEBUG(DBG_SCOPE, "GetMicrostepsPerRevolution");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'a', Parameters, Response))
@@ -197,7 +200,7 @@ bool SkywatcherAPI::GetMicrostepsPerRevolution(AXISID Axis)
 
 bool SkywatcherAPI::GetMicrostepsPerWormRevolution(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "GetMicrostepsPerWormRevolution");
+    MYDEBUG(DBG_SCOPE, "GetMicrostepsPerWormRevolution");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 's', Parameters, Response))
@@ -210,7 +213,7 @@ bool SkywatcherAPI::GetMicrostepsPerWormRevolution(AXISID Axis)
 
 bool SkywatcherAPI::GetMotorBoardVersion(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "GetMotorBoardVersion");
+    MYDEBUG(DBG_SCOPE, "GetMotorBoardVersion");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'e', Parameters, Response))
@@ -237,7 +240,7 @@ const SkywatcherAPI::PositiveRotationSense_t SkywatcherAPI::GetPositiveRotationD
 
 bool SkywatcherAPI::GetStepperClockFrequency(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "GetStepperClockFrequency");
+    MYDEBUG(DBG_SCOPE, "GetStepperClockFrequency");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'b', Parameters, Response))
@@ -250,7 +253,7 @@ bool SkywatcherAPI::GetStepperClockFrequency(AXISID Axis)
 
 bool SkywatcherAPI::GetStatus(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "GetStatus");
+    MYDEBUG(DBG_SCOPE, "GetStatus");
     std::string Parameters, Response;
 
     if(!TalkWithAxis(Axis, 'f', Parameters, Response))
@@ -301,7 +304,7 @@ bool SkywatcherAPI::GetStatus(AXISID Axis)
 // Set initialization done ":F3", where '3'= Both CH1 and CH2.
 bool SkywatcherAPI::InitializeMC()
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InitializeMC");
+    MYDEBUG(DBG_SCOPE, "InitializeMC");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(AXIS1, 'F', Parameters, Response))
@@ -313,7 +316,7 @@ bool SkywatcherAPI::InitializeMC()
 
 bool SkywatcherAPI::InitMount()
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InitMount");
+    MYDEBUG(DBG_SCOPE, "InitMount");
 
 	if (!CheckIfDCMotor())
 		return false;
@@ -381,7 +384,7 @@ bool SkywatcherAPI::InitMount()
 bool SkywatcherAPI::InstantStop(AXISID Axis)
 {
     // Request a slow stop
-    MYDEBUG(INDI::Logger::DBG_SESSION, "InstantStop");
+    MYDEBUG(DBG_SCOPE, "InstantStop");
     std::string Parameters, Response;
     if (!TalkWithAxis(Axis, 'L', Parameters, Response))
     	return false;
@@ -478,7 +481,7 @@ long SkywatcherAPI::RadiansToMicrosteps(AXISID Axis, double AngleInRadians)
 
 bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long Microsteps)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "SetBreakPointIncrement");
+    MYDEBUG(DBG_SCOPE, "SetBreakPointIncrement");
     std::string Parameters, Response;
 
     Long2BCDstr(Microsteps, Parameters);
@@ -491,7 +494,7 @@ bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long Microsteps)
 
 bool SkywatcherAPI::SetBreakSteps(AXISID Axis, long NewBreakSteps)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "SetBreakSteps");
+    MYDEBUG(DBG_SCOPE, "SetBreakSteps");
     std::string Parameters, Response;
 
     Long2BCDstr(NewBreakSteps, Parameters);
@@ -504,7 +507,7 @@ bool SkywatcherAPI::SetBreakSteps(AXISID Axis, long NewBreakSteps)
 
 bool SkywatcherAPI::SetEncoder(AXISID Axis, long Microsteps)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "SetEncoder");
+    MYDEBUG(DBG_SCOPE, "SetEncoder");
     std::string Parameters, Response;
 
     Long2BCDstr(Microsteps, Parameters);
@@ -517,7 +520,7 @@ bool SkywatcherAPI::SetEncoder(AXISID Axis, long Microsteps)
 
 bool SkywatcherAPI::SetGotoTargetOffset(AXISID Axis, long OffsetInMicrosteps)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "SetGotoTargetIncrement");
+    MYDEBUG(DBG_SCOPE, "SetGotoTargetIncrement");
     std::string Parameters, Response;
 
     Long2BCDstr(OffsetInMicrosteps, Parameters);
@@ -534,7 +537,7 @@ bool SkywatcherAPI::SetGotoTargetOffset(AXISID Axis, long OffsetInMicrosteps)
 /// Func - 3 High speed slew mode
 bool SkywatcherAPI::SetMotionMode(AXISID Axis, char Func, char Direction)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "SetMotionMode");
+    MYDEBUG(DBG_SCOPE, "SetMotionMode");
     std::string Parameters, Response;
 
     Parameters.push_back(Func);
@@ -548,7 +551,7 @@ bool SkywatcherAPI::SetMotionMode(AXISID Axis, char Func, char Direction)
 
 bool SkywatcherAPI::SetClockTicksPerMicrostep(AXISID Axis, long ClockTicksPerMicrostep)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "SetStepPeriod");
+    MYDEBUG(DBG_SCOPE, "SetStepPeriod");
     std::string Parameters, Response;
 
     Long2BCDstr(ClockTicksPerMicrostep, Parameters);
@@ -561,7 +564,7 @@ bool SkywatcherAPI::SetClockTicksPerMicrostep(AXISID Axis, long ClockTicksPerMic
 
 bool SkywatcherAPI::SetSwitch(bool OnOff)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "MCSetSwitch");
+    MYDEBUG(DBG_SCOPE, "MCSetSwitch");
     std::string Parameters, Response;
 
     if (OnOff)
@@ -661,7 +664,7 @@ void SkywatcherAPI::SlewTo(AXISID Axis, long OffsetInMicrosteps)
 
 bool SkywatcherAPI::StartMotion(AXISID Axis)
 {
-    MYDEBUG(INDI::Logger::DBG_SESSION, "StartMotion");
+    MYDEBUG(DBG_SCOPE, "StartMotion");
     std::string Parameters, Response;
     if (!TalkWithAxis(Axis, 'J', Parameters, Response))
     	return false;
@@ -671,7 +674,7 @@ bool SkywatcherAPI::StartMotion(AXISID Axis)
 bool SkywatcherAPI::Stop(AXISID Axis)
 {
     // Request a slow stop
-    MYDEBUG(INDI::Logger::DBG_SESSION, "Stop");
+    MYDEBUG(DBG_SCOPE, "Stop");
     std::string Parameters, Response;
     if (!TalkWithAxis(Axis, 'K', Parameters, Response))
     	return false;
@@ -680,7 +683,7 @@ bool SkywatcherAPI::Stop(AXISID Axis)
 
 bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr)
 {
-    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis Axis %d Command %c Data (%s)", Axis, Command, cmdDataStr.c_str());
+    MYDEBUGF(DBG_SCOPE, "TalkWithAxis Axis %d Command %c Data (%s)", Axis, Command, cmdDataStr.c_str());
 
     std::string SendBuffer;
     int bytesWritten;
@@ -723,6 +726,6 @@ bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdData
         if (StartReading)
             responseStr.push_back(c);
     }
-    MYDEBUGF(INDI::Logger::DBG_SESSION, "TalkWithAxis - %s Response (%s)", mount_response ? "Good" : "Bad", responseStr.c_str());
+    MYDEBUGF(DBG_SCOPE, "TalkWithAxis - %s Response (%s)", mount_response ? "Good" : "Bad", responseStr.c_str());
     return true;
 }
