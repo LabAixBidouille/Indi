@@ -63,8 +63,8 @@ SkywatcherAPI::SkywatcherAPI()
     MicrostepsPerRadian[AXIS1] = MicrostepsPerRadian[AXIS2] = 0;
     DegreesPerMicrostep[AXIS1] = DegreesPerMicrostep[AXIS2] = 0;
     MicrostepsPerDegree[AXIS1] = MicrostepsPerDegree[AXIS2] = 0;
-    CurrentPositions[AXIS1] = CurrentPositions[AXIS2] = 0;
-    InitialPositions[AXIS1] = InitialPositions[AXIS2] = 0;
+    CurrentEncoders[AXIS1] = CurrentEncoders[AXIS2] = 0;
+    InitialEncoders[AXIS1] = InitialEncoders[AXIS2] = 0;
     SlewingSpeed[AXIS1] = SlewingSpeed[AXIS2] = 0;
 }
 
@@ -140,6 +140,19 @@ long SkywatcherAPI::DegreesToMicrosteps(AXISID Axis, double AngleInDegrees)
     return (long)(AngleInDegrees * MicrostepsPerDegree[(int)Axis]);
 }
 
+bool SkywatcherAPI::GetEncoder(AXISID Axis)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "GetEncoder");
+    std::string Parameters, Response;
+    if (!TalkWithAxis(Axis, 'j', Parameters, Response))
+    	return false;
+
+    long Microsteps = BCDstr2long(Response);
+    CurrentEncoders[(int)Axis] = Microsteps;
+
+    return true;
+}
+
 bool SkywatcherAPI::GetHighSpeedRatio(AXISID Axis)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "InquireHighSpeedRatio");
@@ -206,20 +219,6 @@ bool SkywatcherAPI::GetMotorBoardVersion(AXISID Axis)
     long tmpMCVersion = BCDstr2long(Response);
 
     MCVersion = ((tmpMCVersion & 0xFF) << 16) | ((tmpMCVersion & 0xFF00)) | ((tmpMCVersion & 0xFF0000) >> 16);
-
-    return true;
-}
-
-bool SkywatcherAPI::GetPosition(AXISID Axis)
-{
-    MYDEBUG(INDI::Logger::DBG_SESSION, "GetPosition");
-    std::string Parameters, Response;
-    if (!TalkWithAxis(Axis, 'j', Parameters, Response))
-    	return false;
-
-    long iPosition = BCDstr2long(Response);
-    iPosition -= 0x00800000;
-    CurrentPositions[(int)Axis] = MicrostepsToRadians(Axis, iPosition);
 
     return true;
 }
@@ -353,15 +352,15 @@ bool SkywatcherAPI::InitMount()
     }
 
     // Inquire Axis Position
-    if (!GetPosition(AXIS1))
+    if (!GetEncoder(AXIS1))
         return false;
-    if (!GetPosition(AXIS2))
+    if (!GetEncoder(AXIS2))
         return false;
 
     // Set initial axis posiitons
     // These are used to define the arbitary zero position vector for the axis
-    InitialPositions[AXIS1] = CurrentPositions[AXIS1];
-    InitialPositions[AXIS2] = CurrentPositions[AXIS2];
+    InitialEncoders[AXIS1] = CurrentEncoders[AXIS1];
+    InitialEncoders[AXIS2] = CurrentEncoders[AXIS2];
 
 
     if (!InitializeMC())
@@ -372,8 +371,8 @@ bool SkywatcherAPI::InitMount()
     LowSpeedGotoMargin[(int)AXIS2] = (long)(640 * SIDEREALRATE * MicrostepsPerRadian[(int)AXIS2]);
 
     // Default break steps
-    BreakSteps[(int)AXIS1] = 3500;
-    BreakSteps[(int)AXIS2] = 3500;
+    BreakMicrosteps[(int)AXIS1] = 3500;
+    BreakMicrosteps[(int)AXIS2] = 3500;
 
 
     return true;
@@ -477,12 +476,12 @@ long SkywatcherAPI::RadiansToMicrosteps(AXISID Axis, double AngleInRadians)
     return (long)(AngleInRadians * MicrostepsPerRadian[(int)Axis]);
 }
 
-bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long StepsCount)
+bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long Microsteps)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "SetBreakPointIncrement");
     std::string Parameters, Response;
 
-    Long2BCDstr(StepsCount, Parameters);
+    Long2BCDstr(Microsteps, Parameters);
 
     if (!TalkWithAxis(Axis, 'M', Parameters, Response))
     	return false;
@@ -503,12 +502,25 @@ bool SkywatcherAPI::SetBreakSteps(AXISID Axis, long NewBreakSteps)
     return true;
 }
 
-bool SkywatcherAPI::SetGotoTargetIncrement(AXISID Axis, long StepsCount)
+bool SkywatcherAPI::SetEncoder(AXISID Axis, long Microsteps)
+{
+    MYDEBUG(INDI::Logger::DBG_SESSION, "SetEncoder");
+    std::string Parameters, Response;
+
+    Long2BCDstr(Microsteps, Parameters);
+
+    if (!TalkWithAxis(Axis, 'L', Parameters, Response))
+    	return false;
+
+    return true;
+}
+
+bool SkywatcherAPI::SetGotoTargetOffset(AXISID Axis, long OffsetInMicrosteps)
 {
     MYDEBUG(INDI::Logger::DBG_SESSION, "SetGotoTargetIncrement");
     std::string Parameters, Response;
 
-    Long2BCDstr(StepsCount, Parameters);
+    Long2BCDstr(OffsetInMicrosteps, Parameters);
 
     if (!TalkWithAxis(Axis, 'H', Parameters, Response))
     	return false;
@@ -529,21 +541,6 @@ bool SkywatcherAPI::SetMotionMode(AXISID Axis, char Func, char Direction)
     Parameters.push_back(Direction);
 
     if (!TalkWithAxis(Axis, 'G', Parameters, Response))
-    	return false;
-
-    return true;
-}
-
-bool SkywatcherAPI::SetPosition(AXISID Axis, double Position)
-{
-    MYDEBUG(INDI::Logger::DBG_SESSION, "SetPosition");
-    std::string Parameters, Response;
-
-    long Temp = Position;
-    Temp += 0x800000;
-    Long2BCDstr(Temp, Parameters);
-
-    if (!TalkWithAxis(Axis, 'L', Parameters, Response))
     	return false;
 
     return true;
@@ -622,6 +619,44 @@ void SkywatcherAPI::Slew(AXISID Axis, double SpeedInRadiansPerSecond)
 
     AxesStatus[Axis].SetSlewing(Forward, HighSpeed);
     SlewingSpeed[Axis] = SpeedInRadiansPerSecond;
+}
+
+void SkywatcherAPI::SlewTo(AXISID Axis, long OffsetInMicrosteps)
+{
+    if (0 == OffsetInMicrosteps)
+        // Nothing to do
+        return;
+
+    char Direction;
+    if (OffsetInMicrosteps  > 0)
+        Direction = '0';
+    else
+    {
+        Direction = '1';
+        OffsetInMicrosteps = -OffsetInMicrosteps;
+    }
+
+    // The Skywatcher API sample implmentation does not check the axis status
+    // before issueing the goto command.
+    // !!!!!! Is this wise?
+
+    bool HighSpeed;
+    if (OffsetInMicrosteps > LowSpeedGotoMargin[Axis])
+    {
+        SetMotionMode(Axis, '0', Direction);
+        HighSpeed = true;
+    }
+    else
+    {
+        SetMotionMode(Axis, '2', Direction);
+        HighSpeed = false;;
+    }
+
+    SetGotoTargetOffset(Axis, OffsetInMicrosteps);
+    SetBreakPointIncrement(Axis, BreakMicrosteps[Axis]);
+    StartMotion(Axis);
+
+    AxesStatus[Axis].SetSlewingTo(Direction == '0' ? true : false, HighSpeed);
 }
 
 bool SkywatcherAPI::StartMotion(AXISID Axis)

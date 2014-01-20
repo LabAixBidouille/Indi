@@ -73,7 +73,12 @@ public:
     /// \return the number of microsteps
     long DegreesToMicrosteps(AXISID Axis, double AngleInDegrees);
 
-    /// \brief Set the HighSpeedRatio status variable to the ratio between
+    /// \brief Set the CurrentEncoders status variable to the current
+    /// encoder value in microsteps for the specified axis.
+    /// \return false failure
+    bool GetEncoder(AXISID Axis);
+
+   /// \brief Set the HighSpeedRatio status variable to the ratio between
     /// high and low speed stepping modes.
     bool GetHighSpeedRatio(AXISID Axis);
 
@@ -90,8 +95,6 @@ public:
     bool GetMicrostepsPerWormRevolution(AXISID Axis);
 
     bool GetMotorBoardVersion(AXISID Axis);
-
-    bool GetPosition(AXISID Axis);
 
     typedef enum { CLOCKWISE, ANTICLOCKWISE} PositiveRotationSense_t;
 
@@ -144,11 +147,11 @@ public:
     /// \return the number of microsteps
     long RadiansToMicrosteps(AXISID Axis, double AngleInRadians);
 
-    bool SetBreakPointIncrement(AXISID Axis, long StepsCount);
+    bool SetBreakPointIncrement(AXISID Axis, long Microsteps);
     bool SetBreakSteps(AXISID Axis, long NewBreakSteps);
-    bool SetGotoTargetIncrement(AXISID Axis, long StepsCount);
+    bool SetEncoder(AXISID Axis, long Microsteps);
+    bool SetGotoTargetOffset(AXISID Axis, long OffsetInMicrosteps);
     bool SetMotionMode(AXISID Axis, char Func, char Direction);
-    bool SetPosition(AXISID Axis, double Position);
     void SetSerialPort(int port) { MyPortFD = port; }
 
     /// \brief Set the PIC internal divider variable which determines
@@ -157,6 +160,13 @@ public:
 
     bool SetSwitch(bool OnOff);
     void Slew(AXISID Axis, double SpeedInRadiansPerSecond);
+
+    /// \brief Slew to the given offset and stop
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] OffsetInMicrosteps - The number of microsteps to
+    /// slew from the current axis position.
+    void SlewTo(AXISID Axis, long OffsetInMicrosteps);
+
     bool StartMotion(AXISID Axis);
 
 
@@ -182,11 +192,11 @@ public:
     double DegreesPerMicrostep[2];
     double MicrostepsPerDegree[2];
     long LowSpeedGotoMargin[2];
-    long BreakSteps[2];
+    long BreakMicrosteps[2];
 
     // Encoder values
-    double CurrentPositions[2];
-    double InitialPositions[2];
+    double CurrentEncoders[2]; // Current encoder value (microsteps).
+    double InitialEncoders[2]; // Initial encoder value (microsteps).
 
     AXISSTATUS AxesStatus[2];
     double SlewingSpeed[2];

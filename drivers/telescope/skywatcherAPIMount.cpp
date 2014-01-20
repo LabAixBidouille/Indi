@@ -130,7 +130,11 @@ const char * SkywatcherAPIMount::getDefaultName()
 bool SkywatcherAPIMount::Goto(double ra,double dec)
 {
     DEBUG(INDI::Logger::DBG_SESSION, "SkywatcherAPIMount::Goto");
-    return false;
+
+    SlewTo(AXIS2, DegreesToMicrosteps(AXIS1, 30));
+
+
+    return true;
 }
 
 bool SkywatcherAPIMount::initProperties()
@@ -477,17 +481,17 @@ bool SkywatcherAPIMount::ReadScopeStatus()
     }
 
     // Update Axis Position
-    if (!GetPosition(AXIS1))
+    if (!GetEncoder(AXIS1))
         return false;
-    if (!GetPosition(AXIS2))
+    if (!GetEncoder(AXIS2))
         return false;
 
     UpdateDetailedMountInformation(true);
 
     // Calculate new RA DEC
     struct ln_hrz_posn AltAz;
-    AltAz.alt = MicrostepsToRadians(AXIS2, CurrentPositions[AXIS2] - InitialPositions[AXIS2]) * 180 / M_PI;
-    AltAz.az = MicrostepsToRadians(AXIS1, CurrentPositions[AXIS1] - InitialPositions[AXIS1]) * 180 / M_PI;
+    AltAz.alt = MicrostepsToRadians(AXIS2, CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]) * 180 / M_PI;
+    AltAz.az = MicrostepsToRadians(AXIS1, CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]) * 180 / M_PI;
     TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
     double RightAscension, Declination;
     if (TransformTelescopeToCelestial( TDV, RightAscension, Declination))
@@ -764,14 +768,14 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
             IDSetSwitch(&AxisTwoStateV, NULL);
 
     bool EncoderValuesHasChanged = false;
-    if (EncoderValues[0].value != CurrentPositions[AXIS1])
+    if (EncoderValues[0].value != CurrentEncoders[AXIS1])
     {
-        EncoderValues[0].value = CurrentPositions[AXIS1];
+        EncoderValues[0].value = CurrentEncoders[AXIS1];
         EncoderValuesHasChanged = true;
     }
-    if (EncoderValues[1].value != CurrentPositions[AXIS2])
+    if (EncoderValues[1].value != CurrentEncoders[AXIS2])
     {
-        EncoderValues[1].value = CurrentPositions[AXIS2];
+        EncoderValues[1].value = CurrentEncoders[AXIS2];
         EncoderValuesHasChanged = true;
     }
     if (EncoderValuesHasChanged && InformClient)
