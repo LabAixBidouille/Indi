@@ -158,7 +158,7 @@ bool SkywatcherAPI::GetEncoder(AXISID Axis)
 
 bool SkywatcherAPI::GetHighSpeedRatio(AXISID Axis)
 {
-    MYDEBUG(DBG_SCOPE, "InquireHighSpeedRatio");
+    MYDEBUG(DBG_SCOPE, "GetHighSpeedRatio");
     std::string Parameters, Response;
 
     if (!TalkWithAxis(Axis, 'g', Parameters, Response))
@@ -374,8 +374,8 @@ bool SkywatcherAPI::InitMount()
     LowSpeedGotoMargin[(int)AXIS2] = (long)(640 * SIDEREALRATE * MicrostepsPerRadian[(int)AXIS2]);
 
     // Default break steps
-    BreakMicrosteps[(int)AXIS1] = 3500;
-    BreakMicrosteps[(int)AXIS2] = 3500;
+    SlewToModeDeccelerationRampLength[(int)AXIS1] = 3500;
+    SlewToModeDeccelerationRampLength[(int)AXIS2] = 3500;
 
 
     return true;
@@ -430,7 +430,7 @@ void SkywatcherAPI::PrepareForSlewing(AXISID Axis, double Speed)
             || (!(AxesStatus[Axis].SlewingForward) && (Speed > 0))) // Direction change
         {
             // I need to stop the axis first
-            Stop(Axis);
+            SlowStop(Axis);
         }
         else
             return; // NO need change motion mode
@@ -479,32 +479,6 @@ long SkywatcherAPI::RadiansToMicrosteps(AXISID Axis, double AngleInRadians)
     return (long)(AngleInRadians * MicrostepsPerRadian[(int)Axis]);
 }
 
-bool SkywatcherAPI::SetBreakPointIncrement(AXISID Axis, long Microsteps)
-{
-    MYDEBUG(DBG_SCOPE, "SetBreakPointIncrement");
-    std::string Parameters, Response;
-
-    Long2BCDstr(Microsteps, Parameters);
-
-    if (!TalkWithAxis(Axis, 'M', Parameters, Response))
-    	return false;
-
-    return true;
-}
-
-bool SkywatcherAPI::SetBreakSteps(AXISID Axis, long NewBreakSteps)
-{
-    MYDEBUG(DBG_SCOPE, "SetBreakSteps");
-    std::string Parameters, Response;
-
-    Long2BCDstr(NewBreakSteps, Parameters);
-
-    if (!TalkWithAxis(Axis, 'U', Parameters, Response))
-    	return false;
-
-    return true;
-}
-
 bool SkywatcherAPI::SetEncoder(AXISID Axis, long Microsteps)
 {
     MYDEBUG(DBG_SCOPE, "SetEncoder");
@@ -520,7 +494,7 @@ bool SkywatcherAPI::SetEncoder(AXISID Axis, long Microsteps)
 
 bool SkywatcherAPI::SetGotoTargetOffset(AXISID Axis, long OffsetInMicrosteps)
 {
-    MYDEBUG(DBG_SCOPE, "SetGotoTargetIncrement");
+    MYDEBUG(DBG_SCOPE, "SetGotoTargetOffset");
     std::string Parameters, Response;
 
     Long2BCDstr(OffsetInMicrosteps, Parameters);
@@ -551,7 +525,7 @@ bool SkywatcherAPI::SetMotionMode(AXISID Axis, char Func, char Direction)
 
 bool SkywatcherAPI::SetClockTicksPerMicrostep(AXISID Axis, long ClockTicksPerMicrostep)
 {
-    MYDEBUG(DBG_SCOPE, "SetStepPeriod");
+    MYDEBUG(DBG_SCOPE, "SetClockTicksPerMicrostep");
     std::string Parameters, Response;
 
     Long2BCDstr(ClockTicksPerMicrostep, Parameters);
@@ -562,9 +536,35 @@ bool SkywatcherAPI::SetClockTicksPerMicrostep(AXISID Axis, long ClockTicksPerMic
     return true;
 }
 
+bool SkywatcherAPI::SetSlewModeDeccelerationRampLength(AXISID Axis, long Microsteps)
+{
+    MYDEBUG(DBG_SCOPE, "SetSlewModeDeccelerationRampLength");
+    std::string Parameters, Response;
+
+    Long2BCDstr(Microsteps, Parameters);
+
+    if (!TalkWithAxis(Axis, 'U', Parameters, Response))
+    	return false;
+
+    return true;
+}
+
+bool SkywatcherAPI::SetSlewToModeDeccelerationRampLength(AXISID Axis, long Microsteps)
+{
+    MYDEBUG(DBG_SCOPE, "SetSlewToModeDeccelerationRampLength");
+    std::string Parameters, Response;
+
+    Long2BCDstr(Microsteps, Parameters);
+
+    if (!TalkWithAxis(Axis, 'M', Parameters, Response))
+    	return false;
+
+    return true;
+}
+
 bool SkywatcherAPI::SetSwitch(bool OnOff)
 {
-    MYDEBUG(DBG_SCOPE, "MCSetSwitch");
+    MYDEBUG(DBG_SCOPE, "SetSwitch");
     std::string Parameters, Response;
 
     if (OnOff)
@@ -579,6 +579,7 @@ bool SkywatcherAPI::SetSwitch(bool OnOff)
 
 void SkywatcherAPI::Slew(AXISID Axis, double SpeedInRadiansPerSecond)
 {
+    MYDEBUG(DBG_SCOPE, "Slew");
     // Clamp to MAX_SPEED
     if (SpeedInRadiansPerSecond > MAX_SPEED)
         SpeedInRadiansPerSecond = MAX_SPEED;
@@ -587,9 +588,9 @@ void SkywatcherAPI::Slew(AXISID Axis, double SpeedInRadiansPerSecond)
 
     double InternalSpeed = SpeedInRadiansPerSecond;
 
-    if (std::abs(InternalSpeed)<= SIDEREALRATE / 1000.0)
+    if (std::abs(InternalSpeed) <= SIDEREALRATE / 1000.0)
     {
-        Stop(Axis);
+        SlowStop(Axis);
         return;
     }
 
@@ -626,6 +627,7 @@ void SkywatcherAPI::Slew(AXISID Axis, double SpeedInRadiansPerSecond)
 
 void SkywatcherAPI::SlewTo(AXISID Axis, long OffsetInMicrosteps)
 {
+    MYDEBUG(DBG_SCOPE, "SlewTo");
     if (0 == OffsetInMicrosteps)
         // Nothing to do
         return;
@@ -656,10 +658,20 @@ void SkywatcherAPI::SlewTo(AXISID Axis, long OffsetInMicrosteps)
     }
 
     SetGotoTargetOffset(Axis, OffsetInMicrosteps);
-    SetBreakPointIncrement(Axis, BreakMicrosteps[Axis]);
+    SetSlewToModeDeccelerationRampLength(Axis, SlewToModeDeccelerationRampLength[Axis]);
     StartMotion(Axis);
 
     AxesStatus[Axis].SetSlewingTo(Direction == '0' ? true : false, HighSpeed);
+}
+
+bool SkywatcherAPI::SlowStop(AXISID Axis)
+{
+    // Request a slow stop
+    MYDEBUG(DBG_SCOPE, "SlowStop");
+    std::string Parameters, Response;
+    if (!TalkWithAxis(Axis, 'K', Parameters, Response))
+    	return false;
+    return true;
 }
 
 bool SkywatcherAPI::StartMotion(AXISID Axis)
@@ -667,16 +679,6 @@ bool SkywatcherAPI::StartMotion(AXISID Axis)
     MYDEBUG(DBG_SCOPE, "StartMotion");
     std::string Parameters, Response;
     if (!TalkWithAxis(Axis, 'J', Parameters, Response))
-    	return false;
-    return true;
-}
-
-bool SkywatcherAPI::Stop(AXISID Axis)
-{
-    // Request a slow stop
-    MYDEBUG(DBG_SCOPE, "Stop");
-    std::string Parameters, Response;
-    if (!TalkWithAxis(Axis, 'K', Parameters, Response))
     	return false;
     return true;
 }

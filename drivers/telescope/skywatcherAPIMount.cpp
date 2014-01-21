@@ -129,19 +129,51 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
 {
     DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Goto");
 
-    SlewTo(AXIS2, DegreesToMicrosteps(AXIS1, 30));
-
     DEBUGF(DBG_SCOPE, "RA %lf DEC %lf", ra, dec);
     TelescopeDirectionVector TDV;
+    ln_hrz_posn AltAz;
     if (TransformCelestialToTelescope(ra, dec, TDV))
     {
-        ln_hrz_posn AltAz;
         AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
-        DEBUGF(DBG_SCOPE, "Conversion OK Altitude %lf Azimuth %lf", AltAz.alt, AltAz.az);
+        DEBUG(DBG_SCOPE, "Conversion OK");
     }
     else
     {
+        bool HavePosition = false;
+        ln_lnlat_posn Position;
+        if (GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+            HavePosition = true;
+        else
+        {
+            if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
+                && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
+            {
+                // I assume that being on the equator and exactly on the prime meridian is unlikely
+                Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
+                Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
+                HavePosition = true;
+            }
+        }
+        struct ln_equ_posn EquatorialCoordinates;
+        if (HavePosition)
+            ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, ln_get_julian_from_sys(), &AltAz);
+        else
+            // The best I can do is just do a direct conversion to Alt/Az
+            AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
+        DEBUGF(DBG_SCOPE, "Conversion Failed - %s", HavePosition ? "have position" : "don't have position");
     }
+    DEBUGF(DBG_SCOPE, "New Altitude %lf degrees Azimuth %lf degrees", AltAz.alt, AltAz.az);
+
+    // Update the current encoder positions
+    GetEncoder(AXIS1);
+    GetEncoder(AXIS2);
+
+    long AltitudeOffsetMicrosteps = DegreesToMicrosteps(AXIS2, AltAz.alt) + InitialEncoders[AXIS2] - CurrentEncoders[AXIS2];
+    long AzimuthOffsetMicrosteps = DegreesToMicrosteps(AXIS1, AltAz.az) + InitialEncoders[AXIS1] - CurrentEncoders[AXIS1];
+
+    SlewTo(AXIS1, AzimuthOffsetMicrosteps);
+    SlewTo(AXIS2, AltitudeOffsetMicrosteps);
+
     return true;
 }
 
@@ -382,7 +414,7 @@ bool SkywatcherAPIMount::MoveNS(TelescopeMotionNS dir)
             else
             {
                 DEBUG(DBG_SCOPE, "Stopping Slew North");
-                Stop(AXIS2);
+                SlowStop(AXIS2);
                 PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
                 IUResetSwitch(&MovementNSSP);
                 MovementNSSP.s = IPS_IDLE;
@@ -400,7 +432,7 @@ bool SkywatcherAPIMount::MoveNS(TelescopeMotionNS dir)
             else
             {
                 DEBUG(DBG_SCOPE, "Stopping Slew South");
-                Stop(AXIS2);
+                SlowStop(AXIS2);
                 PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
                 IUResetSwitch(&MovementNSSP);
                 MovementNSSP.s = IPS_IDLE;
@@ -426,7 +458,7 @@ bool SkywatcherAPIMount::MoveWE(TelescopeMotionWE dir)
             else
             {
                 DEBUG(DBG_SCOPE, "Stopping Slew West");
-                Stop(AXIS1);
+                SlowStop(AXIS1);
                 PreviousWEMotion = PREVIOUS_WE_MOTION_UNKNOWN;
                 IUResetSwitch(&MovementWESP);
                 MovementWESP.s = IPS_IDLE;
@@ -444,7 +476,7 @@ bool SkywatcherAPIMount::MoveWE(TelescopeMotionWE dir)
             else
             {
                 DEBUG(DBG_SCOPE, "Stopping Slew East");
-                Stop(AXIS1);
+                SlowStop(AXIS1);
                 PreviousWEMotion = PREVIOUS_WE_MOTION_UNKNOWN;
                 IUResetSwitch(&MovementWESP);
                 MovementWESP.s = IPS_IDLE;
@@ -507,23 +539,37 @@ bool SkywatcherAPIMount::ReadScopeStatus()
 
     double RightAscension, Declination;
     if (TransformTelescopeToCelestial( TDV, RightAscension, Declination))
-    {
-        NewRaDec(RightAscension, Declination);
-        DEBUGF(DBG_SCOPE, "Conversion OK RA %lf DEC %lf", RightAscension, Declination);
-    }
+        DEBUG(DBG_SCOPE, "Conversion OK");
     else
     {
+        bool HavePosition = false;
         ln_lnlat_posn Position;
-        if (!GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+        if (GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+            HavePosition = true;
+        else
         {
-            // Use standard props if not the north pole
+            if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
+                && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
+            {
+                // I assume that being on the equator and exactly on the prime meridian is unlikely
+                Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
+                Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
+                HavePosition = true;
+            }
         }
         struct ln_equ_posn EquatorialCoordinates;
-        ln_get_equ_from_hrz(&AltAz, &Position, ln_get_julian_from_sys(), &EquatorialCoordinates);
-        NewRaDec(EquatorialCoordinates.ra, EquatorialCoordinates.dec);
-        DEBUGF(DBG_SCOPE, "Conversion failed RA %lf DEC %lf", EquatorialCoordinates.ra, EquatorialCoordinates.dec);
-   }
+        if (HavePosition)
+            ln_get_equ_from_hrz(&AltAz, &Position, ln_get_julian_from_sys(), &EquatorialCoordinates);
+        else
+            // The best I can do is just do a direct conversion to RA/DEC
+            EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
+        RightAscension = EquatorialCoordinates.ra;
+        Declination = EquatorialCoordinates.dec;
+        DEBUGF(DBG_SCOPE, "Conversion Failed - HavePosition %d", HavePosition);
+    }
 
+    DEBUGF(DBG_SCOPE, "New RA %lf DEC %lf", RightAscension, Declination);
+    NewRaDec(RightAscension, Declination);
     return true;
 }
 
@@ -543,6 +589,7 @@ bool SkywatcherAPIMount::updateLocation(double latitude, double longitude, doubl
 {
     DEBUG(DBG_SCOPE, "SkywatcherAPIMount::updateLocation");
     UpdateLocation(latitude, longitude, elevation);
+    return true;
 }
 
 bool SkywatcherAPIMount::updateProperties()

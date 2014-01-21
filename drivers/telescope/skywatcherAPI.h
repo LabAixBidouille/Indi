@@ -117,7 +117,14 @@ public:
 
     bool InitializeMC();
     bool InitMount();
+
+    /// \brief Bring the axis to an immediate halt.
+    /// N.B. This command could cause damage to the mount or telescope
+    /// and should not normally be used except for emergency stops.
+    /// \param[in] Axis - The axis to use.
+    /// \return false failure
     bool InstantStop(AXISID Axis);
+
     void Long2BCDstr(long Number, std::string &String);
 
     /// \brief Convert microsteps to angle in degrees
@@ -147,18 +154,60 @@ public:
     /// \return the number of microsteps
     long RadiansToMicrosteps(AXISID Axis, double AngleInRadians);
 
-    bool SetBreakPointIncrement(AXISID Axis, long Microsteps);
-    bool SetBreakSteps(AXISID Axis, long NewBreakSteps);
+    /// \brief Set axis encoder to the specified value.
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] Microsteps - the value in microsteps.
+    /// \return false failure
     bool SetEncoder(AXISID Axis, long Microsteps);
+
+    /// \brief Set the goto target offset per the specified axis
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] OffsetInMicrosteps - the value to use
+    /// \return false failure
     bool SetGotoTargetOffset(AXISID Axis, long OffsetInMicrosteps);
+
+
+    /// \brief Set the motion mode per the specified axis
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] Func - the slewing mode
+    /// - 0 = Low speed SlewTo mode
+    /// - 1 = Low speed Slew mode
+    /// - 2 = High speed SlewTo mode
+    /// - 3 = High Speed Slew mode
+    /// \param[in] Direction - the direction to slew in
+    /// - 0 = Forward
+    /// - 1 = Reverse
+    /// \return false failure
     bool SetMotionMode(AXISID Axis, char Func, char Direction);
+
+
+    /// \brief Set the serail port to be usb for mount communication
+    /// \param[in] port - an open file descriptor for the port to use.
     void SetSerialPort(int port) { MyPortFD = port; }
 
     /// \brief Set the PIC internal divider variable which determines
     /// how many clock interrupts have to occur between each microstep
     bool SetClockTicksPerMicrostep(AXISID Axis, long ClockTicksPerMicrostep);
 
+    /// \brief Set the length of the deccelaration ramp for Slew mode.
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] Microsteps - the length of the decceleration ramp in microsteps.
+    /// \return false failure
+    bool SetSlewModeDeccelerationRampLength(AXISID Axis, long Microsteps);
+
+    /// \brief Set the length of the deccelaration ramp for SlewTo mode.
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] Microsteps - the length of the decceleration ramp in microsteps.
+    /// \return false failure
+    bool SetSlewToModeDeccelerationRampLength(AXISID Axis, long Microsteps);
+
+    /// \brief Set the camera control switch to the given state
+    /// \param[in] OnOff - the state requested.
     bool SetSwitch(bool OnOff);
+
+    /// \brief Start the axis slewing at the given rate
+    /// \param[in] Axis - The axis to use.
+    /// \param[in] SpeedInRadiansPerSecond - the slewiing speed
     void Slew(AXISID Axis, double SpeedInRadiansPerSecond);
 
     /// \brief Slew to the given offset and stop
@@ -167,10 +216,17 @@ public:
     /// slew from the current axis position.
     void SlewTo(AXISID Axis, long OffsetInMicrosteps);
 
+    /// \brief Bring the axis to slow stop in the distance specified
+    /// by SetSlewModeDeccelerationRampLength
+    /// \param[in] Axis - The axis to use.
+    /// \return false failure
+    bool SlowStop(AXISID Axis);
+
+    /// \brief Start the axis slewing in the prevously selected mode
+    /// \param[in] Axis - The axis to use.
+    /// \return false failure
     bool StartMotion(AXISID Axis);
 
-
-    bool Stop(AXISID Axis);
     bool TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr);
 
     // Skywatcher mount status variables
@@ -192,7 +248,7 @@ public:
     double DegreesPerMicrostep[2];
     double MicrostepsPerDegree[2];
     long LowSpeedGotoMargin[2];
-    long BreakMicrosteps[2];
+    long SlewToModeDeccelerationRampLength[2];
 
     // Encoder values
     long CurrentEncoders[2]; // Current encoder value (microsteps).
