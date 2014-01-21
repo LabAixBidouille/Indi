@@ -131,7 +131,17 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
 
     SlewTo(AXIS2, DegreesToMicrosteps(AXIS1, 30));
 
-
+    DEBUGF(DBG_SCOPE, "RA %lf DEC %lf", ra, dec);
+    TelescopeDirectionVector TDV;
+    if (TransformCelestialToTelescope(ra, dec, TDV))
+    {
+        ln_hrz_posn AltAz;
+        AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
+        DEBUGF(DBG_SCOPE, "Conversion OK Altitude %lf Azimuth %lf", AltAz.alt, AltAz.az);
+    }
+    else
+    {
+    }
     return true;
 }
 
@@ -503,9 +513,13 @@ bool SkywatcherAPIMount::ReadScopeStatus()
     }
     else
     {
-        // Conversion failed just pull the coordinates back into RADEC and hope for the best
+        ln_lnlat_posn Position;
+        if (!GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+        {
+            // Use standard props if not the north pole
+        }
         struct ln_equ_posn EquatorialCoordinates;
-        EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
+        ln_get_equ_from_hrz(&AltAz, &Position, ln_get_julian_from_sys(), &EquatorialCoordinates);
         NewRaDec(EquatorialCoordinates.ra, EquatorialCoordinates.dec);
         DEBUGF(DBG_SCOPE, "Conversion failed RA %lf DEC %lf", EquatorialCoordinates.ra, EquatorialCoordinates.dec);
    }
