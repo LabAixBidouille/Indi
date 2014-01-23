@@ -20,6 +20,8 @@
 
 #include "skywatcherAPI.h"
 
+// Use a saved initial julian date for debugging purposes
+#define USE_INITIAL_JULIAN_DATE
 
 class SkywatcherAPIMount : public SkywatcherAPI, public INDI::Telescope, public INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 {
@@ -76,8 +78,11 @@ private:
     ISwitchVectorProperty AxisOneStateV;
     ISwitch AxisTwoState[6];
     ISwitchVectorProperty AxisTwoStateV;
-    INumber EncoderValues[2];
-    INumberVectorProperty EncoderValuesV;
+    enum { RAW_MICROSTEPS, OFFSET_FROM_INITIAL, DEGREES_FROM_INITIAL };
+    INumber AxisOneEncoderValues[3];
+    INumberVectorProperty AxisOneEncoderValuesV;
+    INumber AxisTwoEncoderValues[3];
+    INumberVectorProperty AxisTwoEncoderValuesV;
 
     // Previous motion direction
     typedef enum { PREVIOUS_NS_MOTION_NORTH = MOTION_NORTH,
@@ -88,6 +93,10 @@ private:
                     PREVIOUS_WE_MOTION_EAST = MOTION_EAST,
                     PREVIOUS_WE_MOTION_UNKNOWN = -1} PreviousWEMotion_t;
     PreviousWEMotion_t PreviousWEMotion;
+
+#ifdef USE_INITIAL_JULIAN_DATE
+    double InitialJulianDate;
+#endif
 };
 
 #endif // SKYWATCHERAPIMOUNT_H

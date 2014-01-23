@@ -359,6 +359,7 @@ bool SkywatcherAPI::InitMount()
         return false;
     if (!GetEncoder(AXIS2))
         return false;
+    MYDEBUGF(DBG_SCOPE, "Encoders before init Axis1 %ld Axis2 %ld", CurrentEncoders[AXIS1], CurrentEncoders[AXIS2]);
 
     // Set initial axis posiitons
     // These are used to define the arbitary zero position vector for the axis
@@ -368,6 +369,12 @@ bool SkywatcherAPI::InitMount()
 
     if (!InitializeMC())
         return false;
+
+    if (!GetEncoder(AXIS1))
+        return false;
+    if (!GetEncoder(AXIS2))
+        return false;
+    MYDEBUGF(DBG_SCOPE, "Encoders after init Axis1 %ld Axis2 %ld", CurrentEncoders[AXIS1], CurrentEncoders[AXIS2]);
 
     // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
     LowSpeedGotoMargin[(int)AXIS1] = (long)(640 * SIDEREALRATE * MicrostepsPerRadian[(int)AXIS1]);
