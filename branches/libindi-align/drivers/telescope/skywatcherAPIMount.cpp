@@ -84,6 +84,9 @@ SkywatcherAPIMount::SkywatcherAPIMount()
     pChildTelescope = this;
     PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
     PreviousWEMotion = PREVIOUS_WE_MOTION_UNKNOWN;
+#ifdef USE_INITIAL_JULIAN_DATE
+    InitialJulianDate = ln_get_julian_from_sys();
+#endif
 }
 
 // destructor
@@ -97,7 +100,11 @@ SkywatcherAPIMount::~SkywatcherAPIMount()
 bool  SkywatcherAPIMount::Abort()
 {
     DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Abort");
-    return false;
+
+    SlowStop(AXIS1);
+    SlowStop(AXIS2);
+
+    return true;
 }
 
 bool SkywatcherAPIMount::canSync()
@@ -115,7 +122,7 @@ bool  SkywatcherAPIMount::Connect()
     // Tell SkywatcherAPI about the serial port
     //SetSerialPort(PortFD); Hacked in ReadScopeStatus
 
-    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Connect - Call MCInit");
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Connect - Call InitMount");
 	return InitMount();
 }
 
@@ -155,12 +162,22 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
             }
         }
         struct ln_equ_posn EquatorialCoordinates;
+        // libnova works in decimal degrees
+        EquatorialCoordinates.ra = ra * 360.0 / 24.0;
+        EquatorialCoordinates.dec = dec;
         if (HavePosition)
+#ifdef USE_INITIAL_JULIAN_DATE
+            ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, InitialJulianDate, &AltAz);
+#else
             ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, ln_get_julian_from_sys(), &AltAz);
+#endif
         else
+        {
             // The best I can do is just do a direct conversion to Alt/Az
+            TDV = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
             AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
-        DEBUGF(DBG_SCOPE, "Conversion Failed - %s", HavePosition ? "have position" : "don't have position");
+        }
+        DEBUGF(DBG_SCOPE, "Conversion Failed - HavePosition %d", HavePosition);
     }
     DEBUGF(DBG_SCOPE, "New Altitude %lf degrees Azimuth %lf degrees", AltAz.alt, AltAz.az);
 
@@ -170,6 +187,19 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
 
     long AltitudeOffsetMicrosteps = DegreesToMicrosteps(AXIS2, AltAz.alt) + InitialEncoders[AXIS2] - CurrentEncoders[AXIS2];
     long AzimuthOffsetMicrosteps = DegreesToMicrosteps(AXIS1, AltAz.az) + InitialEncoders[AXIS1] - CurrentEncoders[AXIS1];
+
+    // Do I need to take out any complete revolutions before I do this test?
+    if (AltitudeOffsetMicrosteps > MicrostepsPerRevolution[AXIS2] / 2)
+    {
+        // Going the long way round - send it the other way
+        AltitudeOffsetMicrosteps -= MicrostepsPerRevolution[AXIS2];
+    }
+
+    if (AzimuthOffsetMicrosteps > MicrostepsPerRevolution[AXIS1] / 2)
+    {
+        // Going the long way round - send it the other way
+        AzimuthOffsetMicrosteps -= MicrostepsPerRevolution[AXIS1];
+    }
 
     SlewTo(AXIS1, AzimuthOffsetMicrosteps);
     SlewTo(AXIS2, AltitudeOffsetMicrosteps);
@@ -310,22 +340,54 @@ bool SkywatcherAPIMount::initProperties()
     IUFillSwitchVector(&AxisTwoStateV, AxisTwoState, 6, getDeviceName(), "AXIS_TWO_STATE", "Axis two state", DetailedMountInfoPage, IP_RO,
                         ISR_NOFMANY, 60, IPS_IDLE);
 
-    IUFillNumber(&EncoderValues[0], "AXIS_ONE",
-                                                            "Axis One",
+    IUFillNumber(&AxisOneEncoderValues[RAW_MICROSTEPS], "RAW_MICROSTEPS",
+                                                            "Raw Microsteps",
                                                             "%.0f",
                                                             0,
                                                             0xFFFFFF,
                                                             1,
                                                             0);
-    IUFillNumber(&EncoderValues[1], "AXIS_TWO",
-                                                            "Axis Two",
+    IUFillNumber(&AxisOneEncoderValues[OFFSET_FROM_INITIAL], "OFFSET_FROM_INITIAL",
+                                                            "Offset from initial",
                                                             "%.0f",
                                                             0,
                                                             0xFFFFFF,
+                                                            1,
+                                                            0);
+    IUFillNumber(&AxisOneEncoderValues[DEGREES_FROM_INITIAL], "DEGREES_FROM_INITIAL",
+                                                            "Degrees from initial",
+                                                            "%.2f",
+                                                            -1000.0,
+                                                            1000.0,
                                                             1,
                                                             0);
 
-    IUFillNumberVector(&EncoderValuesV, EncoderValues, 2, getDeviceName(), "ENCODER_VALUES", "Encoder values",
+    IUFillNumberVector(&AxisOneEncoderValuesV, AxisOneEncoderValues, 3, getDeviceName(), "AXIS1_ENCODER_VALUES", "Axis 1 Encoder values",
+                        DetailedMountInfoPage, IP_RO, 60, IPS_IDLE);
+
+    IUFillNumber(&AxisTwoEncoderValues[RAW_MICROSTEPS], "RAW_MICROSTEPS",
+                                                            "Raw Microsteps",
+                                                            "%.0f",
+                                                            0,
+                                                            0xFFFFFF,
+                                                            1,
+                                                            0);
+    IUFillNumber(&AxisTwoEncoderValues[OFFSET_FROM_INITIAL], "OFFSET_FROM_INITIAL",
+                                                            "Offset from initial",
+                                                            "%.0f",
+                                                            0,
+                                                            0xFFFFFF,
+                                                            1,
+                                                            0);
+    IUFillNumber(&AxisTwoEncoderValues[DEGREES_FROM_INITIAL], "DEGREES_FROM_INITIAL",
+                                                            "Degrees from initial",
+                                                            "%.2f",
+                                                            -1000.0,
+                                                            1000.0,
+                                                            1,
+                                                            0);
+
+    IUFillNumberVector(&AxisTwoEncoderValuesV, AxisTwoEncoderValues, 3, getDeviceName(), "AXIS2_ENCODER_VALUES", "Axis 2 Encoder values",
                         DetailedMountInfoPage, IP_RO, 60, IPS_IDLE);
     // Register any visible before connection properties
 
@@ -351,7 +413,8 @@ void SkywatcherAPIMount::ISGetProperties (const char *dev)
         defineSwitch(&AxisOneStateV);
         defineNumber(&AxisTwoInfoV);
         defineSwitch(&AxisTwoStateV);
-        defineNumber(&EncoderValuesV);
+        defineNumber(&AxisOneEncoderValuesV);
+        defineNumber(&AxisTwoEncoderValuesV);
     }
     return;
 }
@@ -559,16 +622,25 @@ bool SkywatcherAPIMount::ReadScopeStatus()
         }
         struct ln_equ_posn EquatorialCoordinates;
         if (HavePosition)
+        {
+#ifdef USE_INITIAL_JULIAN_DATE
+            ln_get_equ_from_hrz(&AltAz, &Position, InitialJulianDate, &EquatorialCoordinates);
+#else
             ln_get_equ_from_hrz(&AltAz, &Position, ln_get_julian_from_sys(), &EquatorialCoordinates);
+#endif
+        }
         else
             // The best I can do is just do a direct conversion to RA/DEC
             EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
-        RightAscension = EquatorialCoordinates.ra;
+        // libnova works in decimal degrees
+        RightAscension = EquatorialCoordinates.ra * 24.0 / 360.0;
         Declination = EquatorialCoordinates.dec;
-        DEBUGF(DBG_SCOPE, "Conversion Failed - HavePosition %d", HavePosition);
+        DEBUGF(DBG_SCOPE, "Conversion Failed - HavePosition %d RA (degrees) %lf DEC (degrees) %lf", HavePosition,
+                                                                                            EquatorialCoordinates.ra,
+                                                                                            EquatorialCoordinates.dec);
     }
 
-    DEBUGF(DBG_SCOPE, "New RA %lf DEC %lf", RightAscension, Declination);
+    DEBUGF(DBG_SCOPE, "New RA %lf (hours) DEC %lf (degrees)", RightAscension, Declination);
     NewRaDec(RightAscension, Declination);
     return true;
 }
@@ -612,7 +684,8 @@ bool SkywatcherAPIMount::updateProperties()
         defineSwitch(&AxisOneStateV);
         defineNumber(&AxisTwoInfoV);
         defineSwitch(&AxisTwoStateV);
-        defineNumber(&EncoderValuesV);
+        defineNumber(&AxisOneEncoderValuesV);
+        defineNumber(&AxisTwoEncoderValuesV);
 
         // Start the timer if we need one
         // SetTimer(POLLMS);
@@ -627,7 +700,8 @@ bool SkywatcherAPIMount::updateProperties()
         deleteProperty(AxisOneStateV.name);
         deleteProperty(AxisTwoInfoV.name);
         deleteProperty(AxisTwoStateV.name);
-        deleteProperty(EncoderValuesV.name);
+        deleteProperty(AxisOneEncoderValuesV.name);
+        deleteProperty(AxisTwoEncoderValuesV.name);
     }
 }
 
@@ -832,19 +906,28 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
     if (AxisTwoStateHasChanged && InformClient)
             IDSetSwitch(&AxisTwoStateV, NULL);
 
-    bool EncoderValuesHasChanged = false;
-    if (EncoderValues[0].value != CurrentEncoders[AXIS1])
+    bool AxisOneEncoderValuesHasChanged = false;
+    if ((AxisOneEncoderValues[RAW_MICROSTEPS].value != CurrentEncoders[AXIS1])
+    || (AxisOneEncoderValues[OFFSET_FROM_INITIAL].value != CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]))
     {
-        EncoderValues[0].value = CurrentEncoders[AXIS1];
-        EncoderValuesHasChanged = true;
+        AxisOneEncoderValues[RAW_MICROSTEPS].value = CurrentEncoders[AXIS1];
+        AxisOneEncoderValues[OFFSET_FROM_INITIAL].value = CurrentEncoders[AXIS1] - InitialEncoders[AXIS1];
+        AxisOneEncoderValues[DEGREES_FROM_INITIAL].value = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]);
+        AxisOneEncoderValuesHasChanged = true;
     }
-    if (EncoderValues[1].value != CurrentEncoders[AXIS2])
-    {
-        EncoderValues[1].value = CurrentEncoders[AXIS2];
-        EncoderValuesHasChanged = true;
-    }
-    if (EncoderValuesHasChanged && InformClient)
-        IDSetNumber(&EncoderValuesV, NULL);
+    if (AxisOneEncoderValuesHasChanged && InformClient)
+        IDSetNumber(&AxisOneEncoderValuesV, NULL);
 
+        bool AxisTwoEncoderValuesHasChanged = false;
+    if ((AxisTwoEncoderValues[RAW_MICROSTEPS].value != CurrentEncoders[AXIS2])
+    || (AxisTwoEncoderValues[OFFSET_FROM_INITIAL].value != CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]))
+    {
+        AxisTwoEncoderValues[RAW_MICROSTEPS].value = CurrentEncoders[AXIS2];
+        AxisTwoEncoderValues[OFFSET_FROM_INITIAL].value = CurrentEncoders[AXIS2] - InitialEncoders[AXIS2];
+        AxisTwoEncoderValues[DEGREES_FROM_INITIAL].value = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]);
+        AxisTwoEncoderValuesHasChanged = true;
+    }
+    if (AxisTwoEncoderValuesHasChanged && InformClient)
+        IDSetNumber(&AxisTwoEncoderValuesV, NULL);
 }
 
