@@ -20,9 +20,6 @@
 
 #include "skywatcherAPI.h"
 
-// Use a saved initial julian date for debugging purposes
-#define USE_INITIAL_JULIAN_DATE
-
 class SkywatcherAPIMount : public SkywatcherAPI, public INDI::Telescope, public INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 {
 public:
