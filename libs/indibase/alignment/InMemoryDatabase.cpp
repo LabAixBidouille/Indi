@@ -19,6 +19,17 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+bool InMemoryDatabase::GetDatabaseReferencePosition(ln_lnlat_posn& Position)
+{
+    if (DatabaseReferencePositionIsValid)
+    {
+        Position = DatabaseReferencePosition;
+        return true;
+    }
+    else
+        return false;
+}
+
 bool InMemoryDatabase::LoadDatabase(const char* DeviceName)
 {
     char DatabaseFileName[MAXRBUF];
@@ -188,12 +199,6 @@ bool InMemoryDatabase::SaveDatabase(const char* DeviceName)
     return true;
 }
 
-void InMemoryDatabase::SetLoadDatabaseCallback(LoadDatabaseCallbackPointer_t CallbackPointer, void *ThisPointer)
-{
-    LoadDatabaseCallback = CallbackPointer;
-    LoadDatabaseCallbackThisPointer = ThisPointer;
-}
-
 void InMemoryDatabase::SetDatabaseReferencePosition(double Latitude, double Longitude)
 {
     DatabaseReferencePosition.lat = Latitude;
@@ -201,17 +206,11 @@ void InMemoryDatabase::SetDatabaseReferencePosition(double Latitude, double Long
     DatabaseReferencePositionIsValid = true;
 }
 
-bool InMemoryDatabase::GetDatabaseReferencePosition(ln_lnlat_posn& Position)
+void InMemoryDatabase::SetLoadDatabaseCallback(LoadDatabaseCallbackPointer_t CallbackPointer, void *ThisPointer)
 {
-    if (DatabaseReferencePositionIsValid)
-    {
-        Position = DatabaseReferencePosition;
-        return true;
-    }
-    else
-        return false;
+    LoadDatabaseCallback = CallbackPointer;
+    LoadDatabaseCallbackThisPointer = ThisPointer;
 }
-
 
 } // namespace AlignmentSubsystem
 } // namespace INDI

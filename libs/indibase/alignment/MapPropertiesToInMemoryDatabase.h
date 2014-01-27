@@ -71,10 +71,25 @@ class MapPropertiesToInMemoryDatabase : public InMemoryDatabase
 public:
     virtual ~MapPropertiesToInMemoryDatabase() {}
 
+    // Public methods
+
     /** \brief Initilize alignment database properties. It is recommended to call this function within initProperties() of your primary device
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
     */
     void InitProperties(Telescope* pTelescope);
+
+    /** \brief Call this function from within the ISNewBLOB processing path. The function will
+     * handle any alignment database related properties.
+     * \param[in] pTelescope Pointer to the child INDI::Telecope class
+     * \param[in] name vector property name
+     * \param[in] sizes
+     * \param[in] blobsizes
+     * \param[in] blobs
+     * \param[in] formats
+     * \param[in] names
+     * \param[in] n
+    */
+    void ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
     /** \brief Call this function from within the ISNewNumber processing path. The function will
      * handle any alignment database related properties.
@@ -95,19 +110,6 @@ public:
      * \param[in] n number of values and names pair to process.
     */
     void ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
-
-    /** \brief Call this function from within the ISNewBLOB processing path. The function will
-     * handle any alignment database related properties.
-     * \param[in] pTelescope Pointer to the child INDI::Telecope class
-     * \param[in] name vector property name
-     * \param[in] sizes
-     * \param[in] blobsizes
-     * \param[in] blobs
-     * \param[in] formats
-     * \param[in] names
-     * \param[in] n
-    */
-    void ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
     /** \brief Call this function from within the updateLocation processing path
      *  \param[in] latitude Site latitude in degrees.

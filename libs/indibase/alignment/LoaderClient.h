@@ -12,20 +12,24 @@ public:
     LoaderClient();
     virtual ~LoaderClient();
 
-    void Initialise(int argc, char* argv[]);
+    // Public methods
 
+    void Initialise(int argc, char* argv[]);
     void Load();
 
 protected:
-    virtual void newDevice(INDI::BaseDevice *dp);
-    virtual void newProperty(INDI::Property *property);
-    virtual void removeProperty(INDI::Property *property) {}
+
+    // Protected methods
+
     virtual void newBLOB(IBLOB *bp);
-    virtual void newSwitch(ISwitchVectorProperty *svp);
-    virtual void newNumber(INumberVectorProperty *nvp);
-    virtual void newMessage(INDI::BaseDevice *dp, int messageID) {}
-    virtual void newText(ITextVectorProperty *tvp) {}
+    virtual void newDevice(INDI::BaseDevice *dp);
     virtual void newLight(ILightVectorProperty *lvp) {}
+    virtual void newMessage(INDI::BaseDevice *dp, int messageID) {}
+    virtual void newNumber(INumberVectorProperty *nvp);
+    virtual void newProperty(INDI::Property *property);
+    virtual void newSwitch(ISwitchVectorProperty *svp);
+    virtual void newText(ITextVectorProperty *tvp) {}
+    virtual void removeProperty(INDI::Property *property) {}
     virtual void serverConnected() {}
     virtual void serverDisconnected(int exit_code) {}
 

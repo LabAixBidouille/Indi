@@ -18,6 +18,8 @@ MathPluginManagerClient::~MathPluginManagerClient()
     //dtor
 }
 
+// Public methods
+
 void MathPluginManagerClient::Initialise(int argc, char* argv[])
 {
     std::string HostName("localhost");
@@ -42,21 +44,6 @@ void MathPluginManagerClient::Initialise(int argc, char* argv[])
     connectServer();
 
     setBLOBMode(B_ALSO, DeviceName.c_str(), NULL);
-}
-
-void MathPluginManagerClient::newDevice(INDI::BaseDevice *dp)
-{
-    ProcessNewDevice(dp);
-}
-
-void MathPluginManagerClient::newProperty(INDI::Property *property)
-{
-    ProcessNewProperty(property);
-}
-
-void MathPluginManagerClient::newSwitch(ISwitchVectorProperty *svp)
-{
-    ProcessNewSwitch(svp);
 }
 
 void MathPluginManagerClient::Test()
@@ -90,4 +77,19 @@ void MathPluginManagerClient::Test()
         cout << "Failure\n";
 }
 
+// Protected methods
 
+void MathPluginManagerClient::newDevice(INDI::BaseDevice *dp)
+{
+    ProcessNewDevice(dp);
+}
+
+void MathPluginManagerClient::newProperty(INDI::Property *property)
+{
+    ProcessNewProperty(property);
+}
+
+void MathPluginManagerClient::newSwitch(ISwitchVectorProperty *svp)
+{
+    ProcessNewSwitch(svp);
+}

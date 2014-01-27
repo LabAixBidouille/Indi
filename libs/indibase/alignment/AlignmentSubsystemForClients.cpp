@@ -21,6 +21,15 @@ void AlignmentSubsystemForClients::Initialise(const char * DeviceName, INDI::Bas
 
 }
 
+void AlignmentSubsystemForClients::ProcessNewBLOB(IBLOB *BLOBPointer)
+{
+    if (!strcmp(BLOBPointer->bvp->device, DeviceName.c_str()))
+    {
+        IDLog("newBLOB %s\n", BLOBPointer->bvp->name);
+        ClientAPIForAlignmentDatabase::ProcessNewBLOB(BLOBPointer);
+    }
+}
+
 void AlignmentSubsystemForClients::ProcessNewDevice(INDI::BaseDevice *DevicePointer)
 {
     if (!strcmp(DevicePointer->getDeviceName(), DeviceName.c_str()))
@@ -28,6 +37,15 @@ void AlignmentSubsystemForClients::ProcessNewDevice(INDI::BaseDevice *DevicePoin
         IDLog("Receiving %s Device...\n", DevicePointer->getDeviceName());
         ClientAPIForAlignmentDatabase::ProcessNewDevice(DevicePointer);
         ClientAPIForMathPluginManagement::ProcessNewDevice(DevicePointer);
+    }
+}
+
+void AlignmentSubsystemForClients::ProcessNewNumber(INumberVectorProperty *NumberVectorPropertyPointer)
+{
+    if (!strcmp(NumberVectorPropertyPointer->device, DeviceName.c_str()))
+    {
+        IDLog("newNumber %s\n", NumberVectorPropertyPointer->name);
+        ClientAPIForAlignmentDatabase::ProcessNewNumber(NumberVectorPropertyPointer);
     }
 }
 
@@ -48,24 +66,6 @@ void AlignmentSubsystemForClients::ProcessNewSwitch(ISwitchVectorProperty *Switc
         IDLog("newSwitch %s\n", SwitchVectorPropertyPointer->name);
         ClientAPIForAlignmentDatabase::ProcessNewSwitch(SwitchVectorPropertyPointer);
         ClientAPIForMathPluginManagement::ProcessNewSwitch(SwitchVectorPropertyPointer);
-    }
-}
-
-void AlignmentSubsystemForClients::ProcessNewNumber(INumberVectorProperty *NumberVectorPropertyPointer)
-{
-    if (!strcmp(NumberVectorPropertyPointer->device, DeviceName.c_str()))
-    {
-        IDLog("newNumber %s\n", NumberVectorPropertyPointer->name);
-        ClientAPIForAlignmentDatabase::ProcessNewNumber(NumberVectorPropertyPointer);
-    }
-}
-
-void AlignmentSubsystemForClients::ProcessNewBLOB(IBLOB *BLOBPointer)
-{
-    if (!strcmp(BLOBPointer->bvp->device, DeviceName.c_str()))
-    {
-        IDLog("newBLOB %s\n", BLOBPointer->bvp->name);
-        ClientAPIForAlignmentDatabase::ProcessNewBLOB(BLOBPointer);
     }
 }
 

@@ -18,6 +18,8 @@ LoaderClient::~LoaderClient()
     //dtor
 }
 
+// Public methods
+
 void LoaderClient::Initialise(int argc, char* argv[])
 {
     std::string HostName("localhost");
@@ -44,32 +46,6 @@ void LoaderClient::Initialise(int argc, char* argv[])
     setBLOBMode(B_ALSO, DeviceName.c_str(), NULL);
 }
 
-void LoaderClient::newDevice(INDI::BaseDevice *dp)
-{
-    ProcessNewDevice(dp);
-}
-
-void LoaderClient::newProperty(INDI::Property *property)
-{
-    ProcessNewProperty(property);
-}
-
-void LoaderClient::newSwitch(ISwitchVectorProperty *svp)
-{
-    ProcessNewSwitch(svp);
-}
-
-void LoaderClient::newNumber(INumberVectorProperty *nvp)
-{
-    ProcessNewNumber(nvp);
-}
-
-void LoaderClient::newBLOB(IBLOB *bp)
-{
-    ProcessNewBLOB(bp);
-}
-
-
 void LoaderClient::Load()
 {
     AlignmentDatabaseEntry CurrentValues;
@@ -87,4 +63,29 @@ void LoaderClient::Load()
     AppendSyncPoint(CurrentValues);
 }
 
+// Protected methods
 
+void LoaderClient::newBLOB(IBLOB *bp)
+{
+    ProcessNewBLOB(bp);
+}
+
+void LoaderClient::newDevice(INDI::BaseDevice *dp)
+{
+    ProcessNewDevice(dp);
+}
+
+void LoaderClient::newNumber(INumberVectorProperty *nvp)
+{
+    ProcessNewNumber(nvp);
+}
+
+void LoaderClient::newProperty(INDI::Property *property)
+{
+    ProcessNewProperty(property);
+}
+
+void LoaderClient::newSwitch(ISwitchVectorProperty *svp)
+{
+    ProcessNewSwitch(svp);
+}

@@ -29,10 +29,14 @@ public:
 
     typedef std::vector<AlignmentDatabaseEntry> AlignmentDatabaseType;
 
+    // Public methods
+
     /** \brief Get a reference to the in memory database.
         \return A reference to the in memory database.
     */
     AlignmentDatabaseType& GetAlignmentDatabase() { return MySyncPoints; }
+
+    bool GetDatabaseReferencePosition(ln_lnlat_posn& Position);
 
     /** \brief Load the database from persistent storage
         \param[in] DeviceName The name of the current device.
@@ -46,13 +50,11 @@ public:
     */
     bool SaveDatabase(const char* DeviceName);
 
-    typedef void (*LoadDatabaseCallbackPointer_t)(void *);
-
-    void SetLoadDatabaseCallback(LoadDatabaseCallbackPointer_t CallbackPointer, void *ThisPointer);
-
     void SetDatabaseReferencePosition(double Latitude, double Longitude);
 
-    bool GetDatabaseReferencePosition(ln_lnlat_posn& Position);
+    typedef void (*LoadDatabaseCallbackPointer_t)(void *);
+    void SetLoadDatabaseCallback(LoadDatabaseCallbackPointer_t CallbackPointer, void *ThisPointer);
+
 
 private:
     AlignmentDatabaseType MySyncPoints;
