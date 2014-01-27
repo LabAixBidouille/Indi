@@ -6,15 +6,10 @@ If you cannot commit an edit then send your version to me and I will commit it.
 
 Roger.
 
-1. Implement the "Builtin Math Plugin" (30% complete).
+1. Alpha testing
 
-2. Implement enough of SkyWatcherAPIMount to do basic testing (30% complete).
+2. Modify my coordinate conversion layer driver to use the new architecture.
 
-3. Modify my coordinate conversion layer driver to use the new architecture.
-
-4. Implement an example client program to load eqmod format databases into the alignment subsystem (50% complete).
-
-Q1. I want to use a robust matrix and vector math libary for the math plugins. My current candidates are Armadillo and GSL (GNU Scientific Library), both of which are readily available as packages on most major linux distributions. Comments and suggestions please. GSL also has support for SVD algorithms which will be very useful for a least squares approximation alternative to TAKI's simplistic alignment solution.
-
+3. Implement an example client program to load eqmod format databases into the alignment subsystem (50% complete).
 
 
