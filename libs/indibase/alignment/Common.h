@@ -24,18 +24,21 @@ enum AlignmentPointSetEnum {ENTRY_OBSERVATION_JULIAN_DATE, ENTRY_RA, ENTRY_DEC, 
  * \struct TelescopeDirectionVector
  * \brief Holds a nomalised direction vector (direction cosines)
  *
- * The x y,z fields of this class should always represent a normalised (unit length)
- * vector in a right handed rectangular coordinate space.
+ * The x y,z fields of this class should normally represent a normalised (unit length)
+ * vector in a right handed rectangular coordinate space. However, for convenience a number
+ * a number of standard 3d vector methods are also supported.
  */
 struct TelescopeDirectionVector
 {
     TelescopeDirectionVector() : x(0), y(0), z(0) {}
+    TelescopeDirectionVector(double X, double Y, double Z) : x(X), y(Y), z(Z) {}
+
     double x;
     double y;
     double z;
 
     // Override the * operator to return a cross product
-    const TelescopeDirectionVector operator * (const TelescopeDirectionVector &RHS) const
+    inline const TelescopeDirectionVector operator * (const TelescopeDirectionVector &RHS) const
     {
         TelescopeDirectionVector Result;
 
@@ -43,6 +46,39 @@ struct TelescopeDirectionVector
         Result.y = z * RHS.x - x * RHS.z;
         Result.z = x * RHS.y - y * RHS.x;
         return Result;
+    }
+
+    // Override the * operator to return a scalar product
+    inline const TelescopeDirectionVector operator * (const double &RHS) const
+    {
+        TelescopeDirectionVector Result;
+
+        Result.x *= y * RHS;
+        Result.y *= z * RHS;
+        Result.z *= x * RHS;
+        return Result;
+    }
+
+    // Unary scalar product
+    inline const TelescopeDirectionVector& operator *= (const double &RHS)
+    {
+        x *= RHS;
+        y *= RHS;
+        z *= RHS;
+        return *this;
+    }
+
+    // Binary vector subtract
+    inline const TelescopeDirectionVector operator - (const TelescopeDirectionVector& RHS) const
+    {
+        return TelescopeDirectionVector(x - RHS.x, y - RHS.y, z - RHS.z);
+    }
+
+
+    // Override the ^ operator to return a dot product
+    inline double operator ^ (const TelescopeDirectionVector &RHS) const
+    {
+        return x * RHS.x + y * RHS.y + z * RHS.z;
     }
 
     inline void Normalise()

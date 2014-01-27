@@ -816,11 +816,16 @@ void ConvexHull::PrintFaces( void )
 
 }
 
-void ConvexHull::PrintObj( void )
+void ConvexHull::PrintObj(const char * FileName)
 {
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // This code will not work if vertices have been removed from
+    // the list. More work is needed to renumber the vertices for
+    // this case.
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     tVertex  v;
     tFace    f;
-    map<int, tsVertex> SortedVertices;
+    map<int, int> vnumToOffsetMap;
     int a[3], b[3];  /* used to compute normal vector */
     double c[3], length;
     ofstream Ofile;
@@ -833,18 +838,18 @@ void ConvexHull::PrintObj( void )
     Ofile << "s 1\n";
     Ofile << "usemtl default\n";
 
-    // vertices
+    // The convex hull code removes vertices from the list that at are on the hull
+    // so the vertices list might have missing vnums. So I need to construct a map of
+    // vnums to new vertex array indices.
+    int Offset = 1;
     v = vertices;
     do
     {
-        SortedVertices[v->vnum] = *v;
+        vnumToOffsetMap[v->vnum] = Offset;
+        Ofile << "v "  << v->v[X] << ' ' << v->v[Y] << ' ' << v->v[Z] << '\n';
+        Offset++;
         v = v->next;
     } while ( v != vertices );
-
-    for (map<int, tsVertex>::iterator iTr = SortedVertices.begin(); iTr != SortedVertices.end(); iTr++)
-    {
-        Ofile << "v "  << (*iTr).second.v[X] << ' ' << (*iTr).second.v[Y] << ' ' << (*iTr).second.v[Z] << '\n';
-    }
 
     // normals
     f = faces;
@@ -871,9 +876,9 @@ void ConvexHull::PrintObj( void )
     f = faces;
     do
     {
-        Ofile << "f " << f->vertex[0]->vnum + 1 << "//" << i << ' '
-                << f->vertex[1]->vnum + 1 << "//" << i << ' '
-                << f->vertex[2]->vnum + 1 << "//" << i << '\n';
+        Ofile << "f " << vnumToOffsetMap[f->vertex[0]->vnum] << "//" << i << ' '
+                << vnumToOffsetMap[f->vertex[1]->vnum] << "//" << i << ' '
+                << vnumToOffsetMap[f->vertex[2]->vnum] << "//" << i << '\n';
         i++;
         f = f->next;
     } while ( f != faces );
@@ -945,6 +950,52 @@ void ConvexHull::ReadVertices( void )
             PrintPoint(v);
         }
     }
+}
+
+void ConvexHull::Reset( void )
+{
+    tVertex CurrentVertex = vertices;
+    tEdge CurrentEdge = edges;
+    tFace CurrentFace = faces;
+
+    if (NULL != CurrentVertex)
+    {
+        do
+        {
+            tVertex TempVertex = CurrentVertex;
+            CurrentVertex = CurrentVertex->next;
+            delete TempVertex;
+        }
+        while (CurrentVertex != vertices);
+        vertices = NULL;
+    }
+
+    if (NULL != CurrentEdge)
+    {
+        do
+        {
+            tEdge TempEdge = CurrentEdge;
+            CurrentEdge = CurrentEdge->next;
+            delete TempEdge;
+        }
+        while (CurrentEdge != edges);
+        edges = NULL;
+    }
+
+    if (NULL != CurrentFace)
+    {
+        do
+        {
+            tFace TempFace = CurrentFace;
+            CurrentFace = CurrentFace->next;
+            delete TempFace;
+        }
+        while (CurrentFace != faces);
+        faces = NULL;
+    }
+
+    debug = false;
+    check = false;
 }
 
 void ConvexHull::SubVec( int a[3], int b[3], int c[3])

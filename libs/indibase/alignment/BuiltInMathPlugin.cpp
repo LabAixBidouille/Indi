@@ -1,5 +1,6 @@
 #include "BuiltInMathPlugin.h"
 
+#include <limits>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
@@ -36,7 +37,8 @@ bool BuiltInMathPlugin::Initialise()
     /// - If three compute a transform matrix.
     /// - If four or more compute a convex hull, then matrices for each
     /// triangular facet of the hull.
-    switch (GetAlignmentDatabase().size())
+    AlignmentDatabaseType& SyncPoints = GetAlignmentDatabase();
+    switch (SyncPoints.size())
     {
         case 0:
             return false;
@@ -101,7 +103,7 @@ bool BuiltInMathPlugin::Initialise()
             return true;
 #else
             // Compute local horizontal coordinate offsets
-            AlignmentDatabaseEntry& Entry1 = GetAlignmentDatabase()[0];
+            AlignmentDatabaseEntry& Entry1 = SyncPoints[0];
             ln_equ_posn RaDec;
             ln_hrz_posn ActualSyncPoint1;
             ln_lnlat_posn Position;
@@ -148,8 +150,8 @@ bool BuiltInMathPlugin::Initialise()
         case 2:
         {
             // First compute local horizontal coordinates for the two sync points
-            AlignmentDatabaseEntry& Entry1 = GetAlignmentDatabase()[0];
-            AlignmentDatabaseEntry& Entry2 = GetAlignmentDatabase()[1];
+            AlignmentDatabaseEntry& Entry1 = SyncPoints[0];
+            AlignmentDatabaseEntry& Entry2 = SyncPoints[1];
             ln_hrz_posn ActualSyncPoint1;
             ln_hrz_posn ActualSyncPoint2;
             ln_equ_posn RaDec1;
@@ -178,9 +180,9 @@ bool BuiltInMathPlugin::Initialise()
         case 3:
         {
             // First compute local horizontal coordinates for the three sync points
-            AlignmentDatabaseEntry& Entry1 = GetAlignmentDatabase()[0];
-            AlignmentDatabaseEntry& Entry2 = GetAlignmentDatabase()[1];
-            AlignmentDatabaseEntry& Entry3 = GetAlignmentDatabase()[2];
+            AlignmentDatabaseEntry& Entry1 = SyncPoints[0];
+            AlignmentDatabaseEntry& Entry2 = SyncPoints[1];
+            AlignmentDatabaseEntry& Entry3 = SyncPoints[2];
             ln_hrz_posn ActualSyncPoint1;
             ln_hrz_posn ActualSyncPoint2;
             ln_hrz_posn ActualSyncPoint3;
@@ -213,19 +215,100 @@ bool BuiltInMathPlugin::Initialise()
 
 
         default:
-            // Compute Hull etc.
+        {
+            ln_lnlat_posn Position;
+            if (!GetDatabaseReferencePosition(Position))
+                return false;
+
+            // Compute Hulls etc.
+            ActualConvexHull.Reset();
+            ApparentConvexHull.Reset();
+            ActualDirectionCosines.clear();
+
+            // Add a dummy point at the nadir
+            ActualConvexHull.MakeNewVertex(0.0, 0.0, -1.0, 0);
+            ApparentConvexHull.MakeNewVertex(0.0, 0.0, -1.0, 0);
+
+            int VertexNumber = 1;
+            // Add the rest of the vertices
+            for (AlignmentDatabaseType::const_iterator Itr = SyncPoints.begin(); Itr != SyncPoints.end(); Itr++)
+            {
+                ln_equ_posn RaDec;
+                ln_hrz_posn ActualSyncPoint;
+                RaDec.dec = (*Itr).Declination;
+                RaDec.ra = (*Itr).RightAscension;
+                ln_get_hrz_from_equ(&RaDec, &Position, (*Itr).ObservationJulianDate, &ActualSyncPoint);
+                // Now express this coordinate as normalised direction vectors (a.k.a direction cosines)
+                TelescopeDirectionVector ActualDirectionCosine = TelescopeDirectionVectorFromAltitudeAzimuth(ActualSyncPoint);
+                ActualDirectionCosines.push_back(ActualDirectionCosine);
+                ActualConvexHull.MakeNewVertex(ActualDirectionCosine.x, ActualDirectionCosine.y, ActualDirectionCosine.z, VertexNumber);
+                ApparentConvexHull.MakeNewVertex((*Itr).TelescopeDirection.x, (*Itr).TelescopeDirection.y, (*Itr).TelescopeDirection.z, VertexNumber);
+                VertexNumber++;
+            }
+            // I should only need to do this once but it is easier to do it twice
+            ActualConvexHull.DoubleTriangle();
+            ActualConvexHull.ConstructHull();
+            ActualConvexHull.EdgeOrderOnFaces();
+            ApparentConvexHull.DoubleTriangle();
+            ApparentConvexHull.ConstructHull();
+            ApparentConvexHull.EdgeOrderOnFaces();
+
+            // Make the matrices
+            tFace CurrentFace = ActualConvexHull.faces;
+            if (NULL != CurrentFace)
+            {
+                do
+                {
+                    CalculateTAKIMatrices(ActualDirectionCosines[CurrentFace->vertex[0]->vnum],
+                                        ActualDirectionCosines[CurrentFace->vertex[1]->vnum],
+                                        ActualDirectionCosines[CurrentFace->vertex[2]->vnum],
+                                        SyncPoints[CurrentFace->vertex[0]->vnum].TelescopeDirection,
+                                        SyncPoints[CurrentFace->vertex[1]->vnum].TelescopeDirection,
+                                        SyncPoints[CurrentFace->vertex[2]->vnum].TelescopeDirection,
+                                        CurrentFace->pMatrix, NULL);
+                    CurrentFace = CurrentFace->next;
+                }
+                while (CurrentFace != faces);
+            }
+
+            // One of these days I will optimise this
+            CurrentFace = ApparentConvexHull.faces;
+            if (NULL != CurrentFace)
+            {
+                do
+                {
+                    CalculateTAKIMatrices(SyncPoints[CurrentFace->vertex[0]->vnum].TelescopeDirection,
+                                        SyncPoints[CurrentFace->vertex[1]->vnum].TelescopeDirection,
+                                        SyncPoints[CurrentFace->vertex[2]->vnum].TelescopeDirection,
+                                        ActualDirectionCosines[CurrentFace->vertex[0]->vnum],
+                                        ActualDirectionCosines[CurrentFace->vertex[1]->vnum],
+                                        ActualDirectionCosines[CurrentFace->vertex[2]->vnum],
+                                        CurrentFace->pMatrix, NULL);
+                    CurrentFace = CurrentFace->next;
+                }
+                while (CurrentFace != faces);
+            }
+
+#ifdef CONVEX_HULL_DEBUGGING
+            ActualConvexHull.PrintObj("ActualHull.obj");
+            ApparentConvexHull.PrintObj("ApparentHull.obj");
+#endif
             return true;
+        }
     }
 }
 
 bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& ApparentTelescopeDirectionVector)
 {
     ln_equ_posn ActualRaDec;
+    ln_hrz_posn ActualAltAz;
     ActualRaDec.ra = RightAscension;
     ActualRaDec.dec = Declination;
     ln_lnlat_posn Position;
     if (!GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
         return false;
+    ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys(), &ActualAltAz);
+    TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
 
     switch (GetAlignmentDatabase().size())
     {
@@ -264,10 +347,7 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
         case 2:
         case 3:
         {
-            ln_hrz_posn ActualAltAz;
             ln_hrz_posn ApparentAltAz;
-            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys(), &ActualAltAz);
-            TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
             gsl_vector *pGSLActualVector = gsl_vector_alloc(3);
             gsl_vector_set(pGSLActualVector, 0, ActualVector.x);
             gsl_vector_set(pGSLActualVector, 1, ActualVector.y);
@@ -284,8 +364,46 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
         }
 
         default:
-            // Convex hull stuff to go in here
-            return false;
+        {
+            // Scale the actual telescope direction vector to make sure it traverses the unit sphere.
+            TelescopeDirectionVector ScaledActualVector = ActualVector * 2.0;
+            // Shoot the scaled vector in the into the list of actual facets
+            // and use the conversuion matrix from the one it intersects
+            tFace CurrentFace = ActualConvexHull.faces;
+            if (NULL != CurrentFace)
+            {
+                do
+                {
+                    if (RayTriangleIntersection(ScaledActualVector,
+                                                ActualDirectionCosines[CurrentFace->vertex[0]->vnum],
+                                                ActualDirectionCosines[CurrentFace->vertex[1]->vnum],
+                                                ActualDirectionCosines[CurrentFace->vertex[2]->vnum]))
+                        break;
+                    CurrentFace = CurrentFace->next;
+                }
+                while (CurrentFace != faces);
+                if (CurrentFace == faces)
+                    return false;
+            }
+            else
+                return false;
+
+            // OK - got an intersection - CurrentFace is pointing at the face
+            ln_hrz_posn ApparentAltAz;
+            gsl_vector *pGSLActualVector = gsl_vector_alloc(3);
+            gsl_vector_set(pGSLActualVector, 0, ActualVector.x);
+            gsl_vector_set(pGSLActualVector, 1, ActualVector.y);
+            gsl_vector_set(pGSLActualVector, 2, ActualVector.z);
+            gsl_vector *pGSLApparentVector = gsl_vector_alloc(3);
+            MatrixVectorMultipy(CurrentFace->pMatrix, pGSLActualVector, pGSLApparentVector);
+            ApparentTelescopeDirectionVector.x = gsl_vector_get(pGSLApparentVector, 0);
+            ApparentTelescopeDirectionVector.y = gsl_vector_get(pGSLApparentVector, 1);
+            ApparentTelescopeDirectionVector.z = gsl_vector_get(pGSLApparentVector, 2);
+            ApparentTelescopeDirectionVector.Normalise();
+            gsl_vector_free(pGSLActualVector);
+            gsl_vector_free(pGSLApparentVector);
+            break;
+        }
     }
     return true;
 }
@@ -329,51 +447,101 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
         }
 
         default:
-            // Convex hull stuff to go in here
-            return false;
+        {
+            AlignmentDatabaseType& SyncPoints = GetAlignmentDatabase();
+
+            // Scale the apparent telescope direction vector to make sure it traverses the unit sphere.
+            TelescopeDirectionVector ScaledApparentVector = ApparentTelescopeDirectionVector * 2.0;
+            // Shoot the scaled vector in the into the list of apparent facets
+            // and use the conversuion matrix from the one it intersects
+            tFace CurrentFace = ApparentConvexHull.faces;
+            if (NULL != CurrentFace)
+            {
+                do
+                {
+                    if (RayTriangleIntersection(ScaledApparentVector,
+                                                SyncPoints[CurrentFace->vertex[0]->vnum].TelescopeDirection,
+                                                SyncPoints[CurrentFace->vertex[1]->vnum].TelescopeDirection,
+                                                SyncPoints[CurrentFace->vertex[2]->vnum].TelescopeDirection))
+                        break;
+                    CurrentFace = CurrentFace->next;
+                }
+                while (CurrentFace != faces);
+                if (CurrentFace == faces)
+                    return false;
+            }
+            else
+                return false;
+
+            // OK - got an intersection - CurrentFace is pointing at the face
+            gsl_vector *pGSLApparentVector = gsl_vector_alloc(3);
+            gsl_vector_set(pGSLApparentVector, 0, ApparentTelescopeDirectionVector.x);
+            gsl_vector_set(pGSLApparentVector, 1, ApparentTelescopeDirectionVector.y);
+            gsl_vector_set(pGSLApparentVector, 2, ApparentTelescopeDirectionVector.z);
+            gsl_vector *pGSLActualVector = gsl_vector_alloc(3);
+            MatrixVectorMultipy(CurrentFace->pMatrix, pGSLApparentVector, pGSLActualVector);
+            TelescopeDirectionVector ActualTelescopeDirectionVector;
+            ActualTelescopeDirectionVector.x = gsl_vector_get(pGSLActualVector, 0);
+            ActualTelescopeDirectionVector.y = gsl_vector_get(pGSLActualVector, 1);
+            ActualTelescopeDirectionVector.z = gsl_vector_get(pGSLActualVector, 2);
+            ActualTelescopeDirectionVector.Normalise();
+            ln_hrz_posn ActualAltAz;
+            AltitudeAzimuthFromTelescopeDirectionVector(ActualTelescopeDirectionVector, ActualAltAz);
+            ln_equ_posn ActualRaDec;
+            ln_get_equ_from_hrz(&ActualAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
+            RightAscension = ActualRaDec.ra;
+            Declination = ActualRaDec.dec;
+            gsl_vector_free(pGSLActualVector);
+            gsl_vector_free(pGSLApparentVector);
+            break;
+        }
     }
     return true;
 }
 
 // Private methods
 
-void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& Actual1, const TelescopeDirectionVector& Actual2, const TelescopeDirectionVector& Actual3,
-                            const TelescopeDirectionVector& Apparent1, const TelescopeDirectionVector& Apparent2, const TelescopeDirectionVector& Apparent3,
-                            gsl_matrix *pActualToApparent, gsl_matrix *pApparentToActual)
+void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& Alpha1, const TelescopeDirectionVector& Alpha2, const TelescopeDirectionVector& Alpha3,
+                            const TelescopeDirectionVector& Beta1, const TelescopeDirectionVector& Beta2, const TelescopeDirectionVector& Beta3,
+                            gsl_matrix *pAlphaToBeta, gsl_matrix *pBetaToAlpha)
 {
     // Derive the Actual to Apparent transformation matrix using TAKI's method
-    gsl_matrix *pActualMatrix = gsl_matrix_alloc(3, 3);
-    gsl_matrix_set(pActualMatrix, 0, 0, Actual1.x);
-    gsl_matrix_set(pActualMatrix, 0, 1, Actual1.y);
-    gsl_matrix_set(pActualMatrix, 0, 2, Actual1.z);
-    gsl_matrix_set(pActualMatrix, 1, 0, Actual2.x);
-    gsl_matrix_set(pActualMatrix, 1, 1, Actual2.y);
-    gsl_matrix_set(pActualMatrix, 1, 2, Actual2.z);
-    gsl_matrix_set(pActualMatrix, 2, 0, Actual3.x);
-    gsl_matrix_set(pActualMatrix, 2, 1, Actual3.y);
-    gsl_matrix_set(pActualMatrix, 2, 2, Actual3.z);
+    gsl_matrix *pAlphaMatrix = gsl_matrix_alloc(3, 3);
+    gsl_matrix_set(pAlphaMatrix, 0, 0, Alpha1.x);
+    gsl_matrix_set(pAlphaMatrix, 0, 1, Alpha1.y);
+    gsl_matrix_set(pAlphaMatrix, 0, 2, Alpha1.z);
+    gsl_matrix_set(pAlphaMatrix, 1, 0, Alpha2.x);
+    gsl_matrix_set(pAlphaMatrix, 1, 1, Alpha2.y);
+    gsl_matrix_set(pAlphaMatrix, 1, 2, Alpha2.z);
+    gsl_matrix_set(pAlphaMatrix, 2, 0, Alpha3.x);
+    gsl_matrix_set(pAlphaMatrix, 2, 1, Alpha3.y);
+    gsl_matrix_set(pAlphaMatrix, 2, 2, Alpha3.z);
 
-    gsl_matrix *pApparentMatrix = gsl_matrix_alloc(3, 3);
-    gsl_matrix_set(pApparentMatrix, 0, 0, Apparent1.x);
-    gsl_matrix_set(pApparentMatrix, 0, 1, Apparent1.y);
-    gsl_matrix_set(pApparentMatrix, 0, 2, Apparent1.z);
-    gsl_matrix_set(pApparentMatrix, 1, 0, Apparent2.x);
-    gsl_matrix_set(pApparentMatrix, 1, 1, Apparent2.y);
-    gsl_matrix_set(pApparentMatrix, 1, 2, Apparent2.z);
-    gsl_matrix_set(pApparentMatrix, 2, 0, Apparent3.x);
-    gsl_matrix_set(pApparentMatrix, 2, 1, Apparent3.y);
-    gsl_matrix_set(pApparentMatrix, 2, 2, Apparent3.z);
+    gsl_matrix *pBetaMatrix = gsl_matrix_alloc(3, 3);
+    gsl_matrix_set(pBetaMatrix, 0, 0, Beta1.x);
+    gsl_matrix_set(pBetaMatrix, 0, 1, Beta1.y);
+    gsl_matrix_set(pBetaMatrix, 0, 2, Beta1.z);
+    gsl_matrix_set(pBetaMatrix, 1, 0, Beta2.x);
+    gsl_matrix_set(pBetaMatrix, 1, 1, Beta2.y);
+    gsl_matrix_set(pBetaMatrix, 1, 2, Beta2.z);
+    gsl_matrix_set(pBetaMatrix, 2, 0, Beta3.x);
+    gsl_matrix_set(pBetaMatrix, 2, 1, Beta3.y);
+    gsl_matrix_set(pBetaMatrix, 2, 2, Beta3.z);
 
-    MatrixMatrixMultipy(pApparentMatrix, pActualMatrix, pActualToApparent);
+    MatrixMatrixMultipy(pBetaMatrix, pAlphaMatrix, pAlphaToBeta);
 
-    // Use pApparent as temporary storage
-    gsl_matrix_memcpy(pApparentMatrix, pActualToApparent);
+    if (NULL != pBetaToAlpha)
+    {
+        // Use pActual as temporary storage
+        gsl_matrix_memcpy(pBetaMatrix, pAlphaToBeta);
 
-    // Invert the matrix to get the Apparent to Actual transform
-    MatrixInvert3x3(pActualToApparent, pApparentToActual);
+        // Invert the matrix to get the Apparent to Actual transform
+        MatrixInvert3x3(pAlphaToBeta, pBetaToAlpha);
+    }
+
     // Clean up
-    gsl_matrix_free(pApparentMatrix);
-    gsl_matrix_free(pActualMatrix);
+    gsl_matrix_free(pBetaMatrix);
+    gsl_matrix_free(pAlphaMatrix);
 }
 
 /// Use gsl to compute the inverse of a 3x3 matrix
@@ -411,6 +579,57 @@ void BuiltInMathPlugin::MatrixVectorMultipy(gsl_matrix *pA, gsl_vector *pB, gsl_
     gsl_blas_dgemv(CblasNoTrans, 1.0, pA, pB, 0.0, pC);
 }
 
+bool BuiltInMathPlugin::RayTriangleIntersection(TelescopeDirectionVector& Ray,
+                                                TelescopeDirectionVector& TriangleVertex1,
+                                                TelescopeDirectionVector& TriangleVertex2,
+                                                TelescopeDirectionVector& TriangleVertex3)
+{
+    // Use Möller-Trumbore
+
+    //Find vectors for two edges sharing V1
+    TelescopeDirectionVector Edge1 = TriangleVertex2 - TriangleVertex1;
+    TelescopeDirectionVector Edge2 = TriangleVertex3 - TriangleVertex1;
+
+    TelescopeDirectionVector P = Ray * Edge2; // cross product
+    double Determinant = Edge1 ^ P; // dot product
+    double InverseDeterminant = 1.0 / Determinant;
+
+    // if the determinant is negative the triangle is backfacing
+    // if the determinant is close to 0, the ray misses the triangle
+    if (Determinant < std::numeric_limits<double>::epsilon())
+        return false;
+
+    // I use zero as ray origin so
+    TelescopeDirectionVector T = TriangleVertex1;
+
+    // Calculate the u parameter
+    double u = (T ^ P) * InverseDeterminant;
+
+    if (u < 0.0 || u > 1.0)
+        //The intersection lies outside of the triangle
+        return false;
+
+    //Prepare to test v parameter
+    TelescopeDirectionVector Q = T * Edge1;
+
+    //Calculate v parameter and test bound
+    double v = (Ray ^ Q) * InverseDeterminant;
+
+    if (v < 0.0 || u + v  > 1.0)
+        //The intersection lies outside of the triangle
+        return false;
+
+    double t = (Edge2 ^ Q) * InverseDeterminant;
+
+    if(t > std::numeric_limits<double>::epsilon())
+    {
+        //ray intersection
+        return true;
+    }
+
+    // No hit, no win
+    return false;
+}
 
 
 } // namespace AlignmentSubsystem

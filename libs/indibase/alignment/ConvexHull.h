@@ -19,6 +19,7 @@
 // For INDI alignment purposes we need to scale floating point coordinates
 // into the integer space before using this algorithm.
 
+
 /*
 This code is described in "Computational Geometry in C" (Second Edition),
 Chapter 4.  It is not written to be comprehensible without the
@@ -45,6 +46,7 @@ not removed.
 #include <cstring> // I like to use NULL
 #include <cmath>
 #include <limits>
+#include <gsl/gsl_matrix.h>
 
 namespace INDI {
 namespace AlignmentSubsystem {
@@ -58,7 +60,7 @@ class ConvexHull
     public:
         ConvexHull() : vertices(NULL), edges(NULL), faces(NULL),
                         debug(false), check(false),
-                        ScaleFactor(SAFE) {}
+                        ScaleFactor(SAFE - 1) {}
         virtual ~ConvexHull() {}
 
     enum { X = 0, Y = 1, Z = 2 };
@@ -136,10 +138,13 @@ class ConvexHull
     };
 
     struct tFaceStructure {
+       tFaceStructure() { pMatrix = gsl_matrix_alloc(3,3); }
+       ~tFaceStructure() { gsl_matrix_free(pMatrix); }
        tEdge    edge[3];
        tVertex  vertex[3];
        bool	    visible;    // True iff face visible from new point.
        tFace    next, prev;
+       gsl_matrix *pMatrix;
     };
 
     /* Define flags */
@@ -305,7 +310,7 @@ class ConvexHull
     The files chull.obj and chull.mtl are written to the current working
     directory.
     */
-    void PrintObj( void );
+    void PrintObj( const char * FileName = "chull.obj" );
 
     /** \brief Prints vertices, edges and faces to the standard error output
     */
@@ -325,6 +330,10 @@ class ConvexHull
     variable vertices via the add<> template function.
     */
     void ReadVertices( void );
+
+    /** \brief Frees the vertices edges and faces lists and resets the debug and check flags.
+    */
+    void Reset( void );
 
     /** \brief Set the floating point to integer scaling factor. If you want to tweak
     this a good value to start from may well be a little bit more than the resolution of the
