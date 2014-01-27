@@ -38,6 +38,12 @@ public:
     */
     void Initialise(const char * DeviceName, INDI::BaseClient * BaseClient);
 
+    /** \brief Process new BLOB message from driver. This routine should be called from within
+     the newBLOB handler in the client.
+        \param[in] BLOBPointer A pointer to the INDI::IBLOB.
+    */
+    void ProcessNewBLOB(IBLOB *BLOBPointer);
+
     /** \brief Process new device message from driver. This routine should be called from within
      the newDevice handler in the client.
         \param[in] DevicePointer A pointer to the INDI::BaseDevice object.
@@ -50,23 +56,18 @@ public:
     */
     void ProcessNewProperty(INDI::Property *PropertyPointer);
 
-    /** \brief Process new switch message from driver. This routine should be called from within
-     the newSwitch handler in the client.
-        \param[in] SwitchVectorPropertyPointer A pointer to the INDI::ISwitchVectorProperty.
-    */
-    void ProcessNewSwitch(ISwitchVectorProperty *SwitchVectorPropertyPointer);
-
     /** \brief Process new number message from driver. This routine should be called from within
      the newNumber handler in the client.
         \param[in] NumberVectorPropertyPointer A pointer to the INDI::INumberVectorProperty.
     */
     void ProcessNewNumber(INumberVectorProperty *NumberVectorPropertyPointer);
 
-    /** \brief Process new BLOB message from driver. This routine should be called from within
-     the newBLOB handler in the client.
-        \param[in] BLOBPointer A pointer to the INDI::IBLOB.
+    /** \brief Process new switch message from driver. This routine should be called from within
+     the newSwitch handler in the client.
+        \param[in] SwitchVectorPropertyPointer A pointer to the INDI::ISwitchVectorProperty.
     */
-    void ProcessNewBLOB(IBLOB *BLOBPointer);
+    void ProcessNewSwitch(ISwitchVectorProperty *SwitchVectorPropertyPointer);
+
 private:
     std::string DeviceName;
 };

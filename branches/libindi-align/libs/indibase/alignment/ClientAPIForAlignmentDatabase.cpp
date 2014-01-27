@@ -34,108 +34,6 @@ ClientAPIForAlignmentDatabase::ClientAPIForAlignmentDatabase() :   Device(NULL),
     pthread_mutex_destroy(&DriverActionCompleteMutex);
  }
 
-void ClientAPIForAlignmentDatabase::Initialise(INDI::BaseClient *BaseClient)
-{
-    ClientAPIForAlignmentDatabase::BaseClient = BaseClient;
-}
-
-void ClientAPIForAlignmentDatabase::ProcessNewDevice(INDI::BaseDevice *DevicePointer)
-{
-    Device = DevicePointer;
-}
-
-void ClientAPIForAlignmentDatabase::ProcessNewProperty(INDI::Property *PropertyPointer)
-{
-    int ReturnCode;
-    bool GotOneOfMine = true;
-
-    if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINT_MANDATORY_NUMBERS"))
-        MandatoryNumbers = PropertyPointer;
-    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB"))
-    {
-        OptionalBinaryBlob = PropertyPointer;
-        // Make sure the format string is set up
-        strncpy(OptionalBinaryBlob->getBLOB()->bp->format, "alignmentPrivateData", MAXINDIBLOBFMT);
-    }
-    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_SIZE"))
-        PointsetSize = PropertyPointer;
-    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_CURRENT_ENTRY"))
-        CurrentEntry = PropertyPointer;
-    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_ACTION"))
-        Action = PropertyPointer;
-    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_COMMIT"))
-        Commit = PropertyPointer;
-    else
-        GotOneOfMine = false;
-
-    // Tell the client when all the database proeprties have been set up
-    if (GotOneOfMine
-                && (NULL != MandatoryNumbers)
-                && (NULL != OptionalBinaryBlob)
-                && (NULL != PointsetSize)
-                && (NULL != CurrentEntry)
-                && (NULL != Action)
-                && (NULL != Commit))
-    {
-        // The DriverActionComplete state variable is initialised to false
-        // So I need to call this to set it to true and signal anyone
-        // waiting for the driver to initialise etc.
-        SignalDriverCompletion();
-    }
-}
-
-void ClientAPIForAlignmentDatabase::ProcessNewSwitch(ISwitchVectorProperty *SwitchVectorProperty)
-{
-    if (!strcmp(SwitchVectorProperty->name, "ALIGNMENT_POINTSET_ACTION"))
-    {
-        if (IPS_BUSY != SwitchVectorProperty->s)
-            SignalDriverCompletion();
-    }
-    else if (!strcmp(SwitchVectorProperty->name, "ALIGNMENT_POINTSET_COMMIT"))
-    {
-        if (IPS_BUSY != SwitchVectorProperty->s)
-            SignalDriverCompletion();
-    }
-}
-
-void ClientAPIForAlignmentDatabase::ProcessNewNumber(INumberVectorProperty *NumberVectorProperty)
-{
-    if (!strcmp(NumberVectorProperty->name, "ALIGNMENT_POINT_MANDATORY_NUMBERS"))
-    {
-        if (IPS_BUSY != NumberVectorProperty->s)
-        {
-            ISwitchVectorProperty *pAction = Action->getSwitch();
-            int Index = IUFindOnSwitchIndex(pAction);
-            if ((READ != Index) && (READ_INCREMENT != Index))
-                SignalDriverCompletion();
-        }
-    }
-    else if (!strcmp(NumberVectorProperty->name, "ALIGNMENT_POINTSET_CURRENT_ENTRY"))
-    {
-        if (IPS_BUSY != NumberVectorProperty->s)
-        {
-            ISwitchVectorProperty *pAction = Action->getSwitch();
-            int Index = IUFindOnSwitchIndex(pAction);
-            if (READ_INCREMENT != Index)
-                SignalDriverCompletion();
-        }
-    }
-}
-
-void ClientAPIForAlignmentDatabase::ProcessNewBLOB(IBLOB *BLOBPointer)
-{
-    if (!strcmp(BLOBPointer->bvp->name, "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB"))
-    {
-        if (IPS_BUSY != BLOBPointer->bvp->s)
-        {
-            ISwitchVectorProperty *pAction = Action->getSwitch();
-            int Index = IUFindOnSwitchIndex(pAction);
-            if ((READ != Index) && (READ_INCREMENT != Index))
-                SignalDriverCompletion();
-        }
-    }
-}
-
 bool ClientAPIForAlignmentDatabase::AppendSyncPoint(const AlignmentDatabaseEntry& CurrentValues)
 {
     // Wait for driver to initialise if neccessary
@@ -178,28 +76,65 @@ bool ClientAPIForAlignmentDatabase::AppendSyncPoint(const AlignmentDatabaseEntry
     return true;
 }
 
-bool ClientAPIForAlignmentDatabase::InsertSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues)
+bool ClientAPIForAlignmentDatabase::ClearSyncPoints()
 {
     // Wait for driver to initialise if neccessary
     WaitForDriverCompletion();
 
     ISwitchVectorProperty *pAction = Action->getSwitch();
-    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
-    INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
     ISwitchVectorProperty *pCommit = Commit->getSwitch();
 
     // Select the required action
-    if (INSERT != IUFindOnSwitchIndex(pAction))
+    if (CLEAR != IUFindOnSwitchIndex(pAction))
     {
-        // Request Insert mode
+        // Request Clear mode
         IUResetSwitch(pAction);
-        pAction->sp[INSERT].s = ISS_ON;
+        pAction->sp[CLEAR].s = ISS_ON;
         SetDriverBusy();
         BaseClient->sendNewSwitch(pAction);
         WaitForDriverCompletion();
         if (IPS_OK != pAction->s)
         {
-            IDLog("InsertSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
+            IDLog("ClearSyncPoints - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if (IPS_OK != pCommit->s)
+    {
+        IDLog("ClearSyncPoints - Bad Commit switch state %s\n", pstateStr(pCommit->s));
+        return false;
+    }
+
+    return true;
+}
+
+bool ClientAPIForAlignmentDatabase::DeleteSyncPoint(unsigned int Offset)
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (DELETE != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Delete mode
+        IUResetSwitch(pAction);
+        pAction->sp[DELETE].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("DeleteSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
             return false;
         }
     }
@@ -211,12 +146,9 @@ bool ClientAPIForAlignmentDatabase::InsertSyncPoint(unsigned int Offset, const A
     WaitForDriverCompletion();
     if (IPS_OK != pCurrentEntry->s)
     {
-        IDLog("InsertSyncPoint - Bad Current Entry state %s\n", pstateStr(pCurrentEntry->s));
+        IDLog("DeleteSyncPoint - Bad Current Entry state %s\n", pstateStr(pCurrentEntry->s));
         return false;
     }
-
-    if (!SendEntryData(CurrentValues))
-        return false;
 
     // Commit the entry to the database
     IUResetSwitch(pCommit);
@@ -226,7 +158,7 @@ bool ClientAPIForAlignmentDatabase::InsertSyncPoint(unsigned int Offset, const A
     WaitForDriverCompletion();
     if (IPS_OK != pCommit->s)
     {
-        IDLog("InsertSyncPoint - Bad Commit switch state %s\n", pstateStr(pCommit->s));
+        IDLog("DeleteSyncPoint - Bad Commit switch state %s\n", pstateStr(pCommit->s));
         return false;
     }
 
@@ -288,27 +220,38 @@ bool ClientAPIForAlignmentDatabase::EditSyncPoint(unsigned int Offset, const Ali
     return true;
 }
 
-bool ClientAPIForAlignmentDatabase::DeleteSyncPoint(unsigned int Offset)
+const int ClientAPIForAlignmentDatabase::GetDatabaseSize()
+{
+    return 0;
+}
+
+void ClientAPIForAlignmentDatabase::Initialise(INDI::BaseClient *BaseClient)
+{
+    ClientAPIForAlignmentDatabase::BaseClient = BaseClient;
+}
+
+bool ClientAPIForAlignmentDatabase::InsertSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues)
 {
     // Wait for driver to initialise if neccessary
     WaitForDriverCompletion();
 
     ISwitchVectorProperty *pAction = Action->getSwitch();
+    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
     INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
     ISwitchVectorProperty *pCommit = Commit->getSwitch();
 
     // Select the required action
-    if (DELETE != IUFindOnSwitchIndex(pAction))
+    if (INSERT != IUFindOnSwitchIndex(pAction))
     {
-        // Request Delete mode
+        // Request Insert mode
         IUResetSwitch(pAction);
-        pAction->sp[DELETE].s = ISS_ON;
+        pAction->sp[INSERT].s = ISS_ON;
         SetDriverBusy();
         BaseClient->sendNewSwitch(pAction);
         WaitForDriverCompletion();
         if (IPS_OK != pAction->s)
         {
-            IDLog("DeleteSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
+            IDLog("InsertSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
             return false;
         }
     }
@@ -320,9 +263,12 @@ bool ClientAPIForAlignmentDatabase::DeleteSyncPoint(unsigned int Offset)
     WaitForDriverCompletion();
     if (IPS_OK != pCurrentEntry->s)
     {
-        IDLog("DeleteSyncPoint - Bad Current Entry state %s\n", pstateStr(pCurrentEntry->s));
+        IDLog("InsertSyncPoint - Bad Current Entry state %s\n", pstateStr(pCurrentEntry->s));
         return false;
     }
+
+    if (!SendEntryData(CurrentValues))
+        return false;
 
     // Commit the entry to the database
     IUResetSwitch(pCommit);
@@ -332,14 +278,14 @@ bool ClientAPIForAlignmentDatabase::DeleteSyncPoint(unsigned int Offset)
     WaitForDriverCompletion();
     if (IPS_OK != pCommit->s)
     {
-        IDLog("DeleteSyncPoint - Bad Commit switch state %s\n", pstateStr(pCommit->s));
+        IDLog("InsertSyncPoint - Bad Commit switch state %s\n", pstateStr(pCommit->s));
         return false;
     }
 
     return true;
 }
 
-bool ClientAPIForAlignmentDatabase::ClearSyncPoints()
+bool ClientAPIForAlignmentDatabase::LoadDatabase()
 {
     // Wait for driver to initialise if neccessary
     WaitForDriverCompletion();
@@ -348,21 +294,22 @@ bool ClientAPIForAlignmentDatabase::ClearSyncPoints()
     ISwitchVectorProperty *pCommit = Commit->getSwitch();
 
     // Select the required action
-    if (CLEAR != IUFindOnSwitchIndex(pAction))
+    if (LOAD_DATABASE != IUFindOnSwitchIndex(pAction))
     {
-        // Request Clear mode
+        // Request Load Database mode
         IUResetSwitch(pAction);
-        pAction->sp[CLEAR].s = ISS_ON;
+        pAction->sp[LOAD_DATABASE].s = ISS_ON;
         SetDriverBusy();
         BaseClient->sendNewSwitch(pAction);
         WaitForDriverCompletion();
         if (IPS_OK != pAction->s)
         {
-            IDLog("ClearSyncPoints - Bad Action switch state %s\n", pstateStr(pAction->s));
+            IDLog("LoadDatabase - Bad Action switch state %s\n", pstateStr(pAction->s));
             return false;
         }
     }
 
+    // Commit the Load Database
     IUResetSwitch(pCommit);
     pCommit->sp[0].s = ISS_ON;
     SetDriverBusy();
@@ -370,9 +317,160 @@ bool ClientAPIForAlignmentDatabase::ClearSyncPoints()
     WaitForDriverCompletion();
     if (IPS_OK != pCommit->s)
     {
-        IDLog("ClearSyncPoints - Bad Commit switch state %s\n", pstateStr(pCommit->s));
+        IDLog("LoadDatabase - Bad Commit state %s\n", pstateStr(pCommit->s));
         return false;
     }
+
+    return true;
+}
+
+void ClientAPIForAlignmentDatabase::ProcessNewBLOB(IBLOB *BLOBPointer)
+{
+    if (!strcmp(BLOBPointer->bvp->name, "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB"))
+    {
+        if (IPS_BUSY != BLOBPointer->bvp->s)
+        {
+            ISwitchVectorProperty *pAction = Action->getSwitch();
+            int Index = IUFindOnSwitchIndex(pAction);
+            if ((READ != Index) && (READ_INCREMENT != Index))
+                SignalDriverCompletion();
+        }
+    }
+}
+
+void ClientAPIForAlignmentDatabase::ProcessNewDevice(INDI::BaseDevice *DevicePointer)
+{
+    Device = DevicePointer;
+}
+
+void ClientAPIForAlignmentDatabase::ProcessNewNumber(INumberVectorProperty *NumberVectorProperty)
+{
+    if (!strcmp(NumberVectorProperty->name, "ALIGNMENT_POINT_MANDATORY_NUMBERS"))
+    {
+        if (IPS_BUSY != NumberVectorProperty->s)
+        {
+            ISwitchVectorProperty *pAction = Action->getSwitch();
+            int Index = IUFindOnSwitchIndex(pAction);
+            if ((READ != Index) && (READ_INCREMENT != Index))
+                SignalDriverCompletion();
+        }
+    }
+    else if (!strcmp(NumberVectorProperty->name, "ALIGNMENT_POINTSET_CURRENT_ENTRY"))
+    {
+        if (IPS_BUSY != NumberVectorProperty->s)
+        {
+            ISwitchVectorProperty *pAction = Action->getSwitch();
+            int Index = IUFindOnSwitchIndex(pAction);
+            if (READ_INCREMENT != Index)
+                SignalDriverCompletion();
+        }
+    }
+}
+
+void ClientAPIForAlignmentDatabase::ProcessNewProperty(INDI::Property *PropertyPointer)
+{
+    int ReturnCode;
+    bool GotOneOfMine = true;
+
+    if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINT_MANDATORY_NUMBERS"))
+        MandatoryNumbers = PropertyPointer;
+    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB"))
+    {
+        OptionalBinaryBlob = PropertyPointer;
+        // Make sure the format string is set up
+        strncpy(OptionalBinaryBlob->getBLOB()->bp->format, "alignmentPrivateData", MAXINDIBLOBFMT);
+    }
+    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_SIZE"))
+        PointsetSize = PropertyPointer;
+    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_CURRENT_ENTRY"))
+        CurrentEntry = PropertyPointer;
+    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_ACTION"))
+        Action = PropertyPointer;
+    else if (!strcmp(PropertyPointer->getName(), "ALIGNMENT_POINTSET_COMMIT"))
+        Commit = PropertyPointer;
+    else
+        GotOneOfMine = false;
+
+    // Tell the client when all the database proeprties have been set up
+    if (GotOneOfMine
+                && (NULL != MandatoryNumbers)
+                && (NULL != OptionalBinaryBlob)
+                && (NULL != PointsetSize)
+                && (NULL != CurrentEntry)
+                && (NULL != Action)
+                && (NULL != Commit))
+    {
+        // The DriverActionComplete state variable is initialised to false
+        // So I need to call this to set it to true and signal anyone
+        // waiting for the driver to initialise etc.
+        SignalDriverCompletion();
+    }
+}
+
+void ClientAPIForAlignmentDatabase::ProcessNewSwitch(ISwitchVectorProperty *SwitchVectorProperty)
+{
+    if (!strcmp(SwitchVectorProperty->name, "ALIGNMENT_POINTSET_ACTION"))
+    {
+        if (IPS_BUSY != SwitchVectorProperty->s)
+            SignalDriverCompletion();
+    }
+    else if (!strcmp(SwitchVectorProperty->name, "ALIGNMENT_POINTSET_COMMIT"))
+    {
+        if (IPS_BUSY != SwitchVectorProperty->s)
+            SignalDriverCompletion();
+    }
+}
+
+bool ClientAPIForAlignmentDatabase::ReadIncrementSyncPoint(AlignmentDatabaseEntry& CurrentValues)
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    ISwitchVectorProperty *pAction = Action->getSwitch();
+    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
+    IBLOBVectorProperty   *pBLOB = OptionalBinaryBlob->getBLOB();
+    INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
+    ISwitchVectorProperty *pCommit = Commit->getSwitch();
+
+    // Select the required action
+    if (READ_INCREMENT != IUFindOnSwitchIndex(pAction))
+    {
+        // Request Read Increment mode
+        IUResetSwitch(pAction);
+        pAction->sp[READ_INCREMENT].s = ISS_ON;
+        SetDriverBusy();
+        BaseClient->sendNewSwitch(pAction);
+        WaitForDriverCompletion();
+        if (IPS_OK != pAction->s)
+        {
+            IDLog("ReadIncrementSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
+            return false;
+        }
+    }
+
+    // Commit the read increment
+    IUResetSwitch(pCommit);
+    pCommit->sp[0].s = ISS_ON;
+    SetDriverBusy();
+    BaseClient->sendNewSwitch(pCommit);
+    WaitForDriverCompletion();
+    if ((IPS_OK != pCommit->s) || (IPS_OK != pMandatoryNumbers->s) || (IPS_OK != pBLOB->s) || (IPS_OK != pCurrentEntry->s))
+    {
+        IDLog("ReadIncrementSyncPoint - Bad Commit/Mandatory numbers/Blob/Current entry state %s %s %s %s\n",
+                                                                        pstateStr(pCommit->s),
+                                                                        pstateStr(pMandatoryNumbers->s),
+                                                                        pstateStr(pBLOB->s),
+                                                                        pstateStr(pCurrentEntry->s));
+        return false;
+    }
+
+    // Read the entry data
+    CurrentValues.ObservationJulianDate = pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value;
+    CurrentValues.RightAscension = pMandatoryNumbers->np[ENTRY_RA].value;
+    CurrentValues.Declination = pMandatoryNumbers->np[ENTRY_DEC].value;
+    CurrentValues.TelescopeDirection.x = pMandatoryNumbers->np[ENTRY_VECTOR_X].value;
+    CurrentValues.TelescopeDirection.y = pMandatoryNumbers->np[ENTRY_VECTOR_Y].value;
+    CurrentValues.TelescopeDirection.z = pMandatoryNumbers->np[ENTRY_VECTOR_Z].value;
 
     return true;
 }
@@ -440,99 +538,6 @@ bool ClientAPIForAlignmentDatabase::ReadSyncPoint(unsigned int Offset, Alignment
     return true;
 }
 
-bool ClientAPIForAlignmentDatabase::ReadIncrementSyncPoint(AlignmentDatabaseEntry& CurrentValues)
-{
-    // Wait for driver to initialise if neccessary
-    WaitForDriverCompletion();
-
-    ISwitchVectorProperty *pAction = Action->getSwitch();
-    INumberVectorProperty *pMandatoryNumbers = MandatoryNumbers->getNumber();
-    IBLOBVectorProperty   *pBLOB = OptionalBinaryBlob->getBLOB();
-    INumberVectorProperty *pCurrentEntry = CurrentEntry->getNumber();
-    ISwitchVectorProperty *pCommit = Commit->getSwitch();
-
-    // Select the required action
-    if (READ_INCREMENT != IUFindOnSwitchIndex(pAction))
-    {
-        // Request Read Increment mode
-        IUResetSwitch(pAction);
-        pAction->sp[READ_INCREMENT].s = ISS_ON;
-        SetDriverBusy();
-        BaseClient->sendNewSwitch(pAction);
-        WaitForDriverCompletion();
-        if (IPS_OK != pAction->s)
-        {
-            IDLog("ReadIncrementSyncPoint - Bad Action switch state %s\n", pstateStr(pAction->s));
-            return false;
-        }
-    }
-
-    // Commit the read increment
-    IUResetSwitch(pCommit);
-    pCommit->sp[0].s = ISS_ON;
-    SetDriverBusy();
-    BaseClient->sendNewSwitch(pCommit);
-    WaitForDriverCompletion();
-    if ((IPS_OK != pCommit->s) || (IPS_OK != pMandatoryNumbers->s) || (IPS_OK != pBLOB->s) || (IPS_OK != pCurrentEntry->s))
-    {
-        IDLog("ReadIncrementSyncPoint - Bad Commit/Mandatory numbers/Blob/Current entry state %s %s %s %s\n",
-                                                                        pstateStr(pCommit->s),
-                                                                        pstateStr(pMandatoryNumbers->s),
-                                                                        pstateStr(pBLOB->s),
-                                                                        pstateStr(pCurrentEntry->s));
-        return false;
-    }
-
-    // Read the entry data
-    CurrentValues.ObservationJulianDate = pMandatoryNumbers->np[ENTRY_OBSERVATION_JULIAN_DATE].value;
-    CurrentValues.RightAscension = pMandatoryNumbers->np[ENTRY_RA].value;
-    CurrentValues.Declination = pMandatoryNumbers->np[ENTRY_DEC].value;
-    CurrentValues.TelescopeDirection.x = pMandatoryNumbers->np[ENTRY_VECTOR_X].value;
-    CurrentValues.TelescopeDirection.y = pMandatoryNumbers->np[ENTRY_VECTOR_Y].value;
-    CurrentValues.TelescopeDirection.z = pMandatoryNumbers->np[ENTRY_VECTOR_Z].value;
-
-    return true;
-}
-
-bool ClientAPIForAlignmentDatabase::LoadDatabase()
-{
-    // Wait for driver to initialise if neccessary
-    WaitForDriverCompletion();
-
-    ISwitchVectorProperty *pAction = Action->getSwitch();
-    ISwitchVectorProperty *pCommit = Commit->getSwitch();
-
-    // Select the required action
-    if (LOAD_DATABASE != IUFindOnSwitchIndex(pAction))
-    {
-        // Request Load Database mode
-        IUResetSwitch(pAction);
-        pAction->sp[LOAD_DATABASE].s = ISS_ON;
-        SetDriverBusy();
-        BaseClient->sendNewSwitch(pAction);
-        WaitForDriverCompletion();
-        if (IPS_OK != pAction->s)
-        {
-            IDLog("LoadDatabase - Bad Action switch state %s\n", pstateStr(pAction->s));
-            return false;
-        }
-    }
-
-    // Commit the Load Database
-    IUResetSwitch(pCommit);
-    pCommit->sp[0].s = ISS_ON;
-    SetDriverBusy();
-    BaseClient->sendNewSwitch(pCommit);
-    WaitForDriverCompletion();
-    if (IPS_OK != pCommit->s)
-    {
-        IDLog("LoadDatabase - Bad Commit state %s\n", pstateStr(pCommit->s));
-        return false;
-    }
-
-    return true;
-}
-
 bool ClientAPIForAlignmentDatabase::SaveDatabase()
 {
     // Wait for driver to initialise if neccessary
@@ -572,64 +577,7 @@ bool ClientAPIForAlignmentDatabase::SaveDatabase()
     return true;
 }
 
-bool ClientAPIForAlignmentDatabase::WaitForDriverCompletion()
-{
-    int ReturnCode;
-    ReturnCode = pthread_mutex_lock(&DriverActionCompleteMutex);
-    while(!DriverActionComplete)
-    {
-        IDLog("WaitForDriverCompletion - Waiting\n");
-        ReturnCode = pthread_cond_wait(&DriverActionCompleteCondition, &DriverActionCompleteMutex);
-        IDLog("WaitForDriverCompletion - Back from wait ReturnCode = %d\n", ReturnCode);
-        if (ReturnCode)
-        {
-            ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
-            return false;
-        }
-    }
-    IDLog("WaitForDriverCompletion - Finished waiting\n");
-    ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
-    if (ReturnCode)
-        return false;
-    else
-        return true;
-}
-
-bool ClientAPIForAlignmentDatabase::SignalDriverCompletion()
-{
-    int ReturnCode;
-    ReturnCode = pthread_mutex_lock(&DriverActionCompleteMutex);
-    if (ReturnCode)
-        return false;
-    DriverActionComplete = true;
-    ReturnCode = pthread_cond_signal(&DriverActionCompleteCondition);
-    if (ReturnCode)
-    {
-        ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
-        return false;
-    }
-    IDLog("SignalDriverCompletion\n");
-    ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
-    if (ReturnCode)
-        return false;
-    else
-        return true;
-}
-
-bool ClientAPIForAlignmentDatabase::SetDriverBusy()
-{
-    int ReturnCode;
-    ReturnCode = pthread_mutex_lock(&DriverActionCompleteMutex);
-    if (ReturnCode)
-        return false;
-    DriverActionComplete = false;
-    IDLog("SetDriverBusy\n");
-    ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
-    if (ReturnCode)
-        return false;
-    else
-        return true;
-}
+// Private methods
 
 bool ClientAPIForAlignmentDatabase::SendEntryData(const AlignmentDatabaseEntry& CurrentValues)
 {
@@ -666,6 +614,65 @@ bool ClientAPIForAlignmentDatabase::SendEntryData(const AlignmentDatabaseEntry& 
         }
     }
     return true;
+}
+
+bool ClientAPIForAlignmentDatabase::SetDriverBusy()
+{
+    int ReturnCode;
+    ReturnCode = pthread_mutex_lock(&DriverActionCompleteMutex);
+    if (ReturnCode)
+        return false;
+    DriverActionComplete = false;
+    IDLog("SetDriverBusy\n");
+    ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
+    if (ReturnCode)
+        return false;
+    else
+        return true;
+}
+
+bool ClientAPIForAlignmentDatabase::SignalDriverCompletion()
+{
+    int ReturnCode;
+    ReturnCode = pthread_mutex_lock(&DriverActionCompleteMutex);
+    if (ReturnCode)
+        return false;
+    DriverActionComplete = true;
+    ReturnCode = pthread_cond_signal(&DriverActionCompleteCondition);
+    if (ReturnCode)
+    {
+        ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
+        return false;
+    }
+    IDLog("SignalDriverCompletion\n");
+    ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
+    if (ReturnCode)
+        return false;
+    else
+        return true;
+}
+
+bool ClientAPIForAlignmentDatabase::WaitForDriverCompletion()
+{
+    int ReturnCode;
+    ReturnCode = pthread_mutex_lock(&DriverActionCompleteMutex);
+    while(!DriverActionComplete)
+    {
+        IDLog("WaitForDriverCompletion - Waiting\n");
+        ReturnCode = pthread_cond_wait(&DriverActionCompleteCondition, &DriverActionCompleteMutex);
+        IDLog("WaitForDriverCompletion - Back from wait ReturnCode = %d\n", ReturnCode);
+        if (ReturnCode)
+        {
+            ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
+            return false;
+        }
+    }
+    IDLog("WaitForDriverCompletion - Finished waiting\n");
+    ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
+    if (ReturnCode)
+        return false;
+    else
+        return true;
 }
 
 } // namespace AlignmentSubsystem

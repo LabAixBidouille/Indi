@@ -50,7 +50,7 @@ public:
 
     /// \brief Set the approximate alognment of the mount
     /// \param[in] ApproximateAlignment - the approximate alignment of the mount
-        void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment) { ApproximateMountAlignment = ApproximateAlignment; }
+    void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment) { ApproximateMountAlignment = ApproximateAlignment; }
 
     /// \brief Get the alignment corrected telescope pointing direction for the supplied celestial coordinates
     /// \param[in] RightAscension Right Ascension (Decimal Hours).

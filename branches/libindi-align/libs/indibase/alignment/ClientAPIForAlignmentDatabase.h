@@ -30,7 +30,56 @@ public:
     ClientAPIForAlignmentDatabase();
     virtual ~ClientAPIForAlignmentDatabase();
 
+    /** \brief Append a sync point to the database.
+        \param[in] CurrentValues The entry to append.
+        \return True if successful
+    */
+    bool AppendSyncPoint(const AlignmentDatabaseEntry& CurrentValues);
+
+    /** \brief Delete all sync points from the database.
+        \return True if successful
+    */
+    bool ClearSyncPoints();
+
+    /** \brief Delete a sync point from the database.
+        \param[in] Offset Pointer to the entry to delete
+        \return True if successful
+    */
+    bool DeleteSyncPoint(unsigned int Offset);
+
+    /** \brief Edit a sync point in the database.
+        \param[in] Offset Pointer to where to make then edit.
+        \param[in] CurrentValues The entry to insert.
+        \return True if successful
+    */
+    bool EditSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues);
+
+    /** \brief Return the number of entries in the database.
+        \return The number of entries in the database
+    */
+    const int GetDatabaseSize();
+
     void Initialise(INDI::BaseClient *BaseClient);
+
+    /** \brief Insert a sync point in the database.
+        \param[in] Offset Pointer to where to make then insertion.
+        \param[in] CurrentValues The entry to insert.
+        \return True if successful
+    */
+    bool InsertSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues);
+
+    /** \brief Load the database from persistent storage
+        \return True if successful
+    */
+    bool LoadDatabase();
+
+    /** \brief Process new BLOB message from driver. This routine should be called from within
+     the newBLOB handler in the client. This routine is not normally called directly but is called by
+     the ProcessNewBLOB function in INDI::Alignment::AlignmentSubsystemForClients which filters out calls
+     from unwanted devices. TODO maybe hide this function.
+        \param[in] BLOBPointer A pointer to the INDI::IBLOB.
+    */
+    void ProcessNewBLOB(IBLOB *BLOBPointer);
 
     /** \brief Process new device message from driver. This routine should be called from within
      the newDevice handler in the client. This routine is not normally called directly but is called by
@@ -39,6 +88,14 @@ public:
         \param[in] DevicePointer A pointer to the INDI::BaseDevice object.
     */
     void ProcessNewDevice(INDI::BaseDevice *DevicePointer);
+
+    /** \brief Process new number message from driver. This routine should be called from within
+     the newNumber handler in the client. This routine is not normally called directly but is called by
+     the ProcessNewNumber function in INDI::Alignment::AlignmentSubsystemForClients which filters out calls
+     from unwanted devices. TODO maybe hide this function.
+        \param[in] NumberVectorProperty A pointer to the INDI::INumberVectorProperty.
+    */
+    void ProcessNewNumber(INumberVectorProperty *NumberVectorProperty);
 
     /** \brief Process new property message from driver. This routine should be called from within
      the newProperty handler in the client. This routine is not normally called directly but is called by
@@ -56,52 +113,11 @@ public:
     */
     void ProcessNewSwitch(ISwitchVectorProperty *SwitchVectorProperty);
 
-    /** \brief Process new number message from driver. This routine should be called from within
-     the newNumber handler in the client. This routine is not normally called directly but is called by
-     the ProcessNewNumber function in INDI::Alignment::AlignmentSubsystemForClients which filters out calls
-     from unwanted devices. TODO maybe hide this function.
-        \param[in] NumberVectorProperty A pointer to the INDI::INumberVectorProperty.
-    */
-    void ProcessNewNumber(INumberVectorProperty *NumberVectorProperty);
-
-    /** \brief Process new BLOB message from driver. This routine should be called from within
-     the newBLOB handler in the client. This routine is not normally called directly but is called by
-     the ProcessNewBLOB function in INDI::Alignment::AlignmentSubsystemForClients which filters out calls
-     from unwanted devices. TODO maybe hide this function.
-        \param[in] BLOBPointer A pointer to the INDI::IBLOB.
-    */
-    void ProcessNewBLOB(IBLOB *BLOBPointer);
-
-    /** \brief Append a sync point to the database.
-        \param[in] CurrentValues The entry to append.
+    /** \brief Increment the current offset then read a sync point from the database.
+        \param[out] CurrentValues The entry read.
         \return True if successful
     */
-    bool AppendSyncPoint(const AlignmentDatabaseEntry& CurrentValues);
-
-    /** \brief Insert a sync point in the database.
-        \param[in] Offset Pointer to where to make then insertion.
-        \param[in] CurrentValues The entry to insert.
-        \return True if successful
-    */
-    bool InsertSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues);
-
-    /** \brief Edit a sync point in the database.
-        \param[in] Offset Pointer to where to make then edit.
-        \param[in] CurrentValues The entry to insert.
-        \return True if successful
-    */
-    bool EditSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues);
-
-    /** \brief Delete a sync point from the database.
-        \param[in] Offset Pointer to the entry to delete
-        \return True if successful
-    */
-    bool DeleteSyncPoint(unsigned int Offset);
-
-    /** \brief Delete all sync points from the database.
-        \return True if successful
-    */
-    bool ClearSyncPoints();
+    bool ReadIncrementSyncPoint(AlignmentDatabaseEntry& CurrentValues);
 
     /** \brief Read a sync point from the database.
         \param[in] Offset Pointer to where to read from.
@@ -110,41 +126,26 @@ public:
     */
     bool ReadSyncPoint(unsigned int Offset, AlignmentDatabaseEntry& CurrentValues);
 
-    /** \brief Increment ther current offset then read a sync point from the database.
-        \param[out] CurrentValues The entry read.
-        \return True if successful
-    */
-    bool ReadIncrementSyncPoint(AlignmentDatabaseEntry& CurrentValues);
-
-    /** \brief Load the database from persistent storage
-        \return True if successful
-    */
-    bool LoadDatabase();
-
     /** \brief Save the database to persistent storage
         \return True if successful
     */
     bool SaveDatabase();
 
-    /** \brief Return the number of entries in the database.
-        \return The number of entries in the database
-    */
-    const int GetDatabaseSize();
-
 private:
-    // Pointer to INDI::BaseClient
-    INDI::BaseClient *BaseClient;
+
+    // Private methods
 
     bool SendEntryData(const AlignmentDatabaseEntry& CurrentValues);
-
-    // Synchronise with the listener thread
-    bool WaitForDriverCompletion();
-    bool SignalDriverCompletion();
     bool SetDriverBusy();
+    bool SignalDriverCompletion();
+    bool WaitForDriverCompletion();
+
+    // Private properties
+
+    INDI::BaseClient *BaseClient;
     pthread_cond_t DriverActionCompleteCondition;
     pthread_mutex_t DriverActionCompleteMutex;
     bool DriverActionComplete;
-
     INDI::BaseDevice *Device;
     INDI::Property *MandatoryNumbers;
     INDI::Property *OptionalBinaryBlob;

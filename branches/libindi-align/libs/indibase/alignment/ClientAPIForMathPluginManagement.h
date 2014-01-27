@@ -30,6 +30,15 @@ public:
 
     typedef std::vector<std::string> MathPluginsList;
 
+    // Public methods
+
+    /*!
+     * \brief Return a list of the names of the available math plugins.
+     * \param[out] AvailableMathPlugins Reference to a list of the names of the available math plugins.
+     * \return False on failure
+     */
+    bool EnumerateMathPlugins(MathPluginsList& AvailableMathPlugins);
+
     void Initialise(INDI::BaseClient *BaseClient);
 
     /** \brief Process new device message from driver. This routine should be called from within
@@ -55,12 +64,6 @@ public:
         \param[in] SwitchVectorProperty A pointer to the INDI::ISwitchVectorProperty.
     */
     void ProcessNewSwitch(ISwitchVectorProperty *SwitchVectorProperty);
-    /*!
-     * \brief Return a list of the names of the available math plugins.
-     * \param[out] AvailableMathPlugins Reference to a list of the names of the available math plugins.
-     * \return False on failure
-     */
-    bool EnumerateMathPlugins(MathPluginsList& AvailableMathPlugins);
 
     /*!
      * \brief Selects, loads and initialises the named math plugin.
@@ -76,17 +79,19 @@ public:
     bool ReInitialiseMathPlugin();
 
 private:
-    // Pointer to INDI::BaseClient
-    INDI::BaseClient *BaseClient;
 
-    // Synchronise with the listener thread
-    bool WaitForDriverCompletion();
-    bool SignalDriverCompletion();
+    // Private methods
+
     bool SetDriverBusy();
+    bool SignalDriverCompletion();
+    bool WaitForDriverCompletion();
+
+    // Private properties
+
+    INDI::BaseClient *BaseClient;
     pthread_cond_t DriverActionCompleteCondition;
     pthread_mutex_t DriverActionCompleteMutex;
     bool DriverActionComplete;
-
     INDI::BaseDevice *Device;
     INDI::Property *MathPlugins;
     INDI::Property *PluginInitialise;

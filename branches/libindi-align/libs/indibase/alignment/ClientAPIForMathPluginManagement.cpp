@@ -13,6 +13,23 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+// Public methods
+
+bool ClientAPIForMathPluginManagement::EnumerateMathPlugins(MathPluginsList& AvailableMathPlugins)
+{
+    // Wait for driver to initialise if neccessary
+    WaitForDriverCompletion();
+
+    AvailableMathPlugins.clear();
+
+    ISwitchVectorProperty *pPlugins = MathPlugins->getSwitch();
+
+    for (int i = 0; i < pPlugins->nsp; i++)
+        AvailableMathPlugins.push_back(std::string(pPlugins->sp[i].label));
+
+    return true;
+}
+
 void ClientAPIForMathPluginManagement::Initialise(INDI::BaseClient *BaseClient)
 {
     ClientAPIForMathPluginManagement::BaseClient = BaseClient;
@@ -59,21 +76,6 @@ void ClientAPIForMathPluginManagement::ProcessNewSwitch(ISwitchVectorProperty *S
         if (IPS_BUSY != SwitchVectorProperty->s)
             SignalDriverCompletion();
     }
-}
-
-bool ClientAPIForMathPluginManagement::EnumerateMathPlugins(MathPluginsList& AvailableMathPlugins)
-{
-    // Wait for driver to initialise if neccessary
-    WaitForDriverCompletion();
-
-    AvailableMathPlugins.clear();
-
-    ISwitchVectorProperty *pPlugins = MathPlugins->getSwitch();
-
-    for (int i = 0; i < pPlugins->nsp; i++)
-        AvailableMathPlugins.push_back(std::string(pPlugins->sp[i].label));
-
-    return true;
 }
 
 bool ClientAPIForMathPluginManagement::SelectMathPlugin(const std::string& MathPluginName)
@@ -126,22 +128,16 @@ bool ClientAPIForMathPluginManagement::ReInitialiseMathPlugin()
     return true;
 }
 
-bool ClientAPIForMathPluginManagement::WaitForDriverCompletion()
+// Private methods
+
+bool ClientAPIForMathPluginManagement::SetDriverBusy()
 {
     int ReturnCode;
     ReturnCode = pthread_mutex_lock(&DriverActionCompleteMutex);
-    while(!DriverActionComplete)
-    {
-        IDLog("WaitForDriverCompletion - Waiting\n");
-        ReturnCode = pthread_cond_wait(&DriverActionCompleteCondition, &DriverActionCompleteMutex);
-        IDLog("WaitForDriverCompletion - Back from wait ReturnCode = %d\n", ReturnCode);
-        if (ReturnCode)
-        {
-            ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
-            return false;
-        }
-    }
-    IDLog("WaitForDriverCompletion - Finished waiting\n");
+    if (ReturnCode)
+        return false;
+    DriverActionComplete = false;
+    IDLog("SetDriverBusy\n");
     ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
     if (ReturnCode)
         return false;
@@ -170,14 +166,22 @@ bool ClientAPIForMathPluginManagement::SignalDriverCompletion()
         return true;
 }
 
-bool ClientAPIForMathPluginManagement::SetDriverBusy()
+bool ClientAPIForMathPluginManagement::WaitForDriverCompletion()
 {
     int ReturnCode;
     ReturnCode = pthread_mutex_lock(&DriverActionCompleteMutex);
-    if (ReturnCode)
-        return false;
-    DriverActionComplete = false;
-    IDLog("SetDriverBusy\n");
+    while(!DriverActionComplete)
+    {
+        IDLog("WaitForDriverCompletion - Waiting\n");
+        ReturnCode = pthread_cond_wait(&DriverActionCompleteCondition, &DriverActionCompleteMutex);
+        IDLog("WaitForDriverCompletion - Back from wait ReturnCode = %d\n", ReturnCode);
+        if (ReturnCode)
+        {
+            ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
+            return false;
+        }
+    }
+    IDLog("WaitForDriverCompletion - Finished waiting\n");
     ReturnCode = pthread_mutex_unlock(&DriverActionCompleteMutex);
     if (ReturnCode)
         return false;

@@ -244,6 +244,8 @@ void MathPluginManagement::SaveConfigProperties(FILE *fp)
     IUSaveConfigText(fp, &AlignmentSubsystemCurrentMathPluginV);
 }
 
+// These must match the function signatures in MathPlugin
+
 bool MathPluginManagement::Initialise()
 {
     return (pLoadedMathPlugin->*pInitialise)();

@@ -62,6 +62,29 @@ void MapPropertiesToInMemoryDatabase::InitProperties(Telescope* pTelescope)
     pTelescope->registerProperty(&AlignmentPointSetCommitV, INDI_SWITCH);
 }
 
+void MapPropertiesToInMemoryDatabase::ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+{
+    DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessBlobProperties - name(%s)", name);
+    if (strcmp(name, AlignmentPointSetPrivateBinaryDataV.name) == 0)
+    {
+        AlignmentPointSetPrivateBinaryDataV.s=IPS_OK;
+        if (0 == IUUpdateBLOB(&AlignmentPointSetPrivateBinaryDataV, sizes, blobsizes, blobs, formats, names, n))
+        {
+            // Reset the blob format string just in case it got trashed
+            strncpy(AlignmentPointSetPrivateBinaryData.format, "alignmentPrivateData", MAXINDIBLOBFMT);
+
+            // Send back a dummy zero length blob
+            // to inform client I have received the data
+            IBLOB DummyBlob;
+            IBLOBVectorProperty DummyBlobV;
+            IUFillBLOB(&DummyBlob, "ALIGNMENT_POINT_ENTRY_PRIVATE", "Private binary data", "alignmentPrivateData");
+            IUFillBLOBVector(&DummyBlobV, &DummyBlob, 1, pTelescope->getDeviceName(),
+                    "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB", "Optional sync point binary data", ALIGNMENT_TAB, IP_RW, 60, IPS_OK);
+            IDSetBLOB(&DummyBlobV, NULL);
+        }
+    }
+}
+
 void MapPropertiesToInMemoryDatabase::ProcessNumberProperties(Telescope* pTelescope, const char *name, double values[], char *names[], int n)
 {
     DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessNumberProperties - name(%s)", name);
@@ -210,30 +233,6 @@ void MapPropertiesToInMemoryDatabase::ProcessSwitchProperties(Telescope* pTelesc
     }
 }
 
-
-void MapPropertiesToInMemoryDatabase::ProcessBlobProperties(Telescope* pTelescope, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
-{
-    DEBUGFDEVICE(pTelescope->getDeviceName(), INDI::Logger::DBG_DEBUG, "ProcessBlobProperties - name(%s)", name);
-    if (strcmp(name, AlignmentPointSetPrivateBinaryDataV.name) == 0)
-    {
-        AlignmentPointSetPrivateBinaryDataV.s=IPS_OK;
-        if (0 == IUUpdateBLOB(&AlignmentPointSetPrivateBinaryDataV, sizes, blobsizes, blobs, formats, names, n))
-        {
-            // Reset the blob format string just in case it got trashed
-            strncpy(AlignmentPointSetPrivateBinaryData.format, "alignmentPrivateData", MAXINDIBLOBFMT);
-
-            // Send back a dummy zero length blob
-            // to inform client I have received the data
-            IBLOB DummyBlob;
-            IBLOBVectorProperty DummyBlobV;
-            IUFillBLOB(&DummyBlob, "ALIGNMENT_POINT_ENTRY_PRIVATE", "Private binary data", "alignmentPrivateData");
-            IUFillBLOBVector(&DummyBlobV, &DummyBlob, 1, pTelescope->getDeviceName(),
-                    "ALIGNMENT_POINT_OPTIONAL_BINARY_BLOB", "Optional sync point binary data", ALIGNMENT_TAB, IP_RW, 60, IPS_OK);
-            IDSetBLOB(&DummyBlobV, NULL);
-        }
-    }
-}
-
 void MapPropertiesToInMemoryDatabase::UpdateLocation(double latitude, double longitude, double elevation)
 {
     ln_lnlat_posn Position;
@@ -248,7 +247,6 @@ void MapPropertiesToInMemoryDatabase::UpdateLocation(double latitude, double lon
     else
         SetDatabaseReferencePosition(latitude, longitude);
 }
-
 
 } // namespace AlignmentSubsystem
 } // namespace INDI
