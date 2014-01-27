@@ -647,7 +647,37 @@ bool SkywatcherAPIMount::ReadScopeStatus()
 
 bool SkywatcherAPIMount::Sync(double ra, double dec)
 {
-    return false;
+    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Sync");
+
+    // Compute a telescope direction vector from the current encoders
+    if (!GetEncoder(AXIS1))
+        return false;
+    if (!GetEncoder(AXIS2))
+        return false;
+
+    // Might as well do this
+    UpdateDetailedMountInformation(true);
+
+    struct ln_hrz_posn AltAz;
+    AltAz.alt = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]);
+    DEBUGF(DBG_SCOPE, "Axis2 encoder %ld initial %ld alt(degrees) %lf", CurrentEncoders[AXIS2], InitialEncoders[AXIS2], AltAz.alt);
+    AltAz.az = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]);
+    DEBUGF(DBG_SCOPE, "Axis1 encoder %ld initial %ld az(degrees) %lf", CurrentEncoders[AXIS1], InitialEncoders[AXIS1], AltAz.az);
+
+    AlignmentDatabaseEntry NewEntry;
+    NewEntry.ObservationJulianDate = ln_get_julian_from_sys();
+    NewEntry.RightAscension = ra;
+    NewEntry.Declination = dec;
+    NewEntry.TelescopeDirection = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+    NewEntry.PrivateDataSize = 0;
+
+    DEBUGF(DBG_SCOPE, "New sync point Date %lf RA %lf DEC %lf TDV(x %lf y %lf z %lf)",
+                    NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination,
+                    NewEntry.TelescopeDirection.x, NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
+
+    GetAlignmentDatabase().push_back(NewEntry);
+
+    return true;
 }
 
 bool SkywatcherAPIMount::saveConfigItems(FILE *fp)

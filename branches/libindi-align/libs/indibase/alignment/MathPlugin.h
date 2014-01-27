@@ -38,35 +38,38 @@ public:
 
     MathPlugin(MountAlignment_t ApproximateAlignment = ZENITH) : ApproximateMountAlignment(ApproximateAlignment) {}
 
+    // Constructor
+
     virtual ~MathPlugin() {}
 
-    /** \brief Initialise or re-initialise the math plugin. Re-reading the in memory database as necessary.
-        \return True if successful
-    */
+    // Public methods
+
+    /// \brief Initialise or re-initialise the math plugin. Re-reading the in memory database as necessary.
+    /// \return True if successful
     virtual bool Initialise() = 0;
 
-    /** \brief Get the alignment corrected telescope pointing direction for the supplied celestial coordinates
-        \param[in] RightAscension Right Ascension (Decimal Hours).
-        \param[in] Declination Declination (Decimal Degrees).
-        \param[out] TelescopeDirectionVector Parameter to receive the corrected telescope direction
-        \return True if successful
-    */
+    /// \brief Set the approximate alognment of the mount
+    /// \param[in] ApproximateAlignment - the approximate alignment of the mount
+        void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment) { ApproximateMountAlignment = ApproximateAlignment; }
+
+    /// \brief Get the alignment corrected telescope pointing direction for the supplied celestial coordinates
+    /// \param[in] RightAscension Right Ascension (Decimal Hours).
+    /// \param[in] Declination Declination (Decimal Degrees).
+    /// \param[out] TelescopeDirectionVector Parameter to receive the corrected telescope direction
+    /// \return True if successful
     virtual bool TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& ApparentTelescopeDirectionVector) = 0;
 
-    /** \brief Get the true celestial coordinates for the supplied telescope pointing direction
-        \param[in] TelescopeDirectionVector the telescope direction
-        \param[out] RightAscension Parameter to receive the Right Ascension (Decimal Hours).
-        \param[out] Declination Parameter to receive the Declination (Decimal Degrees).
-        \return True if successful
-    */
+    /// \brief Get the true celestial coordinates for the supplied telescope pointing direction
+    /// \param[in] TelescopeDirectionVector the telescope direction
+    /// \param[out] RightAscension Parameter to receive the Right Ascension (Decimal Hours).
+    /// \param[out] Declination Parameter to receive the Declination (Decimal Degrees).
+    /// \return True if successful
     virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination) = 0;
 
-    void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment) { ApproximateMountAlignment = ApproximateAlignment; }
-
 protected:
-    /** \brief Describe the approximate alignment of the mount. This information is normally used in a one star alignment
-        calculation.
-    */
+    // Protected properties
+    /// \brief Describe the approximate alignment of the mount. This information is normally used in a one star alignment
+    /// calculation.
     MountAlignment_t ApproximateMountAlignment;
 
 };

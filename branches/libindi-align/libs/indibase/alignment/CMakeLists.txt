@@ -12,6 +12,12 @@ set(INDI_MATH_PLUGINS_DIRECTORY "${DATA_INSTALL_DIR}MathPlugins/" CACHE PATH "Pa
 
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS INDI_MATH_PLUGINS_DIRECTORY="${INDI_MATH_PLUGINS_DIRECTORY}")
 
+option(ALIGNMENT_CONVEX_HULL_DEBUGGING "Alignment subsystem - additional debugging output" OFF)
+
+if(ALIGNMENT_CONVEX_HULL_DEBUGGING)
+   set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS CONVEX_HULL_DEBUGGING)
+endif(ALIGNMENT_CONVEX_HULL_DEBUGGING)
+
 ##################################################
 ####### INDI AlignmentDriver shared library ######
 ##################################################

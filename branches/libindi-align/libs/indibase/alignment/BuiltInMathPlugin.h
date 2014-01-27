@@ -26,13 +26,16 @@ public:
     virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination);
 
 private:
-    void CalculateTAKIMatrices(const TelescopeDirectionVector& Actual1, const TelescopeDirectionVector& Actual2, const TelescopeDirectionVector& Actual3,
-                            const TelescopeDirectionVector& Apparent1, const TelescopeDirectionVector& Apparent2, const TelescopeDirectionVector& Apparent3,
-                            gsl_matrix *pActualToApparent, gsl_matrix *pApparentToActual);
+    void CalculateTAKIMatrices(const TelescopeDirectionVector& Alpha1, const TelescopeDirectionVector& Alpha2, const TelescopeDirectionVector& Alpha3,
+                            const TelescopeDirectionVector& Beta1, const TelescopeDirectionVector& Beta2, const TelescopeDirectionVector& Beta3,
+                            gsl_matrix *pAlphaToBeta, gsl_matrix *pBetaToAlpha);
 
     void MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion);
     void MatrixMatrixMultipy(gsl_matrix *pA, gsl_matrix *pB, gsl_matrix *pC);
     void MatrixVectorMultipy(gsl_matrix *pA, gsl_vector *pB, gsl_vector *pC);
+    bool RayTriangleIntersection(TelescopeDirectionVector& Ray, TelescopeDirectionVector& TriangleVertex1,
+                                                                TelescopeDirectionVector& TriangleVertex2,
+                                                                TelescopeDirectionVector& TriangleVertex3);
 
 #if 0
     // Offsets for single point alignment
@@ -43,6 +46,13 @@ private:
     // Transformation matrixes for 1, 2 and 2 sync points case
     gsl_matrix *pActualToApparentTransform;
     gsl_matrix *pApparentToActualTransform;
+
+    // Convex hulls for 4+ sync points case
+    ConvexHull ActualConvexHull;
+    ConvexHull ApparentConvexHull;
+    // Actual direction cosines for the 4+ case
+    std::vector<TelescopeDirectionVector> ActualDirectionCosines;
+
 };
 
 } // namespace AlignmentSubsystem
