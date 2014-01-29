@@ -18,6 +18,12 @@ if(ALIGNMENT_CONVEX_HULL_DEBUGGING)
    set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS CONVEX_HULL_DEBUGGING)
 endif(ALIGNMENT_CONVEX_HULL_DEBUGGING)
 
+option(SKYWATCHER_API_USE_INITIAL_JULIAN_DATE "Skywatcher API - use initial Julian date only" OFF)
+
+if(SKYWATCHER_API_USE_INITIAL_JULIAN_DATE)
+   set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS USE_INITIAL_JULIAN_DATE)
+endif(SKYWATCHER_API_USE_INITIAL_JULIAN_DATE)
+
 ##################################################
 ####### INDI AlignmentDriver shared library ######
 ##################################################
@@ -32,6 +38,7 @@ set (AlignmentDriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/BuiltInMathPlugin.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ConvexHull.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/Common.h
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/DriverCommon.h
     )
 
 add_library(AlignmentDriver SHARED ${AlignmentDriver_SRCS})
@@ -102,12 +109,7 @@ set(skywatcherAPIMount_SRCS
    ${CMAKE_SOURCE_DIR}/drivers/telescope/skywatcherAPIMount.cpp
    ${CMAKE_SOURCE_DIR}/drivers/telescope/skywatcherAPI.cpp )
 
-option(SKYWATCHER_API_USE_INITIAL_JULIAN_DATE "Skywatcher API - use initial Julian date only" OFF)
-
 add_executable(indi_skywatcherAPIMount ${skywatcherAPIMount_SRCS})
-if(SKYWATCHER_API_USE_INITIAL_JULIAN_DATE)
-   set_property(TARGET indi_skywatcherAPIMount APPEND PROPERTY COMPILE_DEFINITIONS USE_INITIAL_JULIAN_DATE)
-endif(SKYWATCHER_API_USE_INITIAL_JULIAN_DATE)
 target_link_libraries(indi_skywatcherAPIMount indidriver AlignmentDriver)
 
 install(TARGETS indi_skywatcherAPIMount RUNTIME DESTINATION bin )

@@ -13,6 +13,8 @@
 #include <cstring>
 #include <cmath>
 
+#include "indilogger.h"
+
 namespace INDI {
 namespace AlignmentSubsystem {
 
