@@ -15,6 +15,7 @@
 
 #include "skywatcherAPIMount.h"
 #include "libs/indicom.h"
+#include "indibase/alignment/DriverCommon.h"   // For DBG_ALIGNMENT
 
 #include <memory>
 #include <cmath>
@@ -134,15 +135,15 @@ const char * SkywatcherAPIMount::getDefaultName()
 
 bool SkywatcherAPIMount::Goto(double ra,double dec)
 {
-    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Goto");
+    DEBUG(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "SkywatcherAPIMount::Goto");
 
-    DEBUGF(DBG_SCOPE, "RA %lf DEC %lf", ra, dec);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "RA %lf DEC %lf", ra, dec);
     TelescopeDirectionVector TDV;
     ln_hrz_posn AltAz;
     if (TransformCelestialToTelescope(ra, dec, TDV))
     {
         AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
-        DEBUG(DBG_SCOPE, "Conversion OK");
+        DEBUG(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion OK");
     }
     else
     {
@@ -177,9 +178,9 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
             TDV = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
             AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
         }
-        DEBUGF(DBG_SCOPE, "Conversion Failed - HavePosition %d", HavePosition);
+        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion Failed - HavePosition %d", HavePosition);
     }
-    DEBUGF(DBG_SCOPE, "New Altitude %lf degrees Azimuth %lf degrees", AltAz.alt, AltAz.az);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New Altitude %lf degrees Azimuth %lf degrees", AltAz.alt, AltAz.az);
 
     // Update the current encoder positions
     GetEncoder(AXIS1);
@@ -647,7 +648,7 @@ bool SkywatcherAPIMount::ReadScopeStatus()
 
 bool SkywatcherAPIMount::Sync(double ra, double dec)
 {
-    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::Sync");
+    DEBUG(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "SkywatcherAPIMount::Sync");
 
     // Compute a telescope direction vector from the current encoders
     if (!GetEncoder(AXIS1))
@@ -660,18 +661,22 @@ bool SkywatcherAPIMount::Sync(double ra, double dec)
 
     struct ln_hrz_posn AltAz;
     AltAz.alt = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]);
-    DEBUGF(DBG_SCOPE, "Axis2 encoder %ld initial %ld alt(degrees) %lf", CurrentEncoders[AXIS2], InitialEncoders[AXIS2], AltAz.alt);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %ld initial %ld alt(degrees) %lf", CurrentEncoders[AXIS2], InitialEncoders[AXIS2], AltAz.alt);
     AltAz.az = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]);
-    DEBUGF(DBG_SCOPE, "Axis1 encoder %ld initial %ld az(degrees) %lf", CurrentEncoders[AXIS1], InitialEncoders[AXIS1], AltAz.az);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %ld initial %ld az(degrees) %lf", CurrentEncoders[AXIS1], InitialEncoders[AXIS1], AltAz.az);
 
     AlignmentDatabaseEntry NewEntry;
+#ifdef USE_INITIAL_JULIAN_DATE
+    NewEntry.ObservationJulianDate = InitialJulianDate;
+#else
     NewEntry.ObservationJulianDate = ln_get_julian_from_sys();
+#endif
     NewEntry.RightAscension = ra;
     NewEntry.Declination = dec;
     NewEntry.TelescopeDirection = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
     NewEntry.PrivateDataSize = 0;
 
-    DEBUGF(DBG_SCOPE, "New sync point Date %lf RA %lf DEC %lf TDV(x %lf y %lf z %lf)",
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New sync point Date %lf RA %lf DEC %lf TDV(x %lf y %lf z %lf)",
                     NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination,
                     NewEntry.TelescopeDirection.x, NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
 

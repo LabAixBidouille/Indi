@@ -1,5 +1,7 @@
 #include "BuiltInMathPlugin.h"
 
+#include "DriverCommon.h"
+
 #include <limits>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_linalg.h>
@@ -28,6 +30,7 @@ BuiltInMathPlugin::~BuiltInMathPlugin()
 
 bool BuiltInMathPlugin::Initialise()
 {
+    ASSDEBUG("Test message");
     /// See how many entries there are in the in memory database.
     /// - If just one use a hint to mounts approximate alignment, this can either be ZENITH,
     /// NORTH_CELESTIAL_POLE or SOUTH_CELESTIAL_POLE. The hint is used to make a dummy second
