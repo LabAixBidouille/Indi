@@ -180,14 +180,15 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
         }
         DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion Failed - HavePosition %d", HavePosition);
     }
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New Altitude %lf degrees Azimuth %lf degrees", AltAz.alt, AltAz.az);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New Altitude %lf degrees %ld microsteps Azimuth %lf degrees %ld microsteps",
+                                    AltAz.alt, DegreesToMicrosteps(AXIS2, AltAz.alt), AltAz.az, DegreesToMicrosteps(AXIS1, AltAz.az));
 
     // Update the current encoder positions
     GetEncoder(AXIS1);
     GetEncoder(AXIS2);
 
-    long AltitudeOffsetMicrosteps = DegreesToMicrosteps(AXIS2, AltAz.alt) + InitialEncoders[AXIS2] - CurrentEncoders[AXIS2];
-    long AzimuthOffsetMicrosteps = DegreesToMicrosteps(AXIS1, AltAz.az) + InitialEncoders[AXIS1] - CurrentEncoders[AXIS1];
+    long AltitudeOffsetMicrosteps = DegreesToMicrosteps(AXIS2, AltAz.alt) + ZeroPositionEncoders[AXIS2] - CurrentEncoders[AXIS2];
+    long AzimuthOffsetMicrosteps = DegreesToMicrosteps(AXIS1, AltAz.az) + ZeroPositionEncoders[AXIS1] - CurrentEncoders[AXIS1];
 
     // Do I need to take out any complete revolutions before I do this test?
     if (AltitudeOffsetMicrosteps > MicrostepsPerRevolution[AXIS2] / 2)
@@ -201,6 +202,12 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
         // Going the long way round - send it the other way
         AzimuthOffsetMicrosteps -= MicrostepsPerRevolution[AXIS1];
     }
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Initial Axis2 %ld microsteps Axis1 %ld microsteps",
+                                                    ZeroPositionEncoders[AXIS2], ZeroPositionEncoders[AXIS1]);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Current Axis2 %ld microsteps Axis1 %ld microsteps",
+                                                    CurrentEncoders[AXIS2], CurrentEncoders[AXIS1]);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Altitude offset %ld microsteps Azimuth offset %ld microsteps",
+                                                    AltitudeOffsetMicrosteps, AzimuthOffsetMicrosteps);
 
     SlewTo(AXIS1, AzimuthOffsetMicrosteps);
     SlewTo(AXIS2, AltitudeOffsetMicrosteps);
@@ -559,7 +566,7 @@ bool SkywatcherAPIMount::Park()
 
 bool SkywatcherAPIMount::ReadScopeStatus()
 {
-    DEBUG(DBG_SCOPE, "SkywatcherAPIMount::ReadScopeStatus");
+    DEBUG(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "SkywatcherAPIMount::ReadScopeStatus");
 
     // Horrible hack to get over the fact that the base class calls ReadScopeStatus from inside Connect
     // before I have a chance to set up the serial port
@@ -594,16 +601,16 @@ bool SkywatcherAPIMount::ReadScopeStatus()
 
     // Calculate new RA DEC
     struct ln_hrz_posn AltAz;
-    AltAz.alt = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]);
-    DEBUGF(DBG_SCOPE, "Axis2 encoder %ld initial %ld alt(degrees) %lf", CurrentEncoders[AXIS2], InitialEncoders[AXIS2], AltAz.alt);
-    AltAz.az = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]);
-    DEBUGF(DBG_SCOPE, "Axis1 encoder %ld initial %ld az(degrees) %lf", CurrentEncoders[AXIS1], InitialEncoders[AXIS1], AltAz.az);
+    AltAz.alt = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - ZeroPositionEncoders[AXIS2]);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %ld initial %ld alt(degrees) %lf", CurrentEncoders[AXIS2], ZeroPositionEncoders[AXIS2], AltAz.alt);
+    AltAz.az = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - ZeroPositionEncoders[AXIS1]);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %ld initial %ld az(degrees) %lf", CurrentEncoders[AXIS1], ZeroPositionEncoders[AXIS1], AltAz.az);
     TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
-    DEBUGF(DBG_SCOPE, "TDV x %lf y %lf z %lf", TDV.x, TDV.y, TDV.z);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "TDV x %lf y %lf z %lf", TDV.x, TDV.y, TDV.z);
 
     double RightAscension, Declination;
     if (TransformTelescopeToCelestial( TDV, RightAscension, Declination))
-        DEBUG(DBG_SCOPE, "Conversion OK");
+        DEBUG(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion OK");
     else
     {
         bool HavePosition = false;
@@ -636,13 +643,77 @@ bool SkywatcherAPIMount::ReadScopeStatus()
         // libnova works in decimal degrees
         RightAscension = EquatorialCoordinates.ra * 24.0 / 360.0;
         Declination = EquatorialCoordinates.dec;
-        DEBUGF(DBG_SCOPE, "Conversion Failed - HavePosition %d RA (degrees) %lf DEC (degrees) %lf", HavePosition,
+        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion Failed - HavePosition %d RA (degrees) %lf DEC (degrees) %lf", HavePosition,
                                                                                             EquatorialCoordinates.ra,
                                                                                             EquatorialCoordinates.dec);
     }
 
-    DEBUGF(DBG_SCOPE, "New RA %lf (hours) DEC %lf (degrees)", RightAscension, Declination);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New RA %lf (hours) DEC %lf (degrees)", RightAscension, Declination);
     NewRaDec(RightAscension, Declination);
+
+#if (1)
+{
+    // reverse the fucker just for fun
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "RA %lf (hours) DEC (degrees) %lf", RightAscension, Declination);
+    TelescopeDirectionVector TDV;
+    bool HavePosition = false;
+    ln_lnlat_posn Position;
+    if (GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+        HavePosition = true;
+    else
+    {
+        if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
+            && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
+        {
+            // I assume that being on the equator and exactly on the prime meridian is unlikely
+            Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
+            Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
+            HavePosition = true;
+        }
+    }
+    struct ln_equ_posn EquatorialCoordinates;
+    // libnova works in decimal degrees
+    EquatorialCoordinates.ra = RightAscension * 360.0 / 24.0;
+    EquatorialCoordinates.dec = Declination;
+    if (HavePosition)
+#ifdef USE_INITIAL_JULIAN_DATE
+        ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, InitialJulianDate, &AltAz);
+#else
+        ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, ln_get_julian_from_sys(), &AltAz);
+#endif
+    else
+    {
+        // The best I can do is just do a direct conversion to Alt/Az
+        TelescopeDirectionVector TDV = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
+        AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
+    }
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion Failed - HavePosition %d", HavePosition);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New Altitude %lf degrees %ld microsteps Azimuth %lf degrees %ld microsteps",
+                                    AltAz.alt, DegreesToMicrosteps(AXIS2, AltAz.alt), AltAz.az, DegreesToMicrosteps(AXIS1, AltAz.az));
+
+    long AltitudeOffsetMicrosteps = DegreesToMicrosteps(AXIS2, AltAz.alt) + ZeroPositionEncoders[AXIS2] - CurrentEncoders[AXIS2];
+    long AzimuthOffsetMicrosteps = DegreesToMicrosteps(AXIS1, AltAz.az) + ZeroPositionEncoders[AXIS1] - CurrentEncoders[AXIS1];
+
+    // Do I need to take out any complete revolutions before I do this test?
+    if (AltitudeOffsetMicrosteps > MicrostepsPerRevolution[AXIS2] / 2)
+    {
+        // Going the long way round - send it the other way
+        AltitudeOffsetMicrosteps -= MicrostepsPerRevolution[AXIS2];
+    }
+
+    if (AzimuthOffsetMicrosteps > MicrostepsPerRevolution[AXIS1] / 2)
+    {
+        // Going the long way round - send it the other way
+        AzimuthOffsetMicrosteps -= MicrostepsPerRevolution[AXIS1];
+    }
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Initial Axis2 %ld microsteps Axis1 %ld microsteps",
+                                                    ZeroPositionEncoders[AXIS2], ZeroPositionEncoders[AXIS1]);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Current Axis2 %ld microsteps Axis1 %ld microsteps",
+                                                    CurrentEncoders[AXIS2], CurrentEncoders[AXIS1]);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Altitude offset %ld microsteps Azimuth offset %ld microsteps",
+                                                    AltitudeOffsetMicrosteps, AzimuthOffsetMicrosteps);
+}
+#endif
     return true;
 }
 
@@ -660,10 +731,10 @@ bool SkywatcherAPIMount::Sync(double ra, double dec)
     UpdateDetailedMountInformation(true);
 
     struct ln_hrz_posn AltAz;
-    AltAz.alt = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %ld initial %ld alt(degrees) %lf", CurrentEncoders[AXIS2], InitialEncoders[AXIS2], AltAz.alt);
-    AltAz.az = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %ld initial %ld az(degrees) %lf", CurrentEncoders[AXIS1], InitialEncoders[AXIS1], AltAz.az);
+    AltAz.alt = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - ZeroPositionEncoders[AXIS2]);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %ld initial %ld alt(degrees) %lf", CurrentEncoders[AXIS2], ZeroPositionEncoders[AXIS2], AltAz.alt);
+    AltAz.az = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - ZeroPositionEncoders[AXIS1]);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %ld initial %ld az(degrees) %lf", CurrentEncoders[AXIS1], ZeroPositionEncoders[AXIS1], AltAz.az);
 
     AlignmentDatabaseEntry NewEntry;
 #ifdef USE_INITIAL_JULIAN_DATE
@@ -750,6 +821,26 @@ int SkywatcherAPIMount::skywatcher_tty_read(int fd, char *buf, int nbytes, int t
 int SkywatcherAPIMount::skywatcher_tty_write(int fd, const char * buffer, int nbytes, int *nbytes_written)
 {
     return tty_write(fd, buffer, nbytes, nbytes_written);
+}
+
+void SkywatcherAPIMount::SkywatcherMicrostepsFromTelescopeDirectionVector(const TelescopeDirectionVector TelescopeDirectionVector,
+                                                            long& Axis1Microsteps, long& Axis2Microsteps)
+{
+    // For the time being I assume that all skywathcer mounts share the same encoder conventions
+    double Axis1Angle;
+    double Axis2Angle;
+    SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, Axis1Angle, TelescopeDirectionVectorSupportFunctions::CLOCKWISE, Axis1Angle, FROM_AZIMUTHAL_PLANE);
+
+    Axis1Microsteps = RadiansToMicrosteps(AXIS1, Axis1Angle);
+    Axis2Microsteps = RadiansToMicrosteps(AXIS2, Axis2Angle);
+}
+
+const TelescopeDirectionVector SkywatcherAPIMount::TelescopeDirectionVectorFromSkywatcherMicrosteps(long Axis1Microsteps, long Axis2Microsteps)
+{
+    // For the time being I assume that all skywathcer mounts share the same encoder conventions
+    double Axis1Angle = MicrostepsToRadians(AXIS1, Axis1Microsteps);
+    double Axis2Angle = MicrostepsToRadians(AXIS2, Axis2Microsteps);
+    return TelescopeDirectionVectorFromSphericalCoordinate(Axis1Angle, TelescopeDirectionVectorSupportFunctions::CLOCKWISE, Axis2Angle, FROM_AZIMUTHAL_PLANE);
 }
 
 void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
@@ -943,11 +1034,11 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
 
     bool AxisOneEncoderValuesHasChanged = false;
     if ((AxisOneEncoderValues[RAW_MICROSTEPS].value != CurrentEncoders[AXIS1])
-    || (AxisOneEncoderValues[OFFSET_FROM_INITIAL].value != CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]))
+    || (AxisOneEncoderValues[OFFSET_FROM_INITIAL].value != CurrentEncoders[AXIS1] - ZeroPositionEncoders[AXIS1]))
     {
         AxisOneEncoderValues[RAW_MICROSTEPS].value = CurrentEncoders[AXIS1];
-        AxisOneEncoderValues[OFFSET_FROM_INITIAL].value = CurrentEncoders[AXIS1] - InitialEncoders[AXIS1];
-        AxisOneEncoderValues[DEGREES_FROM_INITIAL].value = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - InitialEncoders[AXIS1]);
+        AxisOneEncoderValues[OFFSET_FROM_INITIAL].value = CurrentEncoders[AXIS1] - ZeroPositionEncoders[AXIS1];
+        AxisOneEncoderValues[DEGREES_FROM_INITIAL].value = MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - ZeroPositionEncoders[AXIS1]);
         AxisOneEncoderValuesHasChanged = true;
     }
     if (AxisOneEncoderValuesHasChanged && InformClient)
@@ -955,11 +1046,11 @@ void SkywatcherAPIMount::UpdateDetailedMountInformation(bool InformClient)
 
         bool AxisTwoEncoderValuesHasChanged = false;
     if ((AxisTwoEncoderValues[RAW_MICROSTEPS].value != CurrentEncoders[AXIS2])
-    || (AxisTwoEncoderValues[OFFSET_FROM_INITIAL].value != CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]))
+    || (AxisTwoEncoderValues[OFFSET_FROM_INITIAL].value != CurrentEncoders[AXIS2] - ZeroPositionEncoders[AXIS2]))
     {
         AxisTwoEncoderValues[RAW_MICROSTEPS].value = CurrentEncoders[AXIS2];
-        AxisTwoEncoderValues[OFFSET_FROM_INITIAL].value = CurrentEncoders[AXIS2] - InitialEncoders[AXIS2];
-        AxisTwoEncoderValues[DEGREES_FROM_INITIAL].value = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - InitialEncoders[AXIS2]);
+        AxisTwoEncoderValues[OFFSET_FROM_INITIAL].value = CurrentEncoders[AXIS2] - ZeroPositionEncoders[AXIS2];
+        AxisTwoEncoderValues[DEGREES_FROM_INITIAL].value = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - ZeroPositionEncoders[AXIS2]);
         AxisTwoEncoderValuesHasChanged = true;
     }
     if (AxisTwoEncoderValuesHasChanged && InformClient)

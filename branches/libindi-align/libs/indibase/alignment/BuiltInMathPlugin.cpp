@@ -132,13 +132,21 @@ bool BuiltInMathPlugin::Initialise()
                 case NORTH_CELESTIAL_POLE:
                     DummyRaDec.ra = 0.0;
                     DummyRaDec.dec = 0.0;
-                    ln_get_hrz_from_equ(&RaDec, &Position, ln_get_julian_from_sys(), &DummyAltAz);
+#ifdef USE_INITIAL_JULIAN_DATE
+                    ln_get_hrz_from_equ(&DummyRaDec, &Position, Entry1.ObservationJulianDate, &DummyAltAz);
+#else
+                    ln_get_hrz_from_equ(&DummyRaDec, &Position, ln_get_julian_from_sys(), &DummyAltAz);
+#endif
                     break;
 
                 case SOUTH_CELESTIAL_POLE:
                     DummyRaDec.ra = 0.0;
                     DummyRaDec.dec = 180.0;
-                    ln_get_hrz_from_equ(&RaDec, &Position, ln_get_julian_from_sys(), &DummyAltAz);
+#ifdef USE_INITIAL_JULIAN_DATE
+                    ln_get_hrz_from_equ(&DummyRaDec, &Position, Entry1.ObservationJulianDate, &DummyAltAz);
+#else
+                    ln_get_hrz_from_equ(&DummyRaDec, &Position, ln_get_julian_from_sys(), &DummyAltAz);
+#endif
                     break;
             }
             DummyActualDirectionCosine2 = TelescopeDirectionVectorFromAltitudeAzimuth(DummyAltAz);
@@ -310,10 +318,9 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
     ln_lnlat_posn Position;
     if (!GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
         return false;
-    ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys(), &ActualAltAz);
-    TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
 
-    switch (GetAlignmentDatabase().size())
+    AlignmentDatabaseType& SyncPoints = GetAlignmentDatabase();
+    switch (SyncPoints.size())
     {
         case 0:
             // No alignment points
@@ -350,6 +357,12 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
         case 2:
         case 3:
         {
+#ifdef USE_INITIAL_JULIAN_DATE
+            ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
+#else
+            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys(), &ActualAltAz);
+#endif
+            TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
             ln_hrz_posn ApparentAltAz;
             gsl_vector *pGSLActualVector = gsl_vector_alloc(3);
             gsl_vector_set(pGSLActualVector, 0, ActualVector.x);
@@ -368,6 +381,12 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
 
         default:
         {
+#ifdef USE_INITIAL_JULIAN_DATE
+            ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
+#else
+            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys(), &ActualAltAz);
+#endif
+            TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
             // Scale the actual telescope direction vector to make sure it traverses the unit sphere.
             TelescopeDirectionVector ScaledActualVector = ActualVector * 2.0;
             // Shoot the scaled vector in the into the list of actual facets
@@ -417,7 +436,8 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
     if (!GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
         return false;
 
-    switch (GetAlignmentDatabase().size())
+    AlignmentDatabaseType& SyncPoints = GetAlignmentDatabase();
+    switch (SyncPoints.size())
     {
         case 0:
             // No alignment points
@@ -441,7 +461,11 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
             ln_hrz_posn ActualAltAz;
             AltitudeAzimuthFromTelescopeDirectionVector(ActualTelescopeDirectionVector, ActualAltAz);
             ln_equ_posn ActualRaDec;
+#ifdef USE_INITIAL_JULIAN_DATE
+            ln_get_equ_from_hrz(&ActualAltAz, &Position, SyncPoints[0].ObservationJulianDate, &ActualRaDec);
+#else
             ln_get_equ_from_hrz(&ActualAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
+#endif
             RightAscension = ActualRaDec.ra;
             Declination = ActualRaDec.dec;
             gsl_vector_free(pGSLActualVector);
@@ -491,7 +515,11 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
             ln_hrz_posn ActualAltAz;
             AltitudeAzimuthFromTelescopeDirectionVector(ActualTelescopeDirectionVector, ActualAltAz);
             ln_equ_posn ActualRaDec;
+#ifdef USE_INITIAL_JULIAN_DATE
+            ln_get_equ_from_hrz(&ActualAltAz, &Position, SyncPoints[0].ObservationJulianDate, &ActualRaDec);
+#else
             ln_get_equ_from_hrz(&ActualAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
+#endif
             RightAscension = ActualRaDec.ra;
             Declination = ActualRaDec.dec;
             gsl_vector_free(pGSLActualVector);

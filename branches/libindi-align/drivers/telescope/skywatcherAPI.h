@@ -248,11 +248,13 @@ public:
     double DegreesPerMicrostep[2];
     double MicrostepsPerDegree[2];
     long LowSpeedGotoMargin[2];
-    long SlewToModeDeccelerationRampLength[2];
+
+    // SlewTo debugging
+    long LastSlewToTarget[2];
 
     // Encoder values
     long CurrentEncoders[2]; // Current encoder value (microsteps).
-    long InitialEncoders[2]; // Initial encoder value (microsteps).
+    long ZeroPositionEncoders[2]; // Zero position (initial) encoder value (microsteps).
 
     AXISSTATUS AxesStatus[2];
     double SlewingSpeed[2];
