@@ -29,16 +29,16 @@ endif(SKYWATCHER_API_USE_INITIAL_JULIAN_DATE)
 ##################################################
 set (AlignmentDriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForDrivers.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForMathPlugins.h
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/BuiltInMathPlugin.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ConvexHull.cpp
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/DriverCommon.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/InMemoryDatabase.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MapPropertiesToInMemoryDatabase.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPlugin.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPluginManagement.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/TelescopeDirectionVectorSupportFunctions.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForMathPlugins.h
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/BuiltInMathPlugin.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ConvexHull.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/Common.h
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/DriverCommon.h
     )
 
 add_library(AlignmentDriver SHARED ${AlignmentDriver_SRCS})

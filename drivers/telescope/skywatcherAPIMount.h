@@ -54,6 +54,10 @@ private:
     int skywatcher_tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read);
     int skywatcher_tty_write(int fd, const char * buffer, int nbytes, int *nbytes_written);
 
+    void SkywatcherMicrostepsFromTelescopeDirectionVector(const INDI::AlignmentSubsystem::TelescopeDirectionVector TelescopeDirectionVector,
+                                                            long& Axis1Microsteps, long& Axis2Microsteps);
+    const INDI::AlignmentSubsystem::TelescopeDirectionVector TelescopeDirectionVectorFromSkywatcherMicrosteps(long Axis1Microsteps, long Axis2Microsteps);
+
     void UpdateDetailedMountInformation(bool InformClient);
 
     // Properties

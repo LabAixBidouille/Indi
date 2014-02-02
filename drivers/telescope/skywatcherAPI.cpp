@@ -67,7 +67,7 @@ SkywatcherAPI::SkywatcherAPI()
     DegreesPerMicrostep[AXIS1] = DegreesPerMicrostep[AXIS2] = 0;
     MicrostepsPerDegree[AXIS1] = MicrostepsPerDegree[AXIS2] = 0;
     CurrentEncoders[AXIS1] = CurrentEncoders[AXIS2] = 0;
-    InitialEncoders[AXIS1] = InitialEncoders[AXIS2] = 0;
+    ZeroPositionEncoders[AXIS1] = ZeroPositionEncoders[AXIS2] = 0;
     SlewingSpeed[AXIS1] = SlewingSpeed[AXIS2] = 0;
 }
 
@@ -276,6 +276,14 @@ bool SkywatcherAPI::GetStatus(AXISID Axis)
     }
     else
     {
+        // SlewTo Debugging
+        if (AxesStatus[(int)Axis].SlewingTo)
+        {
+            // If the mount was doing a slew to
+            GetEncoder(Axis);
+            MYDEBUGF(INDI::Logger::DBG_SESSION, "SlewTo complete - offset to target %ld microsteps %lf arc seconds",
+                    LastSlewToTarget[Axis] - CurrentEncoders[Axis], MicrostepsToDegrees(Axis, LastSlewToTarget[Axis] - CurrentEncoders[Axis]) * 3600);
+        }
 
         AxesStatus[(int)Axis].FullStop = true;	// FullStop = 1;	// Axis is fully stop.
         AxesStatus[(int)Axis].Slewing = false;
@@ -363,8 +371,8 @@ bool SkywatcherAPI::InitMount()
 
     // Set initial axis posiitons
     // These are used to define the arbitary zero position vector for the axis
-    InitialEncoders[AXIS1] = CurrentEncoders[AXIS1];
-    InitialEncoders[AXIS2] = CurrentEncoders[AXIS2];
+    ZeroPositionEncoders[AXIS1] = CurrentEncoders[AXIS1];
+    ZeroPositionEncoders[AXIS2] = CurrentEncoders[AXIS2];
 
 
     if (!InitializeMC())
@@ -379,11 +387,6 @@ bool SkywatcherAPI::InitMount()
     // These two LowSpeedGotoMargin are calculate from slewing for 5 seconds in 128x sidereal rate
     LowSpeedGotoMargin[(int)AXIS1] = (long)(640 * SIDEREALRATE * MicrostepsPerRadian[(int)AXIS1]);
     LowSpeedGotoMargin[(int)AXIS2] = (long)(640 * SIDEREALRATE * MicrostepsPerRadian[(int)AXIS2]);
-
-    // Default break steps
-    SlewToModeDeccelerationRampLength[(int)AXIS1] = 3500;
-    SlewToModeDeccelerationRampLength[(int)AXIS2] = 3500;
-
 
     return true;
 }
@@ -402,12 +405,10 @@ bool SkywatcherAPI::InstantStop(AXISID Axis)
 void SkywatcherAPI::Long2BCDstr(long Number, std::string &String)
 {
     std::stringstream Temp;
-    const char *Debug;
     Temp << std::hex << std::setfill('0') << std::uppercase
         << std::setw(2) << (Number & 0xff)
         << std::setw(2) << ((Number & 0xff00) >> 8)
         << std::setw(2) << ((Number & 0xff0000) >> 16);
-    Debug = Temp.str().c_str();
     String = Temp.str();
 }
 
@@ -639,7 +640,10 @@ void SkywatcherAPI::SlewTo(AXISID Axis, long OffsetInMicrosteps)
         // Nothing to do
         return;
 
+    // Debugging
+    LastSlewToTarget[Axis] = CurrentEncoders[Axis] + OffsetInMicrosteps;
     char Direction;
+
     if (OffsetInMicrosteps  > 0)
         Direction = '0';
     else
@@ -665,7 +669,13 @@ void SkywatcherAPI::SlewTo(AXISID Axis, long OffsetInMicrosteps)
     }
 
     SetGotoTargetOffset(Axis, OffsetInMicrosteps);
-    SetSlewToModeDeccelerationRampLength(Axis, SlewToModeDeccelerationRampLength[Axis]);
+
+    if (HighSpeed)
+        SetSlewToModeDeccelerationRampLength(Axis,
+                    OffsetInMicrosteps > 3200 ? 3200 : OffsetInMicrosteps);
+    else
+        SetSlewToModeDeccelerationRampLength(Axis,
+                    OffsetInMicrosteps > 200 ? 200 : OffsetInMicrosteps);
     StartMotion(Axis);
 
     AxesStatus[Axis].SetSlewingTo(Direction == '0' ? true : false, HighSpeed);
