@@ -281,8 +281,13 @@ bool SkywatcherAPI::GetStatus(AXISID Axis)
         {
             // If the mount was doing a slew to
             GetEncoder(Axis);
-            MYDEBUGF(INDI::Logger::DBG_SESSION, "SlewTo complete - offset to target %ld microsteps %lf arc seconds",
-                    LastSlewToTarget[Axis] - CurrentEncoders[Axis], MicrostepsToDegrees(Axis, LastSlewToTarget[Axis] - CurrentEncoders[Axis]) * 3600);
+            MYDEBUGF(INDI::Logger::DBG_SESSION, "Axis %d SlewTo complete - offset to target %ld microsteps %lf arc seconds\n"
+                    "LastSlewToTarget %ld CurrentEncoder %ld",
+                    Axis,
+                    LastSlewToTarget[Axis] - CurrentEncoders[Axis],
+                    MicrostepsToDegrees(Axis, LastSlewToTarget[Axis] - CurrentEncoders[Axis]) * 3600,
+                    LastSlewToTarget[Axis],
+                    CurrentEncoders[Axis]);
         }
 
         AxesStatus[(int)Axis].FullStop = true;	// FullStop = 1;	// Axis is fully stop.
@@ -642,6 +647,9 @@ void SkywatcherAPI::SlewTo(AXISID Axis, long OffsetInMicrosteps)
 
     // Debugging
     LastSlewToTarget[Axis] = CurrentEncoders[Axis] + OffsetInMicrosteps;
+    MYDEBUGF(INDI::Logger::DBG_SESSION, "SlewTo axis %d Offset %ld CurrentEncoder %ld SlewToTarget %ld",
+                        Axis, OffsetInMicrosteps, CurrentEncoders[Axis], LastSlewToTarget[Axis]);
+
     char Direction;
 
     if (OffsetInMicrosteps  > 0)

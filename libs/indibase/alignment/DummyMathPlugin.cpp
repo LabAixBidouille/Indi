@@ -38,7 +38,8 @@ bool DummyMathPlugin::Initialise()
     return false;
 }
 
-bool DummyMathPlugin::TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& ApparentTelescopeDirectionVector)
+bool DummyMathPlugin::TransformCelestialToTelescope(const double RightAscension, const double Declination, double JulianOffset,
+                                                        TelescopeDirectionVector& ApparentTelescopeDirectionVector)
 {
     return false;
 }

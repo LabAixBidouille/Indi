@@ -43,9 +43,8 @@ public:
     virtual bool Park();
     virtual bool ReadScopeStatus();
     virtual bool Sync(double ra, double dec);
-    // For the time being stop the timer path being used
-    //virtual void TimerHit() {}
     virtual bool saveConfigItems(FILE *fp);
+    virtual void TimerHit();
     virtual bool updateLocation(double latitude, double longitude, double elevation);
     virtual bool updateProperties();
 
@@ -94,6 +93,10 @@ private:
                     PREVIOUS_WE_MOTION_EAST = MOTION_EAST,
                     PREVIOUS_WE_MOTION_UNKNOWN = -1} PreviousWEMotion_t;
     PreviousWEMotion_t PreviousWEMotion;
+
+    // Tracking
+    ln_equ_posn CurrentTrackingTarget;
+    double NewTrackingTarget[2];
 
 #ifdef USE_INITIAL_JULIAN_DATE
     double InitialJulianDate;

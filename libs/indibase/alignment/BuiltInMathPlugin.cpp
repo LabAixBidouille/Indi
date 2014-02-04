@@ -309,7 +309,8 @@ bool BuiltInMathPlugin::Initialise()
     }
 }
 
-bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& ApparentTelescopeDirectionVector)
+bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscension, const double Declination, double JulianOffset,
+                                                        TelescopeDirectionVector& ApparentTelescopeDirectionVector)
 {
     ln_equ_posn ActualRaDec;
     ln_hrz_posn ActualAltAz;
