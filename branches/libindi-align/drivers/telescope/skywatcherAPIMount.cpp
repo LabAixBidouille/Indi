@@ -138,9 +138,16 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
     DEBUG(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "SkywatcherAPIMount::Goto");
 
     DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "RA %lf DEC %lf", ra, dec);
+
+    if (ISS_ON == IUFindSwitch(&CoordSP,"TRACK")->s)
+    {
+        CurrentTrackingTarget.ra = ra;
+        CurrentTrackingTarget.dec = dec;
+    }
+
     TelescopeDirectionVector TDV;
     ln_hrz_posn AltAz;
-    if (TransformCelestialToTelescope(ra, dec, TDV))
+    if (TransformCelestialToTelescope(ra, dec, 0.0, TDV))
     {
         AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
         DEBUG(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion OK");
@@ -211,6 +218,10 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
 
     SlewTo(AXIS1, AzimuthOffsetMicrosteps);
     SlewTo(AXIS2, AltitudeOffsetMicrosteps);
+
+    TrackState = SCOPE_SLEWING;
+
+    EqNP.s    = IPS_BUSY;
 
     return true;
 }
@@ -584,13 +595,6 @@ bool SkywatcherAPIMount::ReadScopeStatus()
     if (!GetStatus(AXIS2))
         return false;
 
-
-    if(TrackState==SCOPE_SLEWING)
-    {
-        if ((AxesStatus[AXIS1].FullStop) && (AxesStatus[AXIS2].FullStop))
-            TrackState = SCOPE_IDLE;
-    }
-
     // Update Axis Position
     if (!GetEncoder(AXIS1))
         return false;
@@ -761,6 +765,125 @@ bool SkywatcherAPIMount::saveConfigItems(FILE *fp)
     SaveConfigProperties(fp);
 
     return INDI::Telescope::saveConfigItems(fp);
+}
+
+void SkywatcherAPIMount::TimerHit()
+{
+    // By default this method is called every POLLMS milliseconds
+
+    // Call the base class handler
+    // This normally just calls ReadScopeStatus
+    INDI::Telescope::TimerHit();
+
+    // Do my own timer stuff assuming ReadScopeStatus has just been called
+
+    switch(TrackState)
+    {
+        case SCOPE_SLEWING:
+            if ((AxesStatus[AXIS1].FullStop) && (AxesStatus[AXIS2].FullStop))
+            {
+                if (ISS_ON == IUFindSwitch(&CoordSP,"TRACK")->s)
+                {
+                    // Goto has finished start tracking
+                    TrackState = SCOPE_TRACKING;
+                    // Fall through to tracking case
+                }
+                else
+                {
+                    TrackState = SCOPE_IDLE;
+                    break;
+                }
+            }
+            else
+                break;
+
+        case SCOPE_TRACKING:
+            if (ISS_ON == IUFindSwitch(&CoordSP,"TRACK")->s)
+            {
+                // Continue or start tracking
+                // Calculate where the mount needs to be in POLLMS time
+                // POLLMS is hardcoded to be one second
+                double JulianOffset = 1.0 / (24.0 * 60 * 60); // TODO may need to make this
+                TelescopeDirectionVector TDV;
+                ln_hrz_posn AltAz;
+                if (TransformCelestialToTelescope(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec,
+                                                    JulianOffset, TDV))
+                {
+                    AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
+                    DEBUG(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion OK");
+                }
+                else
+                {
+                    bool HavePosition = false;
+                    ln_lnlat_posn Position;
+                    if (GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+                        HavePosition = true;
+                    else
+                    {
+                        if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
+                            && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
+                        {
+                            // I assume that being on the equator and exactly on the prime meridian is unlikely
+                            Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
+                            Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
+                            HavePosition = true;
+                        }
+                    }
+                    struct ln_equ_posn EquatorialCoordinates;
+                    // libnova works in decimal degrees
+                    EquatorialCoordinates.ra = CurrentTrackingTarget.ra * 360.0 / 24.0;
+                    EquatorialCoordinates.dec = CurrentTrackingTarget.dec;
+                    if (HavePosition)
+            #ifdef USE_INITIAL_JULIAN_DATE
+                        ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, InitialJulianDate, &AltAz);
+            #else
+                        ln_get_hrz_from_equ(&EquatorialCoordinates, &Position,
+                                                ln_get_julian_from_sys() + JulianOffset, &AltAz);
+            #endif
+                    else
+                    {
+                        // The best I can do is just do a direct conversion to Alt/Az
+                        TDV = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
+                        AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
+                    }
+                    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion Failed - HavePosition %d", HavePosition);
+                }
+                DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New Tracking Target Altitude %lf degrees %ld microsteps Azimuth %lf degrees %ld microsteps",
+                                    AltAz.alt, DegreesToMicrosteps(AXIS2, AltAz.alt), AltAz.az, DegreesToMicrosteps(AXIS1, AltAz.az));
+
+                long AltitudeOffsetMicrosteps = DegreesToMicrosteps(AXIS2, AltAz.alt) + ZeroPositionEncoders[AXIS2] - CurrentEncoders[AXIS2];
+                long AzimuthOffsetMicrosteps = DegreesToMicrosteps(AXIS1, AltAz.az) + ZeroPositionEncoders[AXIS1] - CurrentEncoders[AXIS1];
+
+                // Do I need to take out any complete revolutions before I do this test?
+                if (AltitudeOffsetMicrosteps > MicrostepsPerRevolution[AXIS2] / 2)
+                {
+                    // Going the long way round - send it the other way
+                    AltitudeOffsetMicrosteps -= MicrostepsPerRevolution[AXIS2];
+                }
+
+                if (AzimuthOffsetMicrosteps > MicrostepsPerRevolution[AXIS1] / 2)
+                {
+                    // Going the long way round - send it the other way
+                    AzimuthOffsetMicrosteps -= MicrostepsPerRevolution[AXIS1];
+                }
+                DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Tracking - Altitude offset %ld microsteps Azimuth offset %ld microsteps",
+                                                                AltitudeOffsetMicrosteps, AzimuthOffsetMicrosteps);
+
+                // Calculate the slewing rates needed to reach that position
+                // at the correct time and start the slew.
+            }
+            else
+            {
+                // Stop tracking
+                SlowStop(AXIS1);
+                SlowStop(AXIS2);
+                TrackState = SCOPE_IDLE;
+            }
+            break;
+
+        default:
+            break;
+    }
 }
 
 bool SkywatcherAPIMount::updateLocation(double latitude, double longitude, double elevation)

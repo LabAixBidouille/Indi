@@ -251,9 +251,10 @@ bool MathPluginManagement::Initialise()
     return (pLoadedMathPlugin->*pInitialise)();
 }
 
-bool MathPluginManagement::TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& ApparentTelescopeDirectionVector)
+bool MathPluginManagement::TransformCelestialToTelescope(const double RightAscension, const double Declination, double JulianOffset,
+                                                        TelescopeDirectionVector& ApparentTelescopeDirectionVector)
 {
-    return (pLoadedMathPlugin->*pTransformCelestialToTelescope)(RightAscension, Declination, ApparentTelescopeDirectionVector);
+    return (pLoadedMathPlugin->*pTransformCelestialToTelescope)(RightAscension, Declination, JulianOffset, ApparentTelescopeDirectionVector);
 }
 
 bool MathPluginManagement::TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination)

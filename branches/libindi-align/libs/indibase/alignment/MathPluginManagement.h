@@ -74,7 +74,8 @@ public:
 
     // These must match the function signatures in MathPlugin
     bool Initialise();
-    bool TransformCelestialToTelescope(const double RightAscension, const double Declination, TelescopeDirectionVector& ApparentTelescopeDirectionVector);
+    bool TransformCelestialToTelescope(const double RightAscension, const double Declination, double JulianOffset,
+                                            TelescopeDirectionVector& ApparentTelescopeDirectionVector);
     bool TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination);
 
 
@@ -95,7 +96,8 @@ private:
     // The following hold links to the current loaded math plugin
     // These must match the function signatures in MathPlugin
     bool (MathPlugin::*pInitialise)();
-    bool (MathPlugin::*pTransformCelestialToTelescope)(const double RightAscension, const double Declination, TelescopeDirectionVector& TelescopeDirectionVector);
+    bool (MathPlugin::*pTransformCelestialToTelescope)(const double RightAscension, const double Declination, double JulianOffset,
+                                                        TelescopeDirectionVector& TelescopeDirectionVector);
     bool (MathPlugin::*pTransformTelescopeToCelestial)(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination);
     MathPlugin* pLoadedMathPlugin;
     void* LoadedMathPluginHandle;
