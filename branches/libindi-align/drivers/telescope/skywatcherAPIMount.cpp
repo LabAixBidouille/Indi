@@ -655,69 +655,6 @@ bool SkywatcherAPIMount::ReadScopeStatus()
     DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New RA %lf (hours) DEC %lf (degrees)", RightAscension, Declination);
     NewRaDec(RightAscension, Declination);
 
-#if (1)
-{
-    // reverse the fucker just for fun
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "RA %lf (hours) DEC (degrees) %lf", RightAscension, Declination);
-    TelescopeDirectionVector TDV;
-    bool HavePosition = false;
-    ln_lnlat_posn Position;
-    if (GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
-        HavePosition = true;
-    else
-    {
-        if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
-            && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
-        {
-            // I assume that being on the equator and exactly on the prime meridian is unlikely
-            Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
-            Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
-            HavePosition = true;
-        }
-    }
-    struct ln_equ_posn EquatorialCoordinates;
-    // libnova works in decimal degrees
-    EquatorialCoordinates.ra = RightAscension * 360.0 / 24.0;
-    EquatorialCoordinates.dec = Declination;
-    if (HavePosition)
-#ifdef USE_INITIAL_JULIAN_DATE
-        ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, InitialJulianDate, &AltAz);
-#else
-        ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, ln_get_julian_from_sys(), &AltAz);
-#endif
-    else
-    {
-        // The best I can do is just do a direct conversion to Alt/Az
-        TelescopeDirectionVector TDV = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
-        AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
-    }
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Conversion Failed - HavePosition %d", HavePosition);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New Altitude %lf degrees %ld microsteps Azimuth %lf degrees %ld microsteps",
-                                    AltAz.alt, DegreesToMicrosteps(AXIS2, AltAz.alt), AltAz.az, DegreesToMicrosteps(AXIS1, AltAz.az));
-
-    long AltitudeOffsetMicrosteps = DegreesToMicrosteps(AXIS2, AltAz.alt) + ZeroPositionEncoders[AXIS2] - CurrentEncoders[AXIS2];
-    long AzimuthOffsetMicrosteps = DegreesToMicrosteps(AXIS1, AltAz.az) + ZeroPositionEncoders[AXIS1] - CurrentEncoders[AXIS1];
-
-    // Do I need to take out any complete revolutions before I do this test?
-    if (AltitudeOffsetMicrosteps > MicrostepsPerRevolution[AXIS2] / 2)
-    {
-        // Going the long way round - send it the other way
-        AltitudeOffsetMicrosteps -= MicrostepsPerRevolution[AXIS2];
-    }
-
-    if (AzimuthOffsetMicrosteps > MicrostepsPerRevolution[AXIS1] / 2)
-    {
-        // Going the long way round - send it the other way
-        AzimuthOffsetMicrosteps -= MicrostepsPerRevolution[AXIS1];
-    }
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Initial Axis2 %ld microsteps Axis1 %ld microsteps",
-                                                    ZeroPositionEncoders[AXIS2], ZeroPositionEncoders[AXIS1]);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Current Axis2 %ld microsteps Axis1 %ld microsteps",
-                                                    CurrentEncoders[AXIS2], CurrentEncoders[AXIS1]);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Altitude offset %ld microsteps Azimuth offset %ld microsteps",
-                                                    AltitudeOffsetMicrosteps, AzimuthOffsetMicrosteps);
-}
-#endif
     return true;
 }
 
@@ -803,7 +740,7 @@ void SkywatcherAPIMount::TimerHit()
                 // Continue or start tracking
                 // Calculate where the mount needs to be in POLLMS time
                 // POLLMS is hardcoded to be one second
-                double JulianOffset = 1.0 / (24.0 * 60 * 60); // TODO may need to make this
+                double JulianOffset = 1.0 / (24.0 * 60 * 60); // TODO may need to make this longer to get a meaningful result
                 TelescopeDirectionVector TDV;
                 ln_hrz_posn AltAz;
                 if (TransformCelestialToTelescope(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec,
@@ -870,7 +807,47 @@ void SkywatcherAPIMount::TimerHit()
                                                                 AltitudeOffsetMicrosteps, AzimuthOffsetMicrosteps);
 
                 // Calculate the slewing rates needed to reach that position
-                // at the correct time and start the slew.
+                // at the correct time.
+                long AltitudeRate = long(double(StepperClockFrequency[AXIS2]) / double(AltitudeOffsetMicrosteps));
+                long AzimuthRate = long(double(StepperClockFrequency[AXIS1]) / double(AzimuthOffsetMicrosteps));
+
+                bool AbandonTrackingForThisClockTick = false;
+
+                if (!AxesStatus[AXIS1].FullStop)
+                {
+                    // Check for direction change
+                    if ((AxesStatus[AXIS1].SlewingForward && (AzimuthRate < 0)) || (!AxesStatus[AXIS1].SlewingForward && (AzimuthRate > 0)))
+                    {
+                        // Direction change whilst axis running
+                        // Abandon tracking for this clock tick
+                        SlowStop(AXIS1);
+                        AbandonTrackingForThisClockTick = true;
+                    }
+                }
+                else
+                    SetMotionMode(AXIS1, '1', AzimuthRate > 0 ? '0' : '1');
+
+                if (!AxesStatus[AXIS2].FullStop)
+                {
+                    // Check for direction change
+                    if ((AxesStatus[AXIS2].SlewingForward && (AltitudeRate < 0)) || (!AxesStatus[AXIS2].SlewingForward && (AltitudeRate > 0)))
+                    {
+                        // Direction change whilst axis running
+                        // Abandon tracking for this clock tick
+                        SlowStop(AXIS2);
+                        AbandonTrackingForThisClockTick = true;
+                    }
+                }
+                else
+                    SetMotionMode(AXIS2, '1', AltitudeRate > 0 ? '0' : '1');
+
+                if (AbandonTrackingForThisClockTick)
+                    return;
+
+                SetClockTicksPerMicrostep(AXIS1, AzimuthRate);
+                SetClockTicksPerMicrostep(AXIS2, AltitudeRate);
+                StartMotion(AXIS1);
+                StartMotion(AXIS2);
             }
             else
             {
