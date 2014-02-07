@@ -281,7 +281,7 @@ bool SkywatcherAPI::GetStatus(AXISID Axis)
         {
             // If the mount was doing a slew to
             GetEncoder(Axis);
-            MYDEBUGF(INDI::Logger::DBG_SESSION, "Axis %d SlewTo complete - offset to target %ld microsteps %lf arc seconds\n"
+            MYDEBUGF(INDI::Logger::DBG_SESSION, "Axis %d SlewTo complete - offset to target %ld microsteps %lf arc seconds "
                     "LastSlewToTarget %ld CurrentEncoder %ld",
                     Axis,
                     LastSlewToTarget[Axis] - CurrentEncoders[Axis],

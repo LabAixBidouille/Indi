@@ -96,7 +96,7 @@ private:
 
     // Tracking
     ln_equ_posn CurrentTrackingTarget;
-    double NewTrackingTarget[2];
+    long NewTrackingTarget[2];
 
 #ifdef USE_INITIAL_JULIAN_DATE
     double InitialJulianDate;
