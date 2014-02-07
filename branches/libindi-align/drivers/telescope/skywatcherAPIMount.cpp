@@ -811,16 +811,13 @@ void SkywatcherAPIMount::TimerHit()
                      // Calculate the slewing rates needed to reach that position
                     // at the correct time.
                     long AltitudeRate = long(double(StepperClockFrequency[AXIS2]) / double(AltitudeOffsetMicrosteps));
-                    if (!AxesStatus[AXIS2].FullStop)
+                    if (!AxesStatus[AXIS2].FullStop &&
+                        ((AxesStatus[AXIS2].SlewingForward && (AltitudeRate < 0)) || (!AxesStatus[AXIS2].SlewingForward && (AltitudeRate > 0))))
                     {
-                        // Check for direction change
-                        if ((AxesStatus[AXIS2].SlewingForward && (AltitudeRate < 0)) || (!AxesStatus[AXIS2].SlewingForward && (AltitudeRate > 0)))
-                        {
-                            // Direction change whilst axis running
-                            // Abandon tracking for this clock tick
-                            DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS2 direction change");
-                            SlowStop(AXIS2);
-                        }
+                        // Direction change whilst axis running
+                        // Abandon tracking for this clock tick
+                        DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS2 direction change");
+                        SlowStop(AXIS2);
                     }
                     else
                     {
@@ -851,16 +848,13 @@ void SkywatcherAPIMount::TimerHit()
                     // Calculate the slewing rates needed to reach that position
                     // at the correct time.
                     long AzimuthRate = long(double(StepperClockFrequency[AXIS1]) / double(AzimuthOffsetMicrosteps));
-                    if (!AxesStatus[AXIS1].FullStop)
+                    if (!AxesStatus[AXIS1].FullStop &&
+                        ((AxesStatus[AXIS1].SlewingForward && (AzimuthRate < 0)) || (!AxesStatus[AXIS1].SlewingForward && (AzimuthRate > 0))))
                     {
-                        // Check for direction change
-                        if ((AxesStatus[AXIS1].SlewingForward && (AzimuthRate < 0)) || (!AxesStatus[AXIS1].SlewingForward && (AzimuthRate > 0)))
-                        {
-                            // Direction change whilst axis running
-                            // Abandon tracking for this clock tick
-                            DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS1 direction change");
-                            SlowStop(AXIS1);
-                        }
+                        // Direction change whilst axis running
+                        // Abandon tracking for this clock tick
+                        DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS1 direction change");
+                        SlowStop(AXIS1);
                     }
                     else
                     {
