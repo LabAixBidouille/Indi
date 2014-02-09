@@ -90,6 +90,8 @@ struct TelescopeDirectionVector
         y /= length;
         z /= length;
     }
+
+    void RotateAroundY(double Angle);
 };
 
 /*!
