@@ -38,7 +38,7 @@ set (AlignmentDriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPlugin.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/MathPluginManagement.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/TelescopeDirectionVectorSupportFunctions.cpp
-        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/Common.h
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/Common.cpp
     )
 
 add_library(AlignmentDriver SHARED ${AlignmentDriver_SRCS})

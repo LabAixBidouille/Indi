@@ -268,26 +268,34 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
     switch (SyncPoints.size())
     {
         case 0:
+        {
             // 0 sync points
+            ln_hrz_posn ApparentAltAz;
+#ifdef USE_INITIAL_JULIAN_DATE
+            ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
+#else
+            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys() + JulianOffset, &ApparentAltAz);
+#endif
+
+            ApparentTelescopeDirectionVector = TelescopeDirectionVectorFromAltitudeAzimuth(ApparentAltAz);
+
             switch (ApproximateMountAlignment)
             {
                 case ZENITH:
-                    ln_hrz_posn ApparentAltAz;
-#ifdef USE_INITIAL_JULIAN_DATE
-                    ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
-#else
-                    ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys() + JulianOffset, &ApparentAltAz);
-#endif
-
-                    ApparentTelescopeDirectionVector = TelescopeDirectionVectorFromAltitudeAzimuth(ApparentAltAz);
                     break;
 
                 case NORTH_CELESTIAL_POLE:
-                case SOUTH_CELESTIAL_POLE: // TODO Check if I need to do anything different here.
+                    // I think I should rotate the TDV clockwise around the y axis by the observatory latitude
+                    ApparentTelescopeDirectionVector.RotateAroundY(-Position.lat);
+                    break;
+
+                case SOUTH_CELESTIAL_POLE:
+                    // I think I should rotate the TDV clockwise around the y axis by the observatory latitude
+                    ApparentTelescopeDirectionVector.RotateAroundY(-Position.lat);
                     break;
             }
             break;
-
+        }
         case 1:
         case 2:
         case 3:
@@ -375,9 +383,36 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
     switch (SyncPoints.size())
     {
         case 0:
-            // No alignment points
-            return false;
+        {
+            // 0 sync points
+            TelescopeDirectionVector RotatedTDV(ApparentTelescopeDirectionVector);
+            switch (ApproximateMountAlignment)
+            {
+                case ZENITH:
+                    break;
 
+                case NORTH_CELESTIAL_POLE:
+                    // I think I should rotate the TDV anti-clockwise around the y axis by the observatory latitude
+                    RotatedTDV.RotateAroundY(Position.lat);
+                    break;
+
+                case SOUTH_CELESTIAL_POLE:
+                    // I think I should rotate the TDV anti-clockwise around the y axis by the observatory latitude
+                    RotatedTDV.RotateAroundY(Position.lat);
+                    break;
+            }
+            ln_hrz_posn ApparentAltAz;
+            ln_equ_posn ActualRaDec;
+            AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, ApparentAltAz);
+#ifdef USE_INITIAL_JULIAN_DATE
+            ln_get_equ_from_hrz(&ApparentAltAz, &Position, SyncPoints[0].ObservationJulianDate, &ActualRaDec);
+#else
+            ln_get_equ_from_hrz(&ApparentAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
+#endif
+            RightAscension = ActualRaDec.ra;
+            Declination = ActualRaDec.dec;
+            break;
+        }
         case 1:
         case 2:
         case 3:
@@ -537,7 +572,7 @@ void BuiltInMathPlugin::MatrixMatrixMultipy(gsl_matrix *pA, gsl_matrix *pB, gsl_
 /// For our purposes the the matrix should be 3x3 and vector 3.
 void BuiltInMathPlugin::MatrixVectorMultipy(gsl_matrix *pA, gsl_vector *pB, gsl_vector *pC)
 {
-    // Zeroise the output matrix
+    // Zeroise the output vector
     gsl_vector_set_zero(pC);
 
     gsl_blas_dgemv(CblasNoTrans, 1.0, pA, pB, 0.0, pC);
