@@ -33,8 +33,11 @@ DummyMathPlugin::~DummyMathPlugin()
     //dtor
 }
 
-bool DummyMathPlugin::Initialise()
+bool DummyMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
 {
+    // Call the base class to initialise to in in memory database pointer
+    MathPlugin::Initialise(pInMemoryDatabase);
+
     return false;
 }
 

@@ -15,6 +15,8 @@ namespace AlignmentSubsystem {
 
 AlignmentSubsystemForDrivers::AlignmentSubsystemForDrivers()
 {
+    // Set up the in memory database pointer for math plugins
+    SetCurrentInMemoryDatabase(this);
     // Fix up the database load callback
     SetLoadDatabaseCallback(&MyDatabaseLoadCallback, this);
 }
@@ -76,7 +78,7 @@ void AlignmentSubsystemForDrivers::SetApproximateMountAlignmentFromMountType(Mou
 
 void AlignmentSubsystemForDrivers::MyDatabaseLoadCallback(void *ThisPointer)
 {
-    ((AlignmentSubsystemForDrivers*)ThisPointer)->Initialise();
+    ((AlignmentSubsystemForDrivers*)ThisPointer)->Initialise((AlignmentSubsystemForDrivers*)ThisPointer);
 }
 
 } // namespace AlignmentSubsystem

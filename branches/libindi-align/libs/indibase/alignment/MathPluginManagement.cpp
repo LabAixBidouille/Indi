@@ -235,7 +235,7 @@ void MathPluginManagement::ProcessSwitchProperties(Telescope* pTelescope, const 
         IDSetSwitch(&AlignmentSubsystemMathPluginInitialiseV, NULL);
 
         // Initialise or reinitialise the current math plugin
-        Initialise();
+        Initialise(CurrentInMemoryDatabase);
     }
 }
 
@@ -246,9 +246,14 @@ void MathPluginManagement::SaveConfigProperties(FILE *fp)
 
 // These must match the function signatures in MathPlugin
 
-bool MathPluginManagement::Initialise()
+bool MathPluginManagement::Initialise(InMemoryDatabase* pInMemoryDatabase)
 {
-    return (pLoadedMathPlugin->*pInitialise)();
+    return (pLoadedMathPlugin->*pInitialise)(pInMemoryDatabase);
+}
+
+void MathPluginManagement::SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment)
+{
+    (pLoadedMathPlugin->*pSetApproximateMountAlignment)(ApproximateAlignment);
 }
 
 bool MathPluginManagement::TransformCelestialToTelescope(const double RightAscension, const double Declination, double JulianOffset,

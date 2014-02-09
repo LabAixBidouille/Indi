@@ -35,9 +35,11 @@ class MathPluginManagement : public MathPlugin // Derive from MathPluign to forc
 {
 public:
     MathPluginManagement() : pInitialise(&MathPlugin::Initialise),
+                            pSetApproximateMountAlignment(&MathPlugin::SetApproximateMountAlignment),
                             pTransformCelestialToTelescope(&MathPlugin::TransformCelestialToTelescope),
                             pTransformTelescopeToCelestial(&MathPlugin::TransformTelescopeToCelestial),
-                            pLoadedMathPlugin(&BuiltInPlugin), LoadedMathPluginHandle(NULL) {}
+                            pLoadedMathPlugin(&BuiltInPlugin), LoadedMathPluginHandle(NULL),
+                            CurrentInMemoryDatabase(NULL) {}
     virtual ~MathPluginManagement() {}
 
     /** \brief Initilize alignment math plugin properties. It is recommended to call this function within initProperties() of your primary device
@@ -72,8 +74,11 @@ public:
     */
     void SaveConfigProperties(FILE *fp);
 
+    void SetCurrentInMemoryDatabase(InMemoryDatabase* pDatabase) { CurrentInMemoryDatabase = pDatabase; }
+
     // These must match the function signatures in MathPlugin
-    bool Initialise();
+    bool Initialise(InMemoryDatabase* pInMemoryDatabase);
+    void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment);
     bool TransformCelestialToTelescope(const double RightAscension, const double Declination, double JulianOffset,
                                             TelescopeDirectionVector& ApparentTelescopeDirectionVector);
     bool TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination);
@@ -89,13 +94,16 @@ private:
     ISwitch AlignmentSubsystemMathPluginInitialise;
     ISwitchVectorProperty AlignmentSubsystemMathPluginInitialiseV;
 
+    InMemoryDatabase* CurrentInMemoryDatabase;
+
     // The following property is used for configuration purposes only and is not propagated to the client
     IText AlignmentSubsystemCurrentMathPlugin;
     ITextVectorProperty AlignmentSubsystemCurrentMathPluginV;
 
     // The following hold links to the current loaded math plugin
     // These must match the function signatures in MathPlugin
-    bool (MathPlugin::*pInitialise)();
+    bool (MathPlugin::*pInitialise)(InMemoryDatabase* pInMemoryDatabase);
+    void (MathPlugin::*pSetApproximateMountAlignment)(MountAlignment_t ApproximateAlignment);
     bool (MathPlugin::*pTransformCelestialToTelescope)(const double RightAscension, const double Declination, double JulianOffset,
                                                         TelescopeDirectionVector& TelescopeDirectionVector);
     bool (MathPlugin::*pTransformTelescopeToCelestial)(const TelescopeDirectionVector& TelescopeDirectionVector, double& RightAscension, double& Declination);
