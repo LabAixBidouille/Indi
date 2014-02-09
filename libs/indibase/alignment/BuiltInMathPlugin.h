@@ -19,7 +19,7 @@ public:
     BuiltInMathPlugin();
     virtual ~BuiltInMathPlugin();
 
-    virtual bool Initialise();
+    virtual bool Initialise(InMemoryDatabase* pInMemoryDatabase);
 
     virtual bool TransformCelestialToTelescope(const double RightAscension, const double Declination, double JulianOffset,
                                                     TelescopeDirectionVector& ApparentTelescopeDirectionVector);

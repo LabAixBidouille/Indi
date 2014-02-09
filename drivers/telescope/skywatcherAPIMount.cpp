@@ -17,6 +17,7 @@
 #include "libs/indicom.h"
 #include "indibase/alignment/DriverCommon.h"   // For DBG_ALIGNMENT
 
+#include <unistd.h> // for sleep
 #include <memory>
 #include <cmath>
 #include <limits>
@@ -81,6 +82,7 @@ const char * SkywatcherAPIMount::DetailedMountInfoPage = "Detailed Mount Informa
 
 SkywatcherAPIMount::SkywatcherAPIMount()
 {
+    sleep(120);
     // Set up the logging pointer in SkyWatcherAPI
     pChildTelescope = this;
     PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
@@ -160,20 +162,16 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
     }
     else
     {
+        // Try a conversion with the stored observatory position if any
         bool HavePosition = false;
         ln_lnlat_posn Position;
-        if (GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
-            HavePosition = true;
-        else
+        if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
+            && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
         {
-            if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
-                && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
-            {
-                // I assume that being on the equator and exactly on the prime meridian is unlikely
-                Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
-                Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
-                HavePosition = true;
-            }
+            // I assume that being on the equator and exactly on the prime meridian is unlikely
+            Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
+            Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
+            HavePosition = true;
         }
         struct ln_equ_posn EquatorialCoordinates;
         // libnova works in decimal degrees
@@ -758,20 +756,16 @@ void SkywatcherAPIMount::TimerHit()
                     AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
                 else
                 {
+                    // Try a conversion with the stored observatory position if any
                     bool HavePosition = false;
                     ln_lnlat_posn Position;
-                    if (GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
-                        HavePosition = true;
-                    else
+                    if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
+                        && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
                     {
-                        if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
-                            && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
-                        {
-                            // I assume that being on the equator and exactly on the prime meridian is unlikely
-                            Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
-                            Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
-                            HavePosition = true;
-                        }
+                        // I assume that being on the equator and exactly on the prime meridian is unlikely
+                        Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
+                        Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
+                        HavePosition = true;
                     }
                     struct ln_equ_posn EquatorialCoordinates;
                     // libnova works in decimal degrees

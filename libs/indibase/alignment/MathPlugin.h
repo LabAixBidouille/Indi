@@ -10,6 +10,7 @@
 #define INDI_ALIGNMENTSUBSYSTEM_MATHPLUGIN_H
 
 #include "Common.h"
+#include "InMemoryDatabase.h"
 
 namespace INDI {
 namespace AlignmentSubsystem {
@@ -46,11 +47,11 @@ public:
 
     /// \brief Initialise or re-initialise the math plugin. Re-reading the in memory database as necessary.
     /// \return True if successful
-    virtual bool Initialise() = 0;
+    virtual bool Initialise(InMemoryDatabase* pInMemoryDatabase);
 
     /// \brief Set the approximate alognment of the mount
     /// \param[in] ApproximateAlignment - the approximate alignment of the mount
-    void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment) { ApproximateMountAlignment = ApproximateAlignment; }
+    virtual void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment) { ApproximateMountAlignment = ApproximateAlignment; }
 
     /// \brief Get the alignment corrected telescope pointing direction for the supplied celestial coordinates
     /// \param[in] RightAscension Right Ascension (Decimal Hours).
@@ -73,6 +74,8 @@ protected:
     /// \brief Describe the approximate alignment of the mount. This information is normally used in a one star alignment
     /// calculation.
     MountAlignment_t ApproximateMountAlignment;
+    InMemoryDatabase *pInMemoryDatabase;
+
 
 };
 

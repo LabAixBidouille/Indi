@@ -28,9 +28,11 @@ BuiltInMathPlugin::~BuiltInMathPlugin()
 
 // Public methods
 
-bool BuiltInMathPlugin::Initialise()
+bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
 {
-    ASSDEBUG("Test message");
+    MathPlugin::Initialise(pInMemoryDatabase);
+    InMemoryDatabase::AlignmentDatabaseType& SyncPoints = pInMemoryDatabase->GetAlignmentDatabase();
+
     /// See how many entries there are in the in memory database.
     /// - If just one use a hint to mounts approximate alignment, this can either be ZENITH,
     /// NORTH_CELESTIAL_POLE or SOUTH_CELESTIAL_POLE. The hint is used to make a dummy second
@@ -40,77 +42,20 @@ bool BuiltInMathPlugin::Initialise()
     /// - If three compute a transform matrix.
     /// - If four or more compute a convex hull, then matrices for each
     /// triangular facet of the hull.
-    AlignmentDatabaseType& SyncPoints = GetAlignmentDatabase();
     switch (SyncPoints.size())
     {
         case 0:
-            return false;
+            // Not sure whether to return false or true here
+            return true;
 
         case 1:
         {
-#if 0
-            // Compute local horizontal coordinate offsets
-            AlignmentDatabaseEntry& Entry = GetAlignmentDatabase()[0];
-            ln_equ_posn RaDec;
-            ln_lnlat_posn Position;
-            if (!GetDatabaseReferencePosition(Position))
-                return false;
-            RaDec.dec = Entry.Declination;
-            RaDec.ra = Entry.RightAscension;
-            switch (ApproximateMountAlignment)
-            {
-                case ZENITH:
-                    ln_hrz_posn AltAz;
-                    ln_hrz_posn MountAltAz;
-                   // Probably an altaz goto or a dobsonian
-                    // Translate sync point RA/DEC into alt/az (clockwise from South) for the
-                    // date and time of the sync point observation.
-                    ln_get_hrz_from_equ(&RaDec, &Position, Entry.ObservationJulianDate, &AltAz);
-                    // Translate the mount coordinates from the sync point into similar clockwise coordinate space
-                    AltitudeAzimuthFromNormalisedDirectionVector(Entry.TelescopeDirection, MountAltAz);
-                    SinglePointOffsetsAltAz.alt = AltAz.alt - MountAltAz.alt;
-                    SinglePointOffsetsAltAz.az = AltAz.az - MountAltAz.az;
-                    break;
-
-                case NORTH_CELESTIAL_POLE:
-                {
-                    // THIS IS RUBBISH!!!!!!!! I need to review it.
-                    // Equatorial in the northern hemisphere
-                    ln_equ_posn AdjustedEquatorialCoordinate;
-                    ln_equ_posn MountEquatorialCoordinate;
-                    double GreenwichMeanSiderealTime = ln_get_mean_sidereal_time(Entry.ObservationJulianDate);
-                    // Convert time to degrees
-                    GreenwichMeanSiderealTime *= 360.0 / 24.0;
-                    // Convert right ascension to local hour angle
-                    // LHA = GMST + Longitude (positive east) - RA
-                    AdjustedEquatorialCoordinate.ra = GreenwichMeanSiderealTime + Position.lng - RaDec.ra;
-                    // N.B. this has converted the ra value from ANTI_CLOCKWISE to CLOCKWISE
-
-                    // Convert declination to elevation measured from equatorial plane towards the north celestial pole
-                    // I am really guessing here !!!!!
-                    AdjustedEquatorialCoordinate.dec = 90.0 - RaDec.dec;
-
-
-                    LocalHourAngleDeclinationFromTelescopeDirectionVector(Entry.TelescopeDirection, MountEquatorialCoordinate);
-                    SinglePointsOffsetsRaDec.ra =  AdjustedEquatorialCoordinate.ra - MountEquatorialCoordinate.ra;
-                    SinglePointsOffsetsRaDec.dec =  AdjustedEquatorialCoordinate.dec - MountEquatorialCoordinate.dec;
-                    break;
-                }
-
-                case SOUTH_CELESTIAL_POLE:
-                    // My brain has stalled. I assume I reverse the rotation of the hour angle calc
-                    // and fudge the declination to elevation measured from the equatorial plane towards the south celestial pole
-                    return false;
-
-            }
-            return true;
-#else
             // Compute local horizontal coordinate offsets
             AlignmentDatabaseEntry& Entry1 = SyncPoints[0];
             ln_equ_posn RaDec;
             ln_hrz_posn ActualSyncPoint1;
             ln_lnlat_posn Position;
-            if (!GetDatabaseReferencePosition(Position))
+            if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position))
                 return false;
             RaDec.dec = Entry1.Declination;
             RaDec.ra = Entry1.RightAscension;
@@ -156,7 +101,6 @@ bool BuiltInMathPlugin::Initialise()
                                 Entry1.TelescopeDirection, DummyApparentDirectionCosine2, Entry1.TelescopeDirection * DummyApparentDirectionCosine2,
                                 pActualToApparentTransform, pApparentToActualTransform);
             return true;
-#endif
         }
         case 2:
         {
@@ -172,7 +116,7 @@ bool BuiltInMathPlugin::Initialise()
             RaDec2.dec = Entry2.Declination;
             RaDec2.ra = Entry2.RightAscension;
             ln_lnlat_posn Position;
-            if (!GetDatabaseReferencePosition(Position))
+            if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position))
                 return false;
             ln_get_hrz_from_equ(&RaDec1, &Position, Entry1.ObservationJulianDate, &ActualSyncPoint1);
             ln_get_hrz_from_equ(&RaDec2, &Position, Entry2.ObservationJulianDate, &ActualSyncPoint2);
@@ -207,7 +151,7 @@ bool BuiltInMathPlugin::Initialise()
             RaDec3.dec = Entry3.Declination;
             RaDec3.ra = Entry3.RightAscension;
             ln_lnlat_posn Position;
-            if (!GetDatabaseReferencePosition(Position))
+            if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position))
                 return false;
             ln_get_hrz_from_equ(&RaDec1, &Position, Entry1.ObservationJulianDate, &ActualSyncPoint1);
             ln_get_hrz_from_equ(&RaDec2, &Position, Entry2.ObservationJulianDate, &ActualSyncPoint2);
@@ -228,7 +172,7 @@ bool BuiltInMathPlugin::Initialise()
         default:
         {
             ln_lnlat_posn Position;
-            if (!GetDatabaseReferencePosition(Position))
+            if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position))
                 return false;
 
             // Compute Hulls etc.
@@ -242,7 +186,7 @@ bool BuiltInMathPlugin::Initialise()
 
             int VertexNumber = 1;
             // Add the rest of the vertices
-            for (AlignmentDatabaseType::const_iterator Itr = SyncPoints.begin(); Itr != SyncPoints.end(); Itr++)
+            for (InMemoryDatabase::AlignmentDatabaseType::const_iterator Itr = SyncPoints.begin(); Itr != SyncPoints.end(); Itr++)
             {
                 ln_equ_posn RaDec;
                 ln_hrz_posn ActualSyncPoint;
@@ -314,37 +258,28 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
 {
     ln_equ_posn ActualRaDec;
     ln_hrz_posn ActualAltAz;
-    ActualRaDec.ra = RightAscension;
+    ActualRaDec.ra = RightAscension * 360.0 / 24.0;
     ActualRaDec.dec = Declination;
     ln_lnlat_posn Position;
-    if (!GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+    if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
         return false;
 
-    AlignmentDatabaseType& SyncPoints = GetAlignmentDatabase();
+    InMemoryDatabase::AlignmentDatabaseType& SyncPoints = pInMemoryDatabase->GetAlignmentDatabase();
     switch (SyncPoints.size())
     {
         case 0:
-            // No alignment points
-            return false;
-
-#if 0
-        case 1:
-            // 1 alignment point. Use the stored single point offsets
+            // 0 sync points
             switch (ApproximateMountAlignment)
             {
                 case ZENITH:
-                    ln_hrz_posn ActualAltAz;
                     ln_hrz_posn ApparentAltAz;
-                    ln_lnlat_posn Position;
-                    if (!GetDatabaseReferencePosition(Position))
-                        return false;
-                    // Hmmm.. should I get the julian date from the observatory clock
-                    ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys(), &ActualAltAz);
+#ifdef USE_INITIAL_JULIAN_DATE
+                    ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
+#else
+                    ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys() + JulianOffset, &ApparentAltAz);
+#endif
 
-                    ApparentAltAz.alt = ActualAltAz.alt - SinglePointOffsetsAltAz.alt;
-                    ApparentAltAz.az = ActualAltAz.az - SinglePointOffsetsAltAz.az;
-
-                    TelescopeDirectionVector = TelescopeDirectionVectorFromAltitudeAzimuth(ApparentAltAz);
+                    ApparentTelescopeDirectionVector = TelescopeDirectionVectorFromAltitudeAzimuth(ApparentAltAz);
                     break;
 
                 case NORTH_CELESTIAL_POLE:
@@ -352,16 +287,15 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
                     break;
             }
             break;
-#else
+
         case 1:
-#endif
         case 2:
         case 3:
         {
 #ifdef USE_INITIAL_JULIAN_DATE
             ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
 #else
-            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys(), &ActualAltAz);
+            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys() + JulianOffset, &ActualAltAz);
 #endif
             TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
             ln_hrz_posn ApparentAltAz;
@@ -434,10 +368,10 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
 bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination)
 {
     ln_lnlat_posn Position;
-    if (!GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+    if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
         return false;
 
-    AlignmentDatabaseType& SyncPoints = GetAlignmentDatabase();
+    InMemoryDatabase::AlignmentDatabaseType& SyncPoints = pInMemoryDatabase->GetAlignmentDatabase();
     switch (SyncPoints.size())
     {
         case 0:
@@ -476,8 +410,6 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
 
         default:
         {
-            AlignmentDatabaseType& SyncPoints = GetAlignmentDatabase();
-
             // Scale the apparent telescope direction vector to make sure it traverses the unit sphere.
             TelescopeDirectionVector ScaledApparentVector = ApparentTelescopeDirectionVector * 2.0;
             // Shoot the scaled vector in the into the list of apparent facets

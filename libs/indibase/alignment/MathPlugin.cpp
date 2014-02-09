@@ -11,6 +11,11 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+bool MathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
+{
+    MathPlugin::pInMemoryDatabase = pInMemoryDatabase;
+    return true;
+}
 
 } // namespace AlignmentSubsystem
 } // namespace INDI
