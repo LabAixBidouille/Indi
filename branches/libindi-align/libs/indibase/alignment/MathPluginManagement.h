@@ -31,10 +31,16 @@ namespace AlignmentSubsystem {
  *
  *  This class also provides function links to the currently selected math plugin
  */
-class MathPluginManagement : public MathPlugin // Derive from MathPluign to force the function signatures to match
+class MathPluginManagement : private MathPlugin // Derive from MathPluign to force the function signatures to match
 {
 public:
-    MathPluginManagement() : pInitialise(&MathPlugin::Initialise),
+    /** \enum MountType
+        \brief Describes the basic type of the mount.
+    */
+    typedef  enum MountType { EQUATORIAL, ALTAZ } MountType_t;
+
+    MathPluginManagement() : pGetApproximateMountAlignment(&MathPlugin::GetApproximateMountAlignment),
+                            pInitialise(&MathPlugin::Initialise),
                             pSetApproximateMountAlignment(&MathPlugin::SetApproximateMountAlignment),
                             pTransformCelestialToTelescope(&MathPlugin::TransformCelestialToTelescope),
                             pTransformTelescopeToCelestial(&MathPlugin::TransformTelescopeToCelestial),
@@ -74,9 +80,21 @@ public:
     */
     void SaveConfigProperties(FILE *fp);
 
+    /** \brief Call this function to set the ApproximateMountAlignment property of the current
+        Math Plugin. The alignment database should be initialised before this function is called
+        so that it can use the DatabaseReferencePosition to determine which hemisphere the
+        current observing site is in. For equatorial the ApproximateMountAlignment property
+        will set to NORTH_CELESTIAL_POLE for sites in the northern hemisphere and SOUTH_CELESTIAL_POLE
+        for sites in the southern hemisphere. For altaz mounts the ApproximateMountAlignment will
+        be set to ZENITH.
+        \param[in] Type the mount type either EQUATORIAL or ALTAZ
+    */
+    void SetApproximateMountAlignmentFromMountType(MountType_t Type);
+
     void SetCurrentInMemoryDatabase(InMemoryDatabase* pDatabase) { CurrentInMemoryDatabase = pDatabase; }
 
     // These must match the function signatures in MathPlugin
+    MountAlignment_t GetApproximateMountAlignment();
     bool Initialise(InMemoryDatabase* pInMemoryDatabase);
     void SetApproximateMountAlignment(MountAlignment_t ApproximateAlignment);
     bool TransformCelestialToTelescope(const double RightAscension, const double Declination, double JulianOffset,
@@ -102,6 +120,7 @@ private:
 
     // The following hold links to the current loaded math plugin
     // These must match the function signatures in MathPlugin
+    MountAlignment_t (MathPlugin::*pGetApproximateMountAlignment)();
     bool (MathPlugin::*pInitialise)(InMemoryDatabase* pInMemoryDatabase);
     void (MathPlugin::*pSetApproximateMountAlignment)(MountAlignment_t ApproximateAlignment);
     bool (MathPlugin::*pTransformCelestialToTelescope)(const double RightAscension, const double Declination, double JulianOffset,

@@ -82,7 +82,6 @@ const char * SkywatcherAPIMount::DetailedMountInfoPage = "Detailed Mount Informa
 
 SkywatcherAPIMount::SkywatcherAPIMount()
 {
-    sleep(120);
     // Set up the logging pointer in SkyWatcherAPI
     pChildTelescope = this;
     PreviousNSMotion = PREVIOUS_NS_MOTION_UNKNOWN;
@@ -178,11 +177,32 @@ bool SkywatcherAPIMount::Goto(double ra,double dec)
         EquatorialCoordinates.ra = ra * 360.0 / 24.0;
         EquatorialCoordinates.dec = dec;
         if (HavePosition)
+        {
 #ifdef USE_INITIAL_JULIAN_DATE
             ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, InitialJulianDate, &AltAz);
 #else
             ln_get_hrz_from_equ(&EquatorialCoordinates, &Position, ln_get_julian_from_sys(), &AltAz);
 #endif
+            TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+            switch (GetApproximateMountAlignment())
+            {
+                case ZENITH:
+                    break;
+
+                case NORTH_CELESTIAL_POLE:
+                    // Rotate the TDV coordinate system clockwise (negative) around the y axis by 90 minus
+                    // the (positive)observatory latitude. The vector itself is rotated anticlockwise
+                    TDV.RotateAroundY(Position.lat - 90.0);
+                    break;
+
+                case SOUTH_CELESTIAL_POLE:
+                    // Rotate the TDV coordinate system anticlockwise (positive) around the y axis by 90 plus
+                    // the (negative)observatory latitude. The vector itself is rotated clockwise
+                    TDV.RotateAroundY(Position.lat + 90.0);
+                    break;
+            }
+            AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
+        }
         else
         {
             // The best I can do is just do a direct conversion to Alt/Az
@@ -623,22 +643,37 @@ bool SkywatcherAPIMount::ReadScopeStatus()
     {
         bool HavePosition = false;
         ln_lnlat_posn Position;
-        if (GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
-            HavePosition = true;
-        else
+        if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
+            && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
         {
-            if ((NULL != IUFindNumber(&LocationNP, "LAT")) && ( 0 != IUFindNumber(&LocationNP, "LAT")->value)
-                && (NULL != IUFindNumber(&LocationNP, "LONG")) && ( 0 != IUFindNumber(&LocationNP, "LONG")->value))
-            {
-                // I assume that being on the equator and exactly on the prime meridian is unlikely
-                Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
-                Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
-                HavePosition = true;
-            }
+            // I assume that being on the equator and exactly on the prime meridian is unlikely
+            Position.lat = IUFindNumber(&LocationNP, "LAT")->value;
+            Position.lng = IUFindNumber(&LocationNP, "LONG")->value;
+            HavePosition = true;
         }
         struct ln_equ_posn EquatorialCoordinates;
         if (HavePosition)
         {
+            TelescopeDirectionVector RotatedTDV(TDV);
+            switch (GetApproximateMountAlignment())
+            {
+                case ZENITH:
+                    break;
+
+                case NORTH_CELESTIAL_POLE:
+                    // Rotate the TDV coordinate system anticlockwise (positive) around the y axis by 90 minus
+                    // the (positive)observatory latitude. The vector itself is rotated clockwise
+                    RotatedTDV.RotateAroundY(90.0 - Position.lat);
+                    AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, AltAz);
+                    break;
+
+                case SOUTH_CELESTIAL_POLE:
+                    // Rotate the TDV coordinate system clockwise (negative) around the y axis by 90 plus
+                    // the (negative)observatory latitude. The vector itself is rotated anticlockwise
+                    RotatedTDV.RotateAroundY(-90.0 - Position.lat);
+                    AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, AltAz);
+                    break;
+            }
 #ifdef USE_INITIAL_JULIAN_DATE
             ln_get_equ_from_hrz(&AltAz, &Position, InitialJulianDate, &EquatorialCoordinates);
 #else

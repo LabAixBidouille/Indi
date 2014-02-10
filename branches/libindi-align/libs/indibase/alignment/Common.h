@@ -18,6 +18,12 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+/** \enum MountAlignment
+    \brief Describe the alignment of a telescope axis. This is normally used to differentiate between
+    equatorial mounts in differnet hemispheres and altaz or dobsonian mounts.
+*/
+typedef enum  MountAlignment { ZENITH, NORTH_CELESTIAL_POLE, SOUTH_CELESTIAL_POLE} MountAlignment_t;
+
 enum AlignmentDatabaseActions { APPEND, INSERT, EDIT, DELETE, CLEAR, READ, READ_INCREMENT, LOAD_DATABASE, SAVE_DATABASE };
 
 enum AlignmentPointSetEnum {ENTRY_OBSERVATION_JULIAN_DATE, ENTRY_RA, ENTRY_DEC, ENTRY_VECTOR_X, ENTRY_VECTOR_Y, ENTRY_VECTOR_Z};
