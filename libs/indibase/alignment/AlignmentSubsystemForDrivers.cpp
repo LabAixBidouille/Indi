@@ -17,6 +17,8 @@ AlignmentSubsystemForDrivers::AlignmentSubsystemForDrivers()
 {
     // Set up the in memory database pointer for math plugins
     SetCurrentInMemoryDatabase(this);
+    // Tell the built in math plugin about it
+    Initialise(this);
     // Fix up the database load callback
     SetLoadDatabaseCallback(&MyDatabaseLoadCallback, this);
 }
@@ -53,25 +55,6 @@ void AlignmentSubsystemForDrivers::ProcessTextProperties(Telescope* pTelescope, 
 void AlignmentSubsystemForDrivers::SaveConfigProperties(FILE *fp)
 {
     MathPluginManagement::SaveConfigProperties(fp);
-}
-
-void AlignmentSubsystemForDrivers::SetApproximateMountAlignmentFromMountType(MountType_t Type)
-{
-    if (EQUATORIAL == Type)
-    {
-        ln_lnlat_posn Position;
-        if (GetDatabaseReferencePosition(Position))
-        {
-            if (Position.lat >= 0)
-                SetApproximateMountAlignment(NORTH_CELESTIAL_POLE);
-            else
-                SetApproximateMountAlignment(SOUTH_CELESTIAL_POLE);
-        }
-        //else
-        // TODO some kind of error!!!
-    }
-    else
-        SetApproximateMountAlignment(ZENITH);
 }
 
 // Private methods

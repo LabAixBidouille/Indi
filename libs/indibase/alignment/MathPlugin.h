@@ -31,12 +31,6 @@ class MathPlugin
 {
 public:
 
-    /** \enum MountAlignment
-        \brief Describe the alignment of a telescope axis. This is normally used to differentiate between
-        equatorial mounts in differnet hemispheres and altaz or dobsonian mounts.
-    */
-    typedef enum  MountAlignment { ZENITH, NORTH_CELESTIAL_POLE, SOUTH_CELESTIAL_POLE} MountAlignment_t;
-
     MathPlugin(MountAlignment_t ApproximateAlignment = ZENITH) : ApproximateMountAlignment(ApproximateAlignment) {}
 
     // Constructor
@@ -44,6 +38,9 @@ public:
     virtual ~MathPlugin() {}
 
     // Public methods
+    /// \brief Get the approximate alognment of the mount
+    /// \return the approximate alignment
+    virtual MountAlignment_t GetApproximateMountAlignment() { return ApproximateMountAlignment; }
 
     /// \brief Initialise or re-initialise the math plugin. Re-reading the in memory database as necessary.
     /// \return True if successful

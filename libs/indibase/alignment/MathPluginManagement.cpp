@@ -244,7 +244,31 @@ void MathPluginManagement::SaveConfigProperties(FILE *fp)
     IUSaveConfigText(fp, &AlignmentSubsystemCurrentMathPluginV);
 }
 
+void MathPluginManagement::SetApproximateMountAlignmentFromMountType(MountType_t Type)
+{
+    if (EQUATORIAL == Type)
+    {
+        ln_lnlat_posn Position;
+        if (CurrentInMemoryDatabase->GetDatabaseReferencePosition(Position))
+        {
+            if (Position.lat >= 0)
+                SetApproximateMountAlignment(NORTH_CELESTIAL_POLE);
+            else
+                SetApproximateMountAlignment(SOUTH_CELESTIAL_POLE);
+        }
+        //else
+        // TODO some kind of error!!!
+    }
+    else
+        SetApproximateMountAlignment(ZENITH);
+}
+
 // These must match the function signatures in MathPlugin
+
+MountAlignment_t MathPluginManagement::GetApproximateMountAlignment()
+{
+    return (pLoadedMathPlugin->*pGetApproximateMountAlignment)();
+}
 
 bool MathPluginManagement::Initialise(InMemoryDatabase* pInMemoryDatabase)
 {

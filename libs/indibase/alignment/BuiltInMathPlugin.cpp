@@ -261,7 +261,8 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
     ActualRaDec.ra = RightAscension * 360.0 / 24.0;
     ActualRaDec.dec = Declination;
     ln_lnlat_posn Position;
-    if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+
+    if ((NULL == pInMemoryDatabase) || !pInMemoryDatabase->GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
         return false;
 
     InMemoryDatabase::AlignmentDatabaseType& SyncPoints = pInMemoryDatabase->GetAlignmentDatabase();
@@ -285,13 +286,15 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
                     break;
 
                 case NORTH_CELESTIAL_POLE:
-                    // I think I should rotate the TDV clockwise around the y axis by the observatory latitude
-                    ApparentTelescopeDirectionVector.RotateAroundY(-Position.lat);
+                    // Rotate the TDV coordinate system clockwise (negative) around the y axis by 90 minus
+                    // the (positive)observatory latitude. The vector itself is rotated anticlockwise
+                    ApparentTelescopeDirectionVector.RotateAroundY(Position.lat - 90.0);
                     break;
 
                 case SOUTH_CELESTIAL_POLE:
-                    // I think I should rotate the TDV clockwise around the y axis by the observatory latitude
-                    ApparentTelescopeDirectionVector.RotateAroundY(-Position.lat);
+                    // Rotate the TDV coordinate system anticlockwise (positive) around the y axis by 90 plus
+                    // the (negative)observatory latitude. The vector itself is rotated clockwise
+                    ApparentTelescopeDirectionVector.RotateAroundY(Position.lat + 90.0);
                     break;
             }
             break;
@@ -376,7 +379,8 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
 bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination)
 {
     ln_lnlat_posn Position;
-    if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
+
+    if ((NULL == pInMemoryDatabase) || !pInMemoryDatabase->GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
         return false;
 
     InMemoryDatabase::AlignmentDatabaseType& SyncPoints = pInMemoryDatabase->GetAlignmentDatabase();
@@ -392,13 +396,15 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
                     break;
 
                 case NORTH_CELESTIAL_POLE:
-                    // I think I should rotate the TDV anti-clockwise around the y axis by the observatory latitude
-                    RotatedTDV.RotateAroundY(Position.lat);
+                    // Rotate the TDV coordinate system anticlockwise (positive) around the y axis by 90 minus
+                    // the (positive)observatory latitude. The vector itself is rotated clockwise
+                    RotatedTDV.RotateAroundY(90.0 - Position.lat);
                     break;
 
                 case SOUTH_CELESTIAL_POLE:
-                    // I think I should rotate the TDV anti-clockwise around the y axis by the observatory latitude
-                    RotatedTDV.RotateAroundY(Position.lat);
+                    // Rotate the TDV coordinate system clockwise (negative) around the y axis by 90 plus
+                    // the (negative)observatory latitude. The vector itself is rotated anticlockwise
+                    RotatedTDV.RotateAroundY(-90.0 - Position.lat);
                     break;
             }
             ln_hrz_posn ApparentAltAz;
@@ -409,7 +415,7 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
 #else
             ln_get_equ_from_hrz(&ApparentAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
 #endif
-            RightAscension = ActualRaDec.ra;
+            RightAscension = ActualRaDec.ra * 24.0 / 360.0;
             Declination = ActualRaDec.dec;
             break;
         }
