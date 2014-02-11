@@ -24,7 +24,9 @@ namespace AlignmentSubsystem {
 class TelescopeDirectionVectorSupportFunctions
 {
 public:
+    /// \brief Virtual destructor
     virtual ~TelescopeDirectionVectorSupportFunctions() {}
+
     /*!
      * \enum AzimuthAngleDirection
      * The direction of measurement of an azimuth angle.
@@ -181,7 +183,7 @@ public:
     };
 
     /*! \brief Calculates a telescope direction vector from the supplied equatorial coordinates.
-     * \param[in] EquatorialCoordinates The equatorial cordinates in decimal degrees
+     * \param[in] EquatorialCoordinates The equatorial coordinates in decimal degrees
      * \return A TelescopeDirectionVector
      * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
      */
@@ -191,7 +193,7 @@ public:
     };
 
     /*! \brief Calculates a telescope direction vector from the supplied equatorial coordinates.
-     * \param[in] EquatorialCoordinates The equatorial cordinates in hours minutes seconds and degrees minutes seconds
+     * \param[in] EquatorialCoordinates The equatorial coordinates in hours minutes seconds and degrees minutes seconds
      * \return A TelescopeDirectionVector
      * \note This assumes a right handed coordinate system for the direction vector with the right ascension being in the XY plane.
      */
@@ -216,7 +218,7 @@ public:
      * \param[in] PolarAngle The polar angle in radians
      * \param[in] PolarAngleDirection The direction the polar angle has been measured either FROM_POLAR_AXIS or FROM_AZIMUTHAL_PLANE
      * \return A TelescopeDirectionVector
-     * \note TelescopeDirectionVectors are always normalised and right handed.
+     * \note TelescopeDirectionVectors are always assumed to be normalised and right handed.
      */
     const TelescopeDirectionVector TelescopeDirectionVectorFromSphericalCoordinate(const double AzimuthAngle, AzimuthAngleDirection_t AzimuthAngleDirection,
                                                                                             const double PolarAngle, PolarAngleDirection_t PolarAngleDirection);

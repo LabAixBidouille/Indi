@@ -24,7 +24,10 @@ namespace AlignmentSubsystem {
 class InMemoryDatabase
 {
 public:
+    /// \brief Default constructor
     InMemoryDatabase() : LoadDatabaseCallback(0), DatabaseReferencePositionIsValid(false) {}
+
+    /// \brief Virtual destructor
     virtual ~InMemoryDatabase() {}
 
     typedef std::vector<AlignmentDatabaseEntry> AlignmentDatabaseType;
@@ -36,6 +39,9 @@ public:
     */
     AlignmentDatabaseType& GetAlignmentDatabase() { return MySyncPoints; }
 
+    /// \brief Get the database reference position
+    /// \param[in] Position A pointer to a ln_lnlat_posn object to retunr the current position in
+    /// \return True if successful
     bool GetDatabaseReferencePosition(ln_lnlat_posn& Position);
 
     /** \brief Load the database from persistent storage
@@ -50,9 +56,16 @@ public:
     */
     bool SaveDatabase(const char* DeviceName);
 
+    /// \brief Set the database reference position
+    /// \param[in] Latitude
+    /// \param[in] Longitude
     void SetDatabaseReferencePosition(double Latitude, double Longitude);
 
     typedef void (*LoadDatabaseCallbackPointer_t)(void *);
+
+    /// \brief Set the function to be called when the database is loaded or reloaded
+    /// \param[in] CallbackPointer A pointer to the class function to call
+    /// \param[in] ThisPointer A pointer to the class object of the callback function
     void SetLoadDatabaseCallback(LoadDatabaseCallbackPointer_t CallbackPointer, void *ThisPointer);
 
 

@@ -27,7 +27,10 @@ namespace AlignmentSubsystem {
 class ClientAPIForAlignmentDatabase
 {
 public:
+    /// \brief Default constructor
     ClientAPIForAlignmentDatabase();
+
+    /// \brief Virtual destructor
     virtual ~ClientAPIForAlignmentDatabase();
 
     /** \brief Append a sync point to the database.
@@ -48,8 +51,8 @@ public:
     bool DeleteSyncPoint(unsigned int Offset);
 
     /** \brief Edit a sync point in the database.
-        \param[in] Offset Pointer to where to make then edit.
-        \param[in] CurrentValues The entry to insert.
+        \param[in] Offset Pointer to where to make the edit.
+        \param[in] CurrentValues The entry to edit.
         \return True if successful
     */
     bool EditSyncPoint(unsigned int Offset, const AlignmentDatabaseEntry& CurrentValues);
@@ -59,6 +62,8 @@ public:
     */
     const int GetDatabaseSize();
 
+    /// \brief Initialise the API
+    /// \param[in] BaseClient A pointer to the INDI::BaseClient class
     void Initialise(INDI::BaseClient *BaseClient);
 
     /** \brief Insert a sync point in the database.

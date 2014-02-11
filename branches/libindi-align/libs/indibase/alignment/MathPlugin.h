@@ -31,10 +31,10 @@ class MathPlugin
 {
 public:
 
+    /// \brief Default constructor
     MathPlugin(MountAlignment_t ApproximateAlignment = ZENITH) : ApproximateMountAlignment(ApproximateAlignment) {}
 
-    // Constructor
-
+    /// \brief Virtual destructor
     virtual ~MathPlugin() {}
 
     // Public methods

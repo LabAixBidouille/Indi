@@ -16,6 +16,7 @@ namespace AlignmentSubsystem {
 class AlignmentSubsystemForMathPlugins : public MathPlugin, public TelescopeDirectionVectorSupportFunctions
 {
     public:
+        /// \brief Virtual destructor
         virtual ~AlignmentSubsystemForMathPlugins() {}
 };
 

@@ -39,6 +39,7 @@ public:
     */
     typedef  enum MountType { EQUATORIAL, ALTAZ } MountType_t;
 
+    /// \brief Default constructor
     MathPluginManagement() : pGetApproximateMountAlignment(&MathPlugin::GetApproximateMountAlignment),
                             pInitialise(&MathPlugin::Initialise),
                             pSetApproximateMountAlignment(&MathPlugin::SetApproximateMountAlignment),
@@ -46,9 +47,11 @@ public:
                             pTransformTelescopeToCelestial(&MathPlugin::TransformTelescopeToCelestial),
                             pLoadedMathPlugin(&BuiltInPlugin), LoadedMathPluginHandle(NULL),
                             CurrentInMemoryDatabase(NULL) {}
+
+    /// \brief Virtual destructor
     virtual ~MathPluginManagement() {}
 
-    /** \brief Initilize alignment math plugin properties. It is recommended to call this function within initProperties() of your primary device
+    /** \brief Initialize alignment math plugin properties. It is recommended to call this function within initProperties() of your primary device
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
     */
     void InitProperties(Telescope* pTelescope);
@@ -64,7 +67,7 @@ public:
     void ProcessSwitchProperties(Telescope* pTelescope, const char *name, ISState *states, char *names[], int n);
 
     /** \brief Call this function from within the ISNewText processing path. The function will
-     * handle any math plugin text properties. This only text property at the moment is contained in the
+     * handle any math plugin text properties. This text property is at the moment only contained in the
      * config file so this will normally only have work to do when the config file is loaded.
      * \param[in] pTelescope Pointer to the child INDI::Telecope class
      * \param[in] name vector property name
@@ -91,6 +94,8 @@ public:
     */
     void SetApproximateMountAlignmentFromMountType(MountType_t Type);
 
+    /// \brief Set the current in memory database
+    /// \param[in] pDatabase A pointer to the current in memory database
     void SetCurrentInMemoryDatabase(InMemoryDatabase* pDatabase) { CurrentInMemoryDatabase = pDatabase; }
 
     // These must match the function signatures in MathPlugin

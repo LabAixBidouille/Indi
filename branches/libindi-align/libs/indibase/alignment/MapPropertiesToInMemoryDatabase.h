@@ -69,13 +69,14 @@ namespace AlignmentSubsystem {
 class MapPropertiesToInMemoryDatabase : public InMemoryDatabase
 {
 public:
+    /// \brief Virtual destructor
     virtual ~MapPropertiesToInMemoryDatabase() {}
 
     // Public methods
 
-    /** \brief Initilize alignment database properties. It is recommended to call this function within initProperties() of your primary device
-     * \param[in] pTelescope Pointer to the child INDI::Telecope class
-    */
+    /// \brief Initialize alignment database properties. It is recommended to call this function within initProperties()
+    /// of your primary device
+    /// \param[in] pTelescope Pointer to the child INDI::Telecope class
     void InitProperties(Telescope* pTelescope);
 
     /** \brief Call this function from within the ISNewBLOB processing path. The function will
