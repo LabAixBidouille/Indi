@@ -154,6 +154,9 @@ class V4L2_Driver: public INDI::CCD
     ITextVectorProperty PortTP;
     ITextVectorProperty camNameTP;
     
+    /* Pointers to optional properties */
+    INumber               *AbsExposureN;
+    ISwitchVectorProperty *ManualExposureSP;
 
    /* Initilization functions */
    //virtual void connectCamera(void);
@@ -165,6 +168,7 @@ class V4L2_Driver: public INDI::CCD
    void allocateBuffers();
    void releaseBuffers();
 
+   bool setManualExposure(double duration);
    void binFrame();
 
    virtual void updateV4L2Controls();
@@ -185,7 +189,7 @@ class V4L2_Driver: public INDI::CCD
    //Long Exposure
    Lx *lx;
    int lxtimer;
-   void startlongexposure(double timeinsec);
+   bool startlongexposure(double timeinsec);
    static void lxtimerCallback(void *userpointer);
 };
    

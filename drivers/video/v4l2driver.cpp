@@ -26,7 +26,6 @@ V4L2_Driver::V4L2_Driver()
   allocateBuffers();
 
   divider = 128.;
-  strncpy(device_name, "V4L2 CCD", MAXINDIDEVICE);
   
   // No guide head, no ST4 port, no cooling, no shutter
 
@@ -43,8 +42,9 @@ V4L2_Driver::V4L2_Driver()
   SetCapability(&cap);
 
   Options=NULL;
-  v4loptions=0;
-
+  v4loptions=0; 
+  AbsExposureN=NULL;
+  ManualExposureSP=NULL;
   stackMode=0;
 
   lx=new Lx();
@@ -113,12 +113,31 @@ void V4L2_Driver::initCamBase()
 void V4L2_Driver::ISGetProperties (const char *dev)
 { 
 
-  if (dev && strcmp (device_name, dev))
+  if (dev && strcmp (getDeviceName(), dev))
     return;
 
   INDI::CCD::ISGetProperties(dev);
 
   defineText(&PortTP);
+
+  if (isConnected())
+  {
+    defineText(&camNameTP);
+    defineSwitch(&StreamSP);
+    defineSwitch(&StackModeSP);
+    defineSwitch(&ImageTypeSP);
+    defineSwitch(&InputsSP);
+    defineSwitch(&CaptureFormatsSP);
+
+    if (CaptureSizesSP.sp != NULL)
+        defineSwitch(&CaptureSizesSP);
+    else if  (CaptureSizesNP.np != NULL)
+        defineNumber(&CaptureSizesNP);
+   if (FrameRatesSP.sp != NULL)
+       defineSwitch(&FrameRatesSP);
+    else if  (FrameRateNP.np != NULL)
+       defineNumber(&FrameRateNP);
+  }
   
 }
 
@@ -207,7 +226,7 @@ bool V4L2_Driver::ISNewSwitch (const char *dev, const char *name, ISState *state
      unsigned int iopt;
 
      /* ignore if not ours */
-     if (dev && strcmp (device_name, dev))
+     if (dev && strcmp (getDeviceName(), dev))
        return true;
 	    
      /* Input */
@@ -456,7 +475,7 @@ bool V4L2_Driver::ISNewText (const char *dev, const char *name, char *texts[], c
 	IText *tp;
 
        /* ignore if not ours */ 
-       if (dev && strcmp (device_name, dev))
+       if (dev && strcmp (getDeviceName(), dev))
          return true;
 
 	if (!strcmp(name, PortTP.name) )
@@ -479,7 +498,7 @@ bool V4L2_Driver::ISNewNumber (const char *dev, const char *name, double values[
   char errmsg[ERRMSGSIZ];
 
   /* ignore if not ours */
-  if (dev && strcmp (device_name, dev))
+  if (dev && strcmp (getDeviceName(), dev))
     return true;
 
        /* Capture Size (Step/Continuous) */
@@ -533,85 +552,161 @@ bool V4L2_Driver::ISNewNumber (const char *dev, const char *name, double values[
      }
     }
   
-   if (!strcmp (ImageAdjustNP.name, name))
-   {      
-     ImageAdjustNP.s = IPS_IDLE;
-     
-     if (IUUpdateNumber(&ImageAdjustNP, values, names, n) < 0)
-       return false;
-     
-     unsigned int ctrl_id;
-     for (int i=0; i < ImageAdjustNP.nnp; i++)
-     {
-         ctrl_id = *((unsigned int *) ImageAdjustNP.np[i].aux0);
-
-	 DEBUGF(INDI::Logger::DBG_DEBUG, "  Setting %s (%s) to %d, ctrl_id = 0x%X \n", ImageAdjustNP.np[i].name, ImageAdjustNP.np[i].label, (int)ImageAdjustNP.np[i].value, ctrl_id);
-
-         if (v4l_base->setINTControl( ctrl_id , ImageAdjustNP.np[i].value, errmsg) < 0)
-         {
-            ImageAdjustNP.s = IPS_ALERT;
-            IDSetNumber(&ImageAdjustNP, "Unable to adjust setting. %s", errmsg);
-            return false;
-         }
-     }
-     
-     ImageAdjustNP.s = IPS_OK;
-     IDSetNumber(&ImageAdjustNP, NULL);
-     return true;
-   }
+  if (!strcmp (ImageAdjustNP.name, name))
+    {      
+      ImageAdjustNP.s = IPS_IDLE;
+      
+      if (IUUpdateNumber(&ImageAdjustNP, values, names, n) < 0)
+	return false;
+      
+      unsigned int ctrl_id;
+      for (int i=0; i < ImageAdjustNP.nnp; i++)
+	{
+	  ctrl_id = *((unsigned int *) ImageAdjustNP.np[i].aux0);
+	  
+	  DEBUGF(INDI::Logger::DBG_DEBUG, "  Setting %s (%s) to %d, ctrl_id = 0x%X \n", ImageAdjustNP.np[i].name, ImageAdjustNP.np[i].label, (int)ImageAdjustNP.np[i].value, ctrl_id);
+	  
+	  if (v4l_base->setINTControl( ctrl_id , ImageAdjustNP.np[i].value, errmsg) < 0)
+	    {
+	      /* Some controls may become read-only depending on selected options
+	      ImageAdjustNP.s = IPS_ALERT;
+	      IDSetNumber(&ImageAdjustNP, "Unable to adjust setting. %s", errmsg);
+	      return false;
+	      */
+	      DEBUGF(INDI::Logger::DBG_WARNING,"Unable to adjust %s (ctrl_id =  0x%X)",  ImageAdjustNP.np[i].label, ctrl_id);
+	      v4l_base->getControl(ctrl_id, &(ImageAdjustNP.np[i].value), errmsg);
+	    }
+	}
+      
+      ImageAdjustNP.s = IPS_OK;
+      IDSetNumber(&ImageAdjustNP, NULL);
+      return true;
+    }
    
-    /* Exposure */
-    if (!strcmp (ExposeTimeNP->name, name))
+   /* Exposure */
+  if (!strcmp (ExposeTimeNP->name, name))
     {
+      bool rc;
       int width  = v4l_base->getWidth();
       int height = v4l_base->getHeight();
-    
-        if (StreamS[0].s == ISS_ON)
-	  v4l_base->stop_capturing(errmsg);
-
-	StreamS[0].s  = ISS_OFF;
-	StreamS[1].s  = ISS_ON;
-	StreamSP.s    = IPS_IDLE;
-    IDSetSwitch(&StreamSP, NULL);
-        
-	V4LFrame->expose = values[0];
-
-        ExposeTimeNP->s   = IPS_BUSY;
-	if (IUUpdateNumber(ExposeTimeNP, values, names, n) < 0)
-	  return false;
-    //frameBytes  = (ImageTypeS[0].s == ISS_ON) ? width * height : width * height * 4;
-    //PrimaryCCD.setFrameBufferSize(frameBytes);
-	/*  if (ImageTypeS[0].s == ISS_ON) {
-	    V4LFrame->stackedFrame =(unsigned char *) realloc (V4LFrame->stackedFrame, sizeof(unsigned char) * frameBytes );
-	    V4LFrame->Y=V4LFrame->stackedFrame;
-	  } else {
-	    V4LFrame->stackedFrame = (unsigned char *) realloc (V4LFrame->stackedFrame, sizeof(unsigned char) * frameBytes);
-	    V4LFrame->colorBuffer=V4LFrame->stackedFrame;
-	  }
-  	}
-	*/
-	timerclear(&exposure_duration);
-	exposure_duration.tv_sec = (long) values[0] ;
-	exposure_duration.tv_usec = (long) ((values[0] - (double) exposure_duration.tv_sec)
-                                 * 1000000.0) ;
-	frameCount=0;
-    gettimeofday(&capture_start, NULL);
-	if (lx->isenabled())
-	  startlongexposure(ExposeTimeN[0].value);
-	else
-	  v4l_base->start_capturing(errmsg);
-	
-        return true;
-    } 
       
-    return INDI::CCD::ISNewNumber(dev, name, values, names, n);
+      if (StreamS[0].s == ISS_ON)
+	v4l_base->stop_capturing(errmsg);
+      
+      StreamS[0].s  = ISS_OFF;
+      StreamS[1].s  = ISS_ON;
+      StreamSP.s    = IPS_IDLE;
+      IDSetSwitch(&StreamSP, NULL);
+      
+      V4LFrame->expose = values[0];
+ 
+      if (AbsExposureN && ManualExposureSP && (AbsExposureN->max >= (V4LFrame->expose * 10000)))
+	{
+	  rc = setManualExposure(V4LFrame->expose);
+	  if (rc == false)
+	    DEBUG(INDI::Logger::DBG_WARNING, "Unable to set manual exposure, falling back to auto exposure.");
+	}
+      
+      timerclear(&exposure_duration);
+      exposure_duration.tv_sec = (long) values[0] ;
+      exposure_duration.tv_usec = (long) ((values[0] - (double) exposure_duration.tv_sec)
+					  * 1000000.0) ;
+      frameCount=0;
+      gettimeofday(&capture_start, NULL);
+      if (lx->isenabled()) {
+	//startlongexposure(ExposeTimeN[0].value);
+	rc=startlongexposure(V4LFrame->expose);
+        if (rc == false)
+	  DEBUG(INDI::Logger::DBG_WARNING, "Unable to start long exposure, falling back to auto exposure.");
+      } else
+	v4l_base->start_capturing(errmsg);
+      
+      ExposeTimeNP->s   = IPS_BUSY;
+      if (IUUpdateNumber(ExposeTimeNP, values, names, n) < 0)
+	return false;
+      
+      return true;
+    } 
+  
+  return INDI::CCD::ISNewNumber(dev, name, values, names, n);
   	
 }
 
-void V4L2_Driver::startlongexposure(double timeinsec)
+bool V4L2_Driver::setManualExposure(double duration)
+{
+    if (AbsExposureN == NULL || ManualExposureSP == NULL)
+        return false;
+
+    char errmsg[MAXRBUF];
+    unsigned int ctrl_id, ctrlindex;
+
+    // Manual mode should be set before changing Exposure (Auto)
+    if (ManualExposureSP->sp[0].s == ISS_OFF)
+    {
+        ManualExposureSP->sp[0].s = ISS_ON;
+        ManualExposureSP->sp[1].s = ISS_OFF;
+        ManualExposureSP->s = IPS_IDLE;
+
+        if (ManualExposureSP->sp[0].aux != NULL)
+              ctrlindex= *(unsigned int *)(ManualExposureSP->sp[0].aux);
+        else
+             ctrlindex=0;
+
+        ctrl_id = (*((unsigned int*) ManualExposureSP->aux));
+        if (v4l_base->setOPTControl( ctrl_id , ctrlindex,  errmsg) < 0)
+        {
+               ManualExposureSP->sp[0].s = ISS_OFF;
+               ManualExposureSP->sp[1].s = ISS_ON;
+               ManualExposureSP->s = IPS_ALERT;
+               IDSetSwitch(ManualExposureSP, NULL);
+               DEBUGF(INDI::Logger::DBG_ERROR, "Unable to adjust setting. %s", errmsg);
+               return false;
+        }
+
+        ManualExposureSP->s = IPS_OK;
+        IDSetSwitch(ManualExposureSP, NULL);
+    }
+
+    /* N.B. Check how this differs from one camera to another. This is just a proof of concept for now */
+    if (duration * 10000 != AbsExposureN->value)
+    {
+        double curVal = AbsExposureN->value;
+        AbsExposureN->value = duration * 10000;
+	ctrl_id = *((unsigned int *)  AbsExposureN->aux0);
+	if (v4l_base->setINTControl( ctrl_id , AbsExposureN->value, errmsg) < 0)
+            {
+               ImageAdjustNP.s = IPS_ALERT;
+               AbsExposureN->value = curVal;
+               IDSetNumber(&ImageAdjustNP, "Unable to adjust AbsExposure. %s", errmsg);
+               return false;
+            }
+	
+	/*  for (int i=0; i < ImageAdjustNP.nnp; i++)
+        {
+            ctrl_id = *((unsigned int *) ImageAdjustNP.np[i].aux0);
+
+            if (v4l_base->setINTControl( ctrl_id , ImageAdjustNP.np[i].value, errmsg) < 0)
+            {
+               ImageAdjustNP.s = IPS_ALERT;
+               AbsExposureN->value = curVal;
+               IDSetNumber(&ImageAdjustNP, "Unable to adjust setting. %s", errmsg);
+               return false;
+            }
+        }
+	*/
+        ImageAdjustNP.s = IPS_OK;
+        IDSetNumber(&ImageAdjustNP, NULL);
+    }
+
+
+    return true;
+
+}
+
+bool V4L2_Driver::startlongexposure(double timeinsec)
 {
   lxtimer=IEAddTimer((int)(timeinsec*1000.0), (IE_TCF *)lxtimerCallback, this);
-  lx->startLx();
+  return (lx->startLx());
 }
 
 void V4L2_Driver::lxtimerCallback(void *userpointer)
@@ -755,22 +850,21 @@ void V4L2_Driver::updateFrame()
     frameCount+=1;
     if (lx->isenabled())
     {
-      if (!stackMode)
-      {
-            v4l_base->stop_capturing(errmsg);
-            DEBUGF(INDI::Logger::DBG_SESSION, "Capture of LX frame took %ld.%06ld seconds.\n", current_exposure.tv_sec, current_exposure.tv_usec);
-            ExposureComplete(&PrimaryCCD);
-            PrimaryCCD.setFrameBufferSize(frameBytes);
-      }
-    } else
-    {
+      //if (!stackMode)
+      //{
+	v4l_base->stop_capturing(errmsg);
+	DEBUGF(INDI::Logger::DBG_SESSION, "Capture of LX frame took %ld.%06ld seconds.\n", current_exposure.tv_sec, current_exposure.tv_usec);
+	ExposureComplete(&PrimaryCCD);
+	PrimaryCCD.setFrameBufferSize(frameBytes);
+	//}
+    } else {
       if (!stackMode || timercmp(&current_exposure, &exposure_duration, >))
-      {
-            v4l_base->stop_capturing(errmsg);
-            DEBUGF(INDI::Logger::DBG_SESSION, "Capture of ONE frame (%d stacked frames) took %ld.%06ld seconds.\n", frameCount, current_exposure.tv_sec, current_exposure.tv_usec);
-           ExposureComplete(&PrimaryCCD);
-           PrimaryCCD.setFrameBufferSize(frameBytes);
-      }
+	{
+	  v4l_base->stop_capturing(errmsg);
+	  DEBUGF(INDI::Logger::DBG_SESSION, "Capture of ONE frame (%d stacked frames) took %ld.%06ld seconds.\n", frameCount, current_exposure.tv_sec, current_exposure.tv_usec);
+	  ExposureComplete(&PrimaryCCD);
+	  PrimaryCCD.setFrameBufferSize(frameBytes);
+	}
     }
   }
 
@@ -878,7 +972,7 @@ bool V4L2_Driver::Disconnect()
 
 const char *V4L2_Driver::getDefaultName()
 {
-  return device_name;
+  return (char *) "V4L2 CCD";
 }
 
 
@@ -939,14 +1033,30 @@ void V4L2_Driver::updateV4L2Controls()
   //defineNumber(&ImageAdjustNP);
   v4l_base->enumerate_ext_ctrl();
   useExtCtrl=false;
-  if  (v4l_base->queryExtControls(&ImageAdjustNP, &v4ladjustments, &Options, &v4loptions, device_name, IMAGE_BOOLEAN)) 
+  if  (v4l_base->queryExtControls(&ImageAdjustNP, &v4ladjustments, &Options, &v4loptions, getDeviceName(), IMAGE_BOOLEAN))
     useExtCtrl=true;
   else
-    v4l_base->queryControls(&ImageAdjustNP, &v4ladjustments, &Options, &v4loptions, device_name, IMAGE_BOOLEAN) ;
-  if (v4ladjustments > 0) defineNumber(&ImageAdjustNP);
-  for (i=0; i < v4loptions; i++) {
+    v4l_base->queryControls(&ImageAdjustNP, &v4ladjustments, &Options, &v4loptions, getDeviceName(), IMAGE_BOOLEAN) ;
+  if (v4ladjustments > 0)
+  {
+      defineNumber(&ImageAdjustNP);
+
+      for (int i=0; i < ImageAdjustNP.nnp; i++)
+      {
+          if (!strcmp(ImageAdjustNP.np[i].label,  "Exposure (Absolute)"))
+          {
+              AbsExposureN = ImageAdjustNP.np+i;
+              break;
+          }
+      }
+  }
+  for (i=0; i < v4loptions; i++)
+  {
       //IDLog("Def switch %d %s\n", i, Options[i].label);
       defineSwitch(&Options[i]);
+
+      if (!strcmp(Options[i].label, "Exposure, Auto"))
+          ManualExposureSP = Options+i;
   }
       
   //v4l_base->enumerate_ctrl();

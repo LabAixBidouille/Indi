@@ -151,6 +151,10 @@
                 <driver name="CCD Simulator">indi_simulator_ccd</driver>
                 <version>1.0</version>
         </device>
+        <device label="DMK CCD">
+                <driver name="V4L2 CCD">indi_v4l2_ccd</driver>
+                <version>0.1</version>
+        </device>
         <device label="V4L2 CCD">
                 <driver name="V4L2 CCD">indi_v4l2_ccd</driver>
                 <version>0.1</version>
@@ -192,5 +196,11 @@
         <device label="Joystick">
                 <driver name="Joystick">indi_joystick</driver>
                 <version>0.1</version>
+        </device>
+</devGroup>
+<devGroup group="Agent">
+    <device label="Imager Agent">
+        <driver name="Imager Agent">indi_imager_agent</driver>
+        <version>1.0</version>
         </device>
 </devGroup>
