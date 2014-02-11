@@ -50,7 +50,6 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
 
         case 1:
         {
-            // Compute local horizontal coordinate offsets
             AlignmentDatabaseEntry& Entry1 = SyncPoints[0];
             ln_equ_posn RaDec;
             ln_hrz_posn ActualSyncPoint1;
@@ -60,7 +59,7 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
             RaDec.dec = Entry1.Declination;
             RaDec.ra = Entry1.RightAscension;
             ln_get_hrz_from_equ(&RaDec, &Position, Entry1.ObservationJulianDate, &ActualSyncPoint1);
-            // Now express this coordinate as normalised direction vectors (a.k.a direction cosines)
+            // Now express this coordinate as a normalised direction vector (a.k.a direction cosines)
             TelescopeDirectionVector ActualDirectionCosine1 = TelescopeDirectionVectorFromAltitudeAzimuth(ActualSyncPoint1);
             // Generate the second dummy sync point
             ln_hrz_posn DummyAltAz;
