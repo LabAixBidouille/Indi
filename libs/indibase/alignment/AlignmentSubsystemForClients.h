@@ -31,6 +31,7 @@ class AlignmentSubsystemForClients : public ClientAPIForMathPluginManagement, pu
                                     public TelescopeDirectionVectorSupportFunctions
 {
 public:
+    /// \brief Virtual destructor
     virtual ~AlignmentSubsystemForClients() {}
 
     /** \brief This routine should be called before any connections to devices are made.

@@ -28,8 +28,9 @@ class AlignmentSubsystemForDrivers : public MapPropertiesToInMemoryDatabase, pub
                                     public TelescopeDirectionVectorSupportFunctions
 {
 public:
+    /// \brief Default constructor
     AlignmentSubsystemForDrivers();
-
+    /// \brief Virtual destructor
     virtual ~AlignmentSubsystemForDrivers() {}
 
     /** \brief Initilize alignment subsystem properties. It is recommended to call this function within initProperties() of your primary device
