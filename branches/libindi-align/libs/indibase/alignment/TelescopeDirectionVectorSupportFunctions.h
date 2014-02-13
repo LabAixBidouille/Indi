@@ -45,7 +45,7 @@ public:
      * \enum PolarAngleDirection
      * The direction of measurement of a polar angle.
      * The following are conventions for some coordinate systems
-     * - Declination is measured FROM_POLAR_AXIS.
+     * - Declination is measured FROM_AZIMUTHAL_PLANE.
      * - Altitude is measured FROM_AZIMUTHAL_PLANE.
      * - Altitude in libnova horizontal coordinates is measured FROM_AZIMUTHAL_PLANE.
      */
@@ -94,7 +94,7 @@ public:
     {
         double AzimuthAngle;
         double PolarAngle;
-        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_POLAR_AXIS);
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
         EquatorialCoordinates.ra = ln_rad_to_deg(AzimuthAngle);
         EquatorialCoordinates.dec = ln_rad_to_deg(PolarAngle);
     };
@@ -110,7 +110,7 @@ public:
     {
         double AzimuthAngle;
         double PolarAngle;
-        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_POLAR_AXIS);
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, ANTI_CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
         ln_rad_to_hms(AzimuthAngle, &EquatorialCoordinates.ra);
         ln_rad_to_dms(PolarAngle, &EquatorialCoordinates.dec);
     };
@@ -126,7 +126,7 @@ public:
     {
         double AzimuthAngle;
         double PolarAngle;
-        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_POLAR_AXIS);
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
         EquatorialCoordinates.ra = ln_rad_to_deg(AzimuthAngle);
         EquatorialCoordinates.dec = ln_rad_to_deg(PolarAngle);
     };
@@ -142,7 +142,7 @@ public:
     {
         double AzimuthAngle;
         double PolarAngle;
-        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_POLAR_AXIS);
+        SphericalCoordinateFromTelescopeDirectionVector(TelescopeDirectionVector, AzimuthAngle, CLOCKWISE, PolarAngle, FROM_AZIMUTHAL_PLANE);
         ln_rad_to_hms(AzimuthAngle, &EquatorialCoordinates.ra);
         ln_rad_to_dms(PolarAngle, &EquatorialCoordinates.dec);
     };
@@ -189,7 +189,7 @@ public:
      */
     const TelescopeDirectionVector TelescopeDirectionVectorFromEquatorialCoordinates(struct ln_equ_posn EquatorialCoordinates)
     {
-        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_POLAR_AXIS);
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
     };
 
     /*! \brief Calculates a telescope direction vector from the supplied equatorial coordinates.
@@ -199,7 +199,7 @@ public:
      */
     const TelescopeDirectionVector TelescopeDirectionVectorFromEquatorialCoordinates(struct lnh_equ_posn EquatorialCoordinates)
     {
-        return TelescopeDirectionVectorFromSphericalCoordinate(ln_hms_to_rad(&EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_dms_to_rad(&EquatorialCoordinates.dec), FROM_POLAR_AXIS);
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_hms_to_rad(&EquatorialCoordinates.ra), ANTI_CLOCKWISE, ln_dms_to_rad(&EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
     };
 
     /*! \brief Calculates a telescope direction vector from the supplied local hour angle and declination.
@@ -209,7 +209,7 @@ public:
      */
     const TelescopeDirectionVector TelescopeDirectionVectorFromLocalHourAngleDeclination(struct ln_equ_posn EquatorialCoordinates)
     {
-        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_POLAR_AXIS);
+        return TelescopeDirectionVectorFromSphericalCoordinate(ln_deg_to_rad(EquatorialCoordinates.ra), CLOCKWISE, ln_deg_to_rad(EquatorialCoordinates.dec), FROM_AZIMUTHAL_PLANE);
     };
 
     /*! \brief Calculates a telescope direction vector from the supplied spherical coordinate information
