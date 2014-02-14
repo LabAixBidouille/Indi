@@ -89,8 +89,8 @@ SkywatcherAPIMount::SkywatcherAPIMount()
 #ifdef USE_INITIAL_JULIAN_DATE
     InitialJulianDate = ln_get_julian_from_sys();
 #endif
-    NewTrackingTarget[0] = 0;
-    NewTrackingTarget[1] = 0;
+    OldTrackingTarget[0] = 0;
+    OldTrackingTarget[1] = 0;
 }
 
 // destructor
@@ -820,63 +820,28 @@ void SkywatcherAPIMount::TimerHit()
                         break;
                     }
                 }
-                DEBUGF(INDI::Logger::DBG_SESSION, "Tracking AXIS1 CurrentEncoder %ld NewTrackingTarget %ld AXIS2 CurrentEncoder %ld NewTrackingTarget %ld",
-                                                CurrentEncoders[AXIS1], NewTrackingTarget[AXIS1], CurrentEncoders[AXIS2], NewTrackingTarget[AXIS2]);
+                DEBUGF(INDI::Logger::DBG_SESSION, "Tracking AXIS1 CurrentEncoder %ld OldTrackingTarget %ld AXIS2 CurrentEncoder %ld OldTrackingTarget %ld",
+                                                CurrentEncoders[AXIS1], OldTrackingTarget[AXIS1], CurrentEncoders[AXIS2], OldTrackingTarget[AXIS2]);
                 DEBUGF(INDI::Logger::DBG_SESSION, "New Tracking Target Altitude %lf degrees %ld microsteps Azimuth %lf degrees %ld microsteps",
                                     AltAz.alt, DegreesToMicrosteps(AXIS2, AltAz.alt), AltAz.az, DegreesToMicrosteps(AXIS1, AltAz.az));
 
                 long AltitudeOffsetMicrosteps = DegreesToMicrosteps(AXIS2, AltAz.alt) + ZeroPositionEncoders[AXIS2] - CurrentEncoders[AXIS2];
                 long AzimuthOffsetMicrosteps = DegreesToMicrosteps(AXIS1, AltAz.az) + ZeroPositionEncoders[AXIS1] - CurrentEncoders[AXIS1];
 
-                if (0 != AltitudeOffsetMicrosteps)
-                {
-                    // Do I need to take out any complete revolutions before I do this test?
-                    if (AltitudeOffsetMicrosteps > MicrostepsPerRevolution[AXIS2] / 2)
-                    {
-                        DEBUG(INDI::Logger::DBG_SESSION, "Tracking AXIS2 going long way round");
-                        // Going the long way round - send it the other way
-                        AltitudeOffsetMicrosteps -= MicrostepsPerRevolution[AXIS2];
-                    }
-                     // Calculate the slewing rates needed to reach that position
-                    // at the correct time.
-                    long AltitudeRate = long(double(StepperClockFrequency[AXIS2]) / double(AltitudeOffsetMicrosteps));
-                    if (!AxesStatus[AXIS2].FullStop &&
-                        ((AxesStatus[AXIS2].SlewingForward && (AltitudeRate < 0)) || (!AxesStatus[AXIS2].SlewingForward && (AltitudeRate > 0))))
-                    {
-                        // Direction change whilst axis running
-                        // Abandon tracking for this clock tick
-                        DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS2 direction change");
-                        SlowStop(AXIS2);
-                    }
-                    else
-                    {
-                        char Direction = AltitudeRate > 0 ? '0' : '1';
-                        SetMotionMode(AXIS2, '1', Direction);
-                        AltitudeRate = std::abs(AltitudeRate);
-                        SetClockTicksPerMicrostep(AXIS2, AltitudeRate < 1 ? 1 : AltitudeRate);
-                        StartMotion(AXIS2);
-                        DEBUGF(INDI::Logger::DBG_SESSION, "Tracking - AXIS2 offset %ld microsteps rate %ld direction %c",
-                                                                        AltitudeOffsetMicrosteps, AltitudeRate, Direction);
-                    }
-                }
-                else
-                {
-                    // Nothing to do - stop the axis
-                    DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS2 zero offset");
-                    SlowStop(AXIS2);
-                }
+                DEBUGF(INDI::Logger::DBG_SESSION, "New Tracking Target AltitudeOffset %ld microsteps AzimuthOffset %ld microsteps",
+                                    AltitudeOffsetMicrosteps, AzimuthOffsetMicrosteps);
 
+                if (AzimuthOffsetMicrosteps > MicrostepsPerRevolution[AXIS1] / 2)
+                {
+                    DEBUG(INDI::Logger::DBG_SESSION, "Tracking AXIS1 going long way round");
+                    // Going the long way round - send it the other way
+                    AzimuthOffsetMicrosteps -= MicrostepsPerRevolution[AXIS1];
+                }
                 if (0 != AzimuthOffsetMicrosteps)
                 {
-                    if (AzimuthOffsetMicrosteps > MicrostepsPerRevolution[AXIS1] / 2)
-                    {
-                        DEBUG(INDI::Logger::DBG_SESSION, "Tracking AXIS1 going long way round");
-                        // Going the long way round - send it the other way
-                        AzimuthOffsetMicrosteps -= MicrostepsPerRevolution[AXIS1];
-                    }
                     // Calculate the slewing rates needed to reach that position
                     // at the correct time.
-                    long AzimuthRate = long(double(StepperClockFrequency[AXIS1]) / double(AzimuthOffsetMicrosteps));
+                    long AzimuthRate = StepperClockFrequency[AXIS1] / AzimuthOffsetMicrosteps;
                     if (!AxesStatus[AXIS1].FullStop &&
                         ((AxesStatus[AXIS1].SlewingForward && (AzimuthRate < 0)) || (!AxesStatus[AXIS1].SlewingForward && (AzimuthRate > 0))))
                     {
@@ -888,10 +853,14 @@ void SkywatcherAPIMount::TimerHit()
                     else
                     {
                         char Direction = AzimuthRate > 0 ? '0' : '1';
-                        SetMotionMode(AXIS1, '1', Direction);
                         AzimuthRate = std::abs(AzimuthRate);
                         SetClockTicksPerMicrostep(AXIS1, AzimuthRate < 1 ? 1 : AzimuthRate);
-                        StartMotion(AXIS1);
+                        if (AxesStatus[AXIS1].FullStop)
+                        {
+                            DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS1 restart");
+                            SetMotionMode(AXIS1, '1', Direction);
+                            StartMotion(AXIS1);
+                        }
                         DEBUGF(INDI::Logger::DBG_SESSION, "Tracking - AXIS1 offset %ld microsteps rate %ld direction %c",
                                                                     AzimuthOffsetMicrosteps, AzimuthRate, Direction);
                     }
@@ -903,12 +872,56 @@ void SkywatcherAPIMount::TimerHit()
                     SlowStop(AXIS1);
                 }
 
-                DEBUGF(INDI::Logger::DBG_SESSION, "Tracking - AXIS1 error %d AXIS2 error %d",
-                                                                    NewTrackingTarget[AXIS1] - CurrentEncoders[AXIS1],
-                                                                    NewTrackingTarget[AXIS2] - CurrentEncoders[AXIS2]);
+                // Do I need to take out any complete revolutions before I do this test?
+                if (AltitudeOffsetMicrosteps > MicrostepsPerRevolution[AXIS2] / 2)
+                {
+                    DEBUG(INDI::Logger::DBG_SESSION, "Tracking AXIS2 going long way round");
+                    // Going the long way round - send it the other way
+                    AltitudeOffsetMicrosteps -= MicrostepsPerRevolution[AXIS2];
+                }
+                if (0 != AltitudeOffsetMicrosteps)
+                {
+                     // Calculate the slewing rates needed to reach that position
+                    // at the correct time.
+                    long AltitudeRate = StepperClockFrequency[AXIS2] / AltitudeOffsetMicrosteps;
 
-                NewTrackingTarget[AXIS1] = AzimuthOffsetMicrosteps + CurrentEncoders[AXIS1];
-                NewTrackingTarget[AXIS2] = AltitudeOffsetMicrosteps + CurrentEncoders[AXIS2];
+                    if (!AxesStatus[AXIS2].FullStop &&
+                        ((AxesStatus[AXIS2].SlewingForward && (AltitudeRate < 0)) || (!AxesStatus[AXIS2].SlewingForward && (AltitudeRate > 0))))
+                    {
+                        // Direction change whilst axis running
+                        // Abandon tracking for this clock tick
+                        DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS2 direction change");
+                        SlowStop(AXIS2);
+                    }
+                    else
+                    {
+                        char Direction = AltitudeRate > 0 ? '0' : '1';
+                        AltitudeRate = std::abs(AltitudeRate);
+                        SetClockTicksPerMicrostep(AXIS2, AltitudeRate < 1 ? 1 : AltitudeRate);
+                        if (AxesStatus[AXIS2].FullStop)
+                        {
+                            DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS2 restart");
+                            SetMotionMode(AXIS2, '1', Direction);
+                            StartMotion(AXIS2);
+                        }
+                        DEBUGF(INDI::Logger::DBG_SESSION, "Tracking - AXIS2 offset %ld microsteps rate %ld direction %c",
+                                                                        AltitudeOffsetMicrosteps, AltitudeRate, Direction);
+                    }
+                }
+                else
+                {
+                    // Nothing to do - stop the axis
+                    DEBUG(INDI::Logger::DBG_SESSION, "Tracking - AXIS2 zero offset");
+                    SlowStop(AXIS2);
+                }
+
+
+                DEBUGF(INDI::Logger::DBG_SESSION, "Tracking - AXIS1 error %d AXIS2 error %d",
+                                                                    OldTrackingTarget[AXIS1] - CurrentEncoders[AXIS1],
+                                                                    OldTrackingTarget[AXIS2] - CurrentEncoders[AXIS2]);
+
+                OldTrackingTarget[AXIS1] = AzimuthOffsetMicrosteps + CurrentEncoders[AXIS1];
+                OldTrackingTarget[AXIS2] = AltitudeOffsetMicrosteps + CurrentEncoders[AXIS2];
             }
             else
             {
