@@ -281,9 +281,9 @@ bool SkywatcherAPI::GetStatus(AXISID Axis)
         {
             // If the mount was doing a slew to
             GetEncoder(Axis);
-            MYDEBUGF(INDI::Logger::DBG_SESSION, "Axis %d SlewTo complete - offset to target %ld microsteps %lf arc seconds "
+            MYDEBUGF(INDI::Logger::DBG_SESSION, "Axis %s SlewTo complete - offset to target %ld microsteps %lf arc seconds "
                     "LastSlewToTarget %ld CurrentEncoder %ld",
-                    Axis,
+                    Axis == AXIS1 ? "AXIS1" : "AXIS2",
                     LastSlewToTarget[Axis] - CurrentEncoders[Axis],
                     MicrostepsToDegrees(Axis, LastSlewToTarget[Axis] - CurrentEncoders[Axis]) * 3600,
                     LastSlewToTarget[Axis],
@@ -710,7 +710,7 @@ bool SkywatcherAPI::StartMotion(AXISID Axis)
 
 bool SkywatcherAPI::TalkWithAxis(AXISID Axis, char Command, std::string& cmdDataStr, std::string& responseStr)
 {
-    MYDEBUGF(DBG_SCOPE, "TalkWithAxis Axis %d Command %c Data (%s)", Axis, Command, cmdDataStr.c_str());
+    MYDEBUGF(DBG_SCOPE, "TalkWithAxis Axis %s Command %c Data (%s)", Axis == AXIS1 ? "AXIS1" : "AXIS2", Command, cmdDataStr.c_str());
 
     std::string SendBuffer;
     int bytesWritten;
