@@ -128,6 +128,7 @@ struct AlignmentDatabaseEntry
     AlignmentDatabaseEntry(const AlignmentDatabaseEntry& Source) : ObservationJulianDate(Source.ObservationJulianDate),
                                                                     RightAscension(Source.RightAscension),
                                                                     Declination(Source.Declination),
+                                                                    TelescopeDirection(Source.TelescopeDirection),
                                                                     PrivateDataSize(Source.PrivateDataSize)
     {
         if (0 != PrivateDataSize)

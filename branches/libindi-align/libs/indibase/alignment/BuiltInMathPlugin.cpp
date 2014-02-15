@@ -3,6 +3,7 @@
 #include "DriverCommon.h"
 
 #include <limits>
+#include <iostream>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
@@ -521,6 +522,9 @@ void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& A
     gsl_matrix_set(pAlphaMatrix, 2, 1, Alpha3.y);
     gsl_matrix_set(pAlphaMatrix, 2, 2, Alpha3.z);
 
+//    std::cerr << "AlphaMatrix\n";
+//    Dump3x3(pAlphaMatrix);
+
     gsl_matrix *pBetaMatrix = gsl_matrix_alloc(3, 3);
     gsl_matrix_set(pBetaMatrix, 0, 0, Beta1.x);
     gsl_matrix_set(pBetaMatrix, 0, 1, Beta1.y);
@@ -532,35 +536,76 @@ void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& A
     gsl_matrix_set(pBetaMatrix, 2, 1, Beta3.y);
     gsl_matrix_set(pBetaMatrix, 2, 2, Beta3.z);
 
+//    std::cerr << "BetaMatrix\n";
+//    Dump3x3(pBetaMatrix);
+
     MatrixMatrixMultipy(pBetaMatrix, pAlphaMatrix, pAlphaToBeta);
 
-    if (NULL != pBetaToAlpha)
-    {
-        // Use pActual as temporary storage
-        gsl_matrix_memcpy(pBetaMatrix, pAlphaToBeta);
+//    std::cerr << "AlphaToBeta\n";
+//    Dump3x3(pAlphaToBeta);
 
-        // Invert the matrix to get the Apparent to Actual transform
-        MatrixInvert3x3(pAlphaToBeta, pBetaToAlpha);
+    // Use pAlphaMatrix as temporary storage
+    gsl_matrix_memcpy(pAlphaMatrix, pAlphaToBeta);
+
+//    std::cerr << "BetaMatrix\n";
+//    Dump3x3(pBetaMatrix);
+
+//    std::cerr << "AlphaToBeta\n";
+//    Dump3x3(pAlphaToBeta);
+
+    // Invert the matrix to get the Apparent to Actual transform
+    // use pBetaMatrix as temporary storage
+    if (!MatrixInvert3x3(pAlphaToBeta, pBetaMatrix))
+    {
+        // pAlphaToBeta is singular and therefore is not a true transform
+        // and cannot be inverted. This probably means it contains at least
+        // one row or column that contains only zeroes
+        gsl_matrix_set_identity(pBetaMatrix);
+        ASSDEBUG("CalculateTAKIMatrices - AlphaToBeta matrix is singular!");
+        IDMessage(NULL, "Calculated Celestial to Telescope transformation matrix is singular (not a true transform).");
     }
+
+    if (NULL != pBetaToAlpha)
+        gsl_matrix_memcpy(pBetaToAlpha, pBetaMatrix);
 
     // Clean up
     gsl_matrix_free(pBetaMatrix);
     gsl_matrix_free(pAlphaMatrix);
 }
 
-/// Use gsl to compute the inverse of a 3x3 matrix
-void BuiltInMathPlugin::MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion)
+void BuiltInMathPlugin::Dump3x3(gsl_matrix *pMatrix)
 {
+    std::cerr << "Row 0 " << gsl_matrix_get(pMatrix, 0, 0) << " " << gsl_matrix_get(pMatrix, 0, 1) << " " << gsl_matrix_get(pMatrix, 0, 2) << '\n'
+    << "Row 1 " << gsl_matrix_get(pMatrix, 1, 0) << " " << gsl_matrix_get(pMatrix, 1, 1) << " " << gsl_matrix_get(pMatrix, 1, 2) << '\n'
+    << "Row 2 " << gsl_matrix_get(pMatrix, 2, 0) << " " << gsl_matrix_get(pMatrix, 2, 1) << " " << gsl_matrix_get(pMatrix, 2, 2) << '\n';
+
+}
+
+
+/// Use gsl to compute the inverse of a 3x3 matrix
+bool BuiltInMathPlugin::MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion)
+{
+    bool Retcode = true;
     gsl_permutation *pPermutation = gsl_permutation_alloc(3);
     gsl_matrix *pDecomp = gsl_matrix_alloc(3,3);
     int Signum;
 
     gsl_matrix_memcpy(pDecomp, pInput);
+
     gsl_linalg_LU_decomp(pDecomp, pPermutation, &Signum);
-    gsl_linalg_LU_invert(pDecomp, pPermutation, pInversion);
+
+    // Test for singularity
+    if (0 == gsl_linalg_LU_det(pDecomp, Signum))
+    {
+        Retcode = false;
+    }
+    else
+        gsl_linalg_LU_invert(pDecomp, pPermutation, pInversion);
 
     gsl_matrix_free(pDecomp);
     gsl_permutation_free(pPermutation);
+
+    return Retcode;
 }
 
 /// Use gsl blas support to multiply two matrices together and put the result in a third.

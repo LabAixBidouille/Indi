@@ -33,6 +33,7 @@ public:
     virtual bool TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination);
 
 private:
+
     /// \brief Calculate tranformation matrices from the supplied vectors using Taki's method
     /// \param[in] Alpha1 Pointer to the first coordinate in the alpha reference frame
     /// \param[in] Alpha2 Pointer to the second coordinate in the alpha reference frame
@@ -46,10 +47,15 @@ private:
                             const TelescopeDirectionVector& Beta1, const TelescopeDirectionVector& Beta2, const TelescopeDirectionVector& Beta3,
                             gsl_matrix *pAlphaToBeta, gsl_matrix *pBetaToAlpha);
 
+    /// \brief Print out a 3x3 matrix to cout
+    /// \param[in] pMatrix The matrix to print
+    void Dump3x3(gsl_matrix *pMatrix);
+
     /// \brief Calculate the inverse of the supplied matrix
     /// \param[in] pInput Pointer to the input matrix
     /// \param[in] pInversion Pointer to a matrix to receive the inversion
-    void MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion);
+    /// \return False if input matrix is singular (not invertable) otherwise true
+    bool MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion);
 
     /// \brief Multiply matrix A by matrix B and put the result in C
     void MatrixMatrixMultipy(gsl_matrix *pA, gsl_matrix *pB, gsl_matrix *pC);
