@@ -58,10 +58,10 @@ private:
     bool MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion);
 
     /// \brief Multiply matrix A by matrix B and put the result in C
-    void MatrixMatrixMultipy(gsl_matrix *pA, gsl_matrix *pB, gsl_matrix *pC);
+    void MatrixMatrixMultiply(gsl_matrix *pA, gsl_matrix *pB, gsl_matrix *pC);
 
     /// \brief Multiply matrix A by vector B and put the result in vector C
-    void MatrixVectorMultipy(gsl_matrix *pA, gsl_vector *pB, gsl_vector *pC);
+    void MatrixVectorMultiply(gsl_matrix *pA, gsl_vector *pB, gsl_vector *pC);
 
     /// \brief Test if a ray intersects a triangle in 3d space
     /// \param[in] Ray The ray vector
