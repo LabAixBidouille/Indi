@@ -139,10 +139,22 @@ struct AlignmentDatabaseEntry
     }
 
     double ObservationJulianDate;
+
+    /// \brief Right ascension in decimal hours. N.B. libnova works in decimal degrees
+    /// so conversion is always needed!
     double RightAscension;
+
+    /// \brief Declination in decimal degrees
     double Declination;
+
+    /// \brief Normalised vector giving telescope pointing direction.
+    /// This is referred to elsewhere as the "apparent" direction.
     TelescopeDirectionVector TelescopeDirection;
+
+    /// \brief Private data associated with this sync point
     std::auto_ptr<unsigned char> PrivateData;
+
+    /// \brief This size in bytes of any private data
     int PrivateDataSize;
 };
 

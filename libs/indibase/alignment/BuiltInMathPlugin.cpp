@@ -58,7 +58,8 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
             if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position))
                 return false;
             RaDec.dec = Entry1.Declination;
-            RaDec.ra = Entry1.RightAscension;
+            // libnova works in decimal degrees so conversion is needed here
+            RaDec.ra = Entry1.RightAscension * 360.0 / 24.0;
             ln_get_hrz_from_equ(&RaDec, &Position, Entry1.ObservationJulianDate, &ActualSyncPoint1);
             // Now express this coordinate as a normalised direction vector (a.k.a direction cosines)
             TelescopeDirectionVector ActualDirectionCosine1 = TelescopeDirectionVectorFromAltitudeAzimuth(ActualSyncPoint1);
@@ -112,9 +113,11 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
             ln_equ_posn RaDec1;
             ln_equ_posn RaDec2;
             RaDec1.dec = Entry1.Declination;
-            RaDec1.ra = Entry1.RightAscension;
+            // libnova works in decimal degrees so conversion is needed here
+            RaDec1.ra = Entry1.RightAscension * 360.0 / 24.0;
             RaDec2.dec = Entry2.Declination;
-            RaDec2.ra = Entry2.RightAscension;
+            // libnova works in decimal degrees so conversion is needed here
+            RaDec2.ra = Entry2.RightAscension * 360.0 / 24.0;
             ln_lnlat_posn Position;
             if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position))
                 return false;
@@ -145,11 +148,14 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
             ln_equ_posn RaDec2;
             ln_equ_posn RaDec3;
             RaDec1.dec = Entry1.Declination;
-            RaDec1.ra = Entry1.RightAscension;
+            // libnova works in decimal degrees so conversion is needed here
+            RaDec1.ra = Entry1.RightAscension * 360.0 / 24.0;
             RaDec2.dec = Entry2.Declination;
-            RaDec2.ra = Entry2.RightAscension;
+            // libnova works in decimal degrees so conversion is needed here
+            RaDec2.ra = Entry2.RightAscension * 360.0 / 24.0;
             RaDec3.dec = Entry3.Declination;
-            RaDec3.ra = Entry3.RightAscension;
+            // libnova works in decimal degrees so conversion is needed here
+            RaDec3.ra = Entry3.RightAscension * 360.0 / 24.0;
             ln_lnlat_posn Position;
             if (!pInMemoryDatabase->GetDatabaseReferencePosition(Position))
                 return false;
@@ -191,7 +197,8 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
                 ln_equ_posn RaDec;
                 ln_hrz_posn ActualSyncPoint;
                 RaDec.dec = (*Itr).Declination;
-                RaDec.ra = (*Itr).RightAscension;
+                // libnova works in decimal degrees so conversion is needed here
+                RaDec.ra = (*Itr).RightAscension * 360.0 / 24.0;
                 ln_get_hrz_from_equ(&RaDec, &Position, (*Itr).ObservationJulianDate, &ActualSyncPoint);
                 // Now express this coordinate as normalised direction vectors (a.k.a direction cosines)
                 TelescopeDirectionVector ActualDirectionCosine = TelescopeDirectionVectorFromAltitudeAzimuth(ActualSyncPoint);
@@ -258,6 +265,7 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
 {
     ln_equ_posn ActualRaDec;
     ln_hrz_posn ActualAltAz;
+    // libnova works in decimal degrees so conversion is needed here
     ActualRaDec.ra = RightAscension * 360.0 / 24.0;
     ActualRaDec.dec = Declination;
     ln_lnlat_posn Position;
@@ -415,6 +423,7 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
 #else
             ln_get_equ_from_hrz(&ApparentAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
 #endif
+            // libnova works in decimal degrees so conversion is needed here
             RightAscension = ActualRaDec.ra * 24.0 / 360.0;
             Declination = ActualRaDec.dec;
             break;
@@ -429,6 +438,10 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
             gsl_vector_set(pGSLApparentVector, 2, ApparentTelescopeDirectionVector.z);
             gsl_vector *pGSLActualVector = gsl_vector_alloc(3);
             MatrixVectorMultiply(pApparentToActualTransform, pGSLApparentVector, pGSLActualVector);
+
+            Dump3("ApparentVector", pGSLApparentVector);
+            Dump3("ActualVector", pGSLActualVector);
+
             TelescopeDirectionVector ActualTelescopeDirectionVector;
             ActualTelescopeDirectionVector.x = gsl_vector_get(pGSLActualVector, 0);
             ActualTelescopeDirectionVector.y = gsl_vector_get(pGSLActualVector, 1);
@@ -442,7 +455,8 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
 #else
             ln_get_equ_from_hrz(&ActualAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
 #endif
-            RightAscension = ActualRaDec.ra;
+            // libnova works in decimal degrees so conversion is needed here
+            RightAscension = ActualRaDec.ra * 24.0 / 360.0;
             Declination = ActualRaDec.dec;
             gsl_vector_free(pGSLActualVector);
             gsl_vector_free(pGSLApparentVector);
@@ -494,7 +508,8 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
 #else
             ln_get_equ_from_hrz(&ActualAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
 #endif
-            RightAscension = ActualRaDec.ra;
+            // libnova works in decimal degrees so conversion is needed here
+            RightAscension = ActualRaDec.ra * 24.0 / 360.0;
             Declination = ActualRaDec.dec;
             gsl_vector_free(pGSLActualVector);
             gsl_vector_free(pGSLApparentVector);
@@ -522,6 +537,8 @@ void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& A
     gsl_matrix_set(pAlphaMatrix, 1, 2, Alpha3.y);
     gsl_matrix_set(pAlphaMatrix, 2, 2, Alpha3.z);
 
+    Dump3x3("AlphaMatrix", pAlphaMatrix);
+
     gsl_matrix *pBetaMatrix = gsl_matrix_alloc(3, 3);
     gsl_matrix_set(pBetaMatrix, 0, 0, Beta1.x);
     gsl_matrix_set(pBetaMatrix, 1, 0, Beta1.y);
@@ -533,7 +550,11 @@ void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& A
     gsl_matrix_set(pBetaMatrix, 1, 2, Beta3.y);
     gsl_matrix_set(pBetaMatrix, 2, 2, Beta3.z);
 
+    Dump3x3("BetaMatrix", pBetaMatrix);
+
     MatrixMatrixMultiply(pBetaMatrix, pAlphaMatrix, pAlphaToBeta);
+
+    Dump3x3("AlphaToBeta", pAlphaToBeta);
 
     // Use pAlphaMatrix as temporary storage
     gsl_matrix_memcpy(pAlphaMatrix, pAlphaToBeta);
@@ -551,21 +572,30 @@ void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& A
     }
 
     if (NULL != pBetaToAlpha)
+    {
         gsl_matrix_memcpy(pBetaToAlpha, pBetaMatrix);
+
+        Dump3x3("BetaToAlpha", pBetaToAlpha);
+    }
 
     // Clean up
     gsl_matrix_free(pBetaMatrix);
     gsl_matrix_free(pAlphaMatrix);
 }
 
-void BuiltInMathPlugin::Dump3x3(gsl_matrix *pMatrix)
+void BuiltInMathPlugin::Dump3(const char *Label, gsl_vector *pVector)
 {
-    std::cerr << "Row 0 " << gsl_matrix_get(pMatrix, 0, 0) << " " << gsl_matrix_get(pMatrix, 0, 1) << " " << gsl_matrix_get(pMatrix, 0, 2) << '\n'
-    << "Row 1 " << gsl_matrix_get(pMatrix, 1, 0) << " " << gsl_matrix_get(pMatrix, 1, 1) << " " << gsl_matrix_get(pMatrix, 1, 2) << '\n'
-    << "Row 2 " << gsl_matrix_get(pMatrix, 2, 0) << " " << gsl_matrix_get(pMatrix, 2, 1) << " " << gsl_matrix_get(pMatrix, 2, 2) << '\n';
-
+    ASSDEBUGF("Vector dump - %s", Label);
+    ASSDEBUGF("%lf %lf %lf", gsl_vector_get(pVector, 0), gsl_vector_get(pVector, 1), gsl_vector_get(pVector, 2));
 }
 
+void BuiltInMathPlugin::Dump3x3(const char *Label, gsl_matrix *pMatrix)
+{
+    ASSDEBUGF("Matrix dump - %s", Label);
+    ASSDEBUGF("Row 0 %lf %lf %lf", gsl_matrix_get(pMatrix, 0, 0), gsl_matrix_get(pMatrix, 0, 1), gsl_matrix_get(pMatrix, 0, 2));
+    ASSDEBUGF("Row 1 %lf %lf %lf", gsl_matrix_get(pMatrix, 1, 0), gsl_matrix_get(pMatrix, 1, 1), gsl_matrix_get(pMatrix, 1, 2));
+    ASSDEBUGF("Row 2 %lf %lf %lf", gsl_matrix_get(pMatrix, 2, 0), gsl_matrix_get(pMatrix, 2, 1), gsl_matrix_get(pMatrix, 2, 2));
+}
 
 /// Use gsl to compute the inverse of a 3x3 matrix
 bool BuiltInMathPlugin::MatrixInvert3x3(gsl_matrix *pInput, gsl_matrix *pInversion)
