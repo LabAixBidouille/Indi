@@ -47,9 +47,15 @@ private:
                             const TelescopeDirectionVector& Beta1, const TelescopeDirectionVector& Beta2, const TelescopeDirectionVector& Beta3,
                             gsl_matrix *pAlphaToBeta, gsl_matrix *pBetaToAlpha);
 
-    /// \brief Print out a 3x3 matrix to cout
+    /// \brief Print out a 3 vector to debug
+    /// \param[in] Label A label to identify the vector
     /// \param[in] pMatrix The matrix to print
-    void Dump3x3(gsl_matrix *pMatrix);
+    void Dump3(const char *Label, gsl_vector *pVector);
+
+    /// \brief Print out a 3x3 matrix to debug
+    /// \param[in] Label A label to identify the matrix
+    /// \param[in] pMatrix The matrix to print
+    void Dump3x3(const char *Label, gsl_matrix *pMatrix);
 
     /// \brief Calculate the inverse of the supplied matrix
     /// \param[in] pInput Pointer to the input matrix
