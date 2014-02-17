@@ -68,7 +68,7 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
             ln_equ_posn DummyRaDec;
             TelescopeDirectionVector DummyActualDirectionCosine2;
             TelescopeDirectionVector DummyApparentDirectionCosine2;
-            switch (ApproximateMountAlignment)
+/*            switch (ApproximateMountAlignment)
             {
                 case ZENITH:
                     DummyAltAz.alt = 90.0;
@@ -97,7 +97,11 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
             }
             DummyActualDirectionCosine2 = TelescopeDirectionVectorFromAltitudeAzimuth(DummyAltAz);
             // Cheat - make actual and apparent the same
-            DummyApparentDirectionCosine2 = DummyActualDirectionCosine2;
+            DummyApparentDirectionCosine2 = DummyActualDirectionCosine2;*/
+            DummyActualDirectionCosine2 = ActualDirectionCosine1;
+            DummyActualDirectionCosine2.RotateAroundY(-90.0);
+            DummyApparentDirectionCosine2 = Entry1.TelescopeDirection;
+            DummyApparentDirectionCosine2.RotateAroundY(-90.0);
             CalculateTAKIMatrices(ActualDirectionCosine1, DummyActualDirectionCosine2, ActualDirectionCosine1 * DummyActualDirectionCosine2,
                                 Entry1.TelescopeDirection, DummyApparentDirectionCosine2, Entry1.TelescopeDirection * DummyApparentDirectionCosine2,
                                 pActualToApparentTransform, pApparentToActualTransform);
@@ -552,7 +556,19 @@ void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& A
 
     Dump3x3("BetaMatrix", pBetaMatrix);
 
-    MatrixMatrixMultiply(pBetaMatrix, pAlphaMatrix, pAlphaToBeta);
+    gsl_matrix *pInvertedAlphaMatrix = gsl_matrix_alloc(3, 3);
+
+    if (!MatrixInvert3x3(pAlphaMatrix, pInvertedAlphaMatrix))
+    {
+        // pAlphaToBeta is singular and therefore is not a true transform
+        // and cannot be inverted. This probably means it contains at least
+        // one row or column that contains only zeroes
+        gsl_matrix_set_identity(pInvertedAlphaMatrix);
+        ASSDEBUG("CalculateTAKIMatrices - Alpha matrix is singular!");
+        IDMessage(NULL, "Alpha matrix is singular and cannot be inverted.");
+    }
+
+    MatrixMatrixMultiply(pBetaMatrix, pInvertedAlphaMatrix, pAlphaToBeta);
 
     Dump3x3("AlphaToBeta", pAlphaToBeta);
 
@@ -581,6 +597,7 @@ void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& A
     // Clean up
     gsl_matrix_free(pBetaMatrix);
     gsl_matrix_free(pAlphaMatrix);
+    gsl_matrix_free(pInvertedAlphaMatrix);
 }
 
 void BuiltInMathPlugin::Dump3(const char *Label, gsl_vector *pVector)
