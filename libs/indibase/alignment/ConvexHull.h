@@ -43,6 +43,7 @@ not removed.
 --------------------------------------------------------------------
 */
 
+#include <fstream>
 #include <cstring> // I like to use NULL
 #include <cmath>
 #include <limits>
@@ -298,13 +299,13 @@ class ConvexHull
     */
     void Print( void );
 
-    /** \brief Prints the edges to the standard error output
+    /** \brief Prints the edges Ofile
     */
-    void PrintEdges( void );
+    void PrintEdges( std::ofstream& Ofile );
 
-    /** \brief Prints the faces to the standard error output
+    /** \brief Prints the faces to Ofile
     */
-    void PrintFaces( void );
+    void PrintFaces( std::ofstream& Ofile );
 
     /** \brief Outputs the faces in Lightwave obj format for 3d viewing.
     The files chull.obj and chull.mtl are written to the current working
@@ -314,15 +315,15 @@ class ConvexHull
 
     /** \brief Prints vertices, edges and faces to the standard error output
     */
-    void PrintOut( tVertex v );
+    void PrintOut( const char * FileName, tVertex v );
 
     /** \brief Prints a single vertex to the standard output.
     */
     void PrintPoint( tVertex p );
 
-    /** \brief Prints vertices the standard error output.
+    /** \brief Prints vertices to Ofile.
     */
-    void PrintVertices( void );
+    void PrintVertices( std::ofstream& Ofile );
 
     /** \brief ReadVertices: Reads in the vertices, and links them into a circular
     list with MakeNullVertex.  There is no need for the # of vertices to be

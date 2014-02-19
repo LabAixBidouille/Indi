@@ -69,9 +69,9 @@ struct TelescopeDirectionVector
     {
         TelescopeDirectionVector Result;
 
-        Result.x *= y * RHS;
-        Result.y *= z * RHS;
-        Result.z *= x * RHS;
+        Result.x = x * RHS;
+        Result.y = y * RHS;
+        Result.z = z * RHS;
         return Result;
     }
 

@@ -460,7 +460,7 @@ void SkywatcherAPI::PrepareForSlewing(AXISID Axis, double Speed)
 #if __cplusplus >= 201103L
             std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Sleep for 1/10 second
 #else
-            usleep(1000);
+            usleep(100000); // sleep for 1/10 second
 #endif
         }
     }
@@ -651,30 +651,62 @@ void SkywatcherAPI::SlewTo(AXISID Axis, long OffsetInMicrosteps)
                         Axis, OffsetInMicrosteps, CurrentEncoders[Axis], LastSlewToTarget[Axis]);
 
     char Direction;
+    bool Forward;
 
     if (OffsetInMicrosteps  > 0)
+    {
+        Forward = true;
         Direction = '0';
+    }
     else
     {
+        Forward = false;
         Direction = '1';
         OffsetInMicrosteps = -OffsetInMicrosteps;
     }
 
-    // The Skywatcher API sample implmentation does not check the axis status
-    // before issueing the goto command.
-    // !!!!!! Is this wise?
-
     bool HighSpeed;
     if (OffsetInMicrosteps > LowSpeedGotoMargin[Axis])
-    {
-        SetMotionMode(Axis, '0', Direction);
         HighSpeed = true;
-    }
     else
+        HighSpeed = false;
+
+    if (!GetStatus(Axis))
+        return;
+
+    if (!AxesStatus[Axis].FullStop)
     {
-        SetMotionMode(Axis, '2', Direction);
-        HighSpeed = false;;
+        // Axis is running
+        if ((AxesStatus[Axis].SlewingTo) // slew to (GOTO) in progress
+            || (AxesStatus[Axis].HighSpeed) // currently high speed slewing
+            || HighSpeed // I am about to request high speed
+            || ((AxesStatus[Axis].SlewingForward) && !Forward) // Direction change
+            || (!(AxesStatus[Axis].SlewingForward) && Forward)) // Direction change
+        {
+            // I need to stop the axis first
+            SlowStop(Axis);
+            // Horrible bit A POLLING LOOP !!!!!!!!!!
+            while (true)
+            {
+                // Update status
+                GetStatus(Axis);
+
+                if (AxesStatus[Axis].FullStop)
+                    break;
+
+    #if __cplusplus >= 201103L
+                std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Sleep for 1/10 second
+    #else
+                usleep(100000); // sleep for 1/10 second
+    #endif
+            }
+        }
     }
+
+    if (HighSpeed)
+        SetMotionMode(Axis, '0', Direction);
+    else
+        SetMotionMode(Axis, '2', Direction);
 
     SetGotoTargetOffset(Axis, OffsetInMicrosteps);
 
@@ -686,7 +718,7 @@ void SkywatcherAPI::SlewTo(AXISID Axis, long OffsetInMicrosteps)
                     OffsetInMicrosteps > 200 ? 200 : OffsetInMicrosteps);
     StartMotion(Axis);
 
-    AxesStatus[Axis].SetSlewingTo(Direction == '0' ? true : false, HighSpeed);
+    AxesStatus[Axis].SetSlewingTo(Forward, HighSpeed);
 }
 
 bool SkywatcherAPI::SlowStop(AXISID Axis)
