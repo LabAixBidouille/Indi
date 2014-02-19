@@ -37,7 +37,6 @@ not removed.
 #include <cmath>
 #include <cstdlib>
 #include <map>
-#include <fstream>
 
 using namespace std;
 
@@ -54,7 +53,7 @@ bool ConvexHull::AddOne( tVertex p )
     if ( debug )
     {
         cerr << "AddOne: starting to add v" << p->vnum << ".\n";
-        PrintOut( vertices );
+        //PrintOut( vertices );
     }
 
     /* Mark faces visible from p. */
@@ -364,8 +363,8 @@ void ConvexHull::ConstructHull( void )
                 cerr << "ConstructHull: After Add of " << v->vnum << " & Cleanup:\n";
                 Checks();
             }
-            if ( debug )
-                PrintOut( v );
+//            if ( debug )
+//                PrintOut( v );
         }
         v = vnext;
     } while ( v != vertices );
@@ -455,7 +454,7 @@ void ConvexHull::DoubleTriangle( void )
     if ( debug )
     {
         cerr << "DoubleTriangle: finished. Head repositioned at v3.\n";
-        PrintOut( vertices );
+        //PrintOut( vertices );
     }
 }
 
@@ -774,43 +773,43 @@ void ConvexHull::Print( void )
 
 }
 
-void ConvexHull::PrintEdges( void )
+void ConvexHull::PrintEdges( ofstream& Ofile )
 {
     tEdge  temp;
     int 	  i;
 
     temp = edges;
-    cerr << "Edge List\n";
+    Ofile << "Edge List\n";
     if (edges) do {
-        cerr << "  addr: " << hex << edges << '\t';
-        cerr << "adj: ";
+        Ofile << "  addr: " << hex << edges << '\t';
+        Ofile << "adj: ";
         for (i=0; i<2; ++i)
-            cerr << edges->adjface[i];
-        cerr << "  endpts:" << dec;
+            Ofile << edges->adjface[i] << ' ';
+        Ofile << " endpts:" << dec;
         for (i=0; i<2; ++i)
-            cerr << edges->endpts[i]->vnum;
-        cerr << "  del:" << edges->delete_it << '\n';
+            Ofile << edges->endpts[i]->vnum << ' ';
+        Ofile << "  del:" << edges->delete_it << '\n';
         edges = edges->next;
     } while (edges != temp );
 
 }
 
-void ConvexHull::PrintFaces( void )
+void ConvexHull::PrintFaces( ofstream& Ofile )
 {
     int 	  i;
     tFace  temp;
 
     temp = faces;
-    cerr << "Face List\n";
+    Ofile << "Face List\n";
     if (faces) do {
-        cerr << "  addr: " << hex << faces << "  ";
-        cerr << "  edges:" << hex;
+        Ofile << "  addr: " << hex << faces << "  ";
+        Ofile << "  edges:" << hex;
         for( i=0; i<3; ++i )
-            cerr << faces->edge[i] << ' ';
-        cerr << "  vert:" << dec;
+            Ofile << faces->edge[i] << ' ';
+        Ofile << "  vert:" << dec;
         for ( i=0; i<3; ++i)
-            cerr << ' ' << faces->vertex[i]->vnum;
-        cerr << "  vis: " << faces->visible << '\n';
+            Ofile << ' ' << faces->vertex[i]->vnum;
+        Ofile << "  vis: " << faces->visible << '\n';
         faces= faces->next;
     } while ( faces != temp );
 
@@ -818,11 +817,6 @@ void ConvexHull::PrintFaces( void )
 
 void ConvexHull::PrintObj(const char * FileName)
 {
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // This code will not work if vertices have been removed from
-    // the list. More work is needed to renumber the vertices for
-    // this case.
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     tVertex  v;
     tFace    f;
     map<int, int> vnumToOffsetMap;
@@ -830,7 +824,7 @@ void ConvexHull::PrintObj(const char * FileName)
     double c[3], length;
     ofstream Ofile;
 
-    Ofile.open("chull.obj", ios_base::out|ios_base::trunc);
+    Ofile.open(FileName, ios_base::out|ios_base::trunc);
 
     Ofile << "# obj file written by chull\n";
     Ofile << "mtllib chull.mtl\n";
@@ -857,7 +851,8 @@ void ConvexHull::PrintObj(const char * FileName)
     {
         // get two tangent vectors
         SubVec( f->vertex[1]->v, f->vertex[0]->v, a );
-        SubVec( f->vertex[2]->v, f->vertex[1]->v, b );
+//        SubVec( f->vertex[2]->v, f->vertex[1]->v, b );
+        SubVec( f->vertex[2]->v, f->vertex[0]->v, b );
         // cross product for the normal
         c[0] = a[1]*b[2] - a[2]*b[1];
         c[1] = a[2]*b[0] - a[0]*b[2];
@@ -895,12 +890,18 @@ void ConvexHull::PrintObj(const char * FileName)
     Ofile.close();
 }
 
-void ConvexHull::PrintOut( tVertex v )
+void ConvexHull::PrintOut( const char * FileName, tVertex v )
 {
-   cerr << "\nHead vertex " << v->vnum << " = " << hex << v << " :\n";
-   PrintVertices();
-   PrintEdges();
-   PrintFaces();
+    ofstream Ofile;
+    Ofile.open(FileName, ios_base::out|ios_base::trunc);
+
+    Ofile << "\nHead vertex " << v->vnum << " = " << hex << v << " :\n";
+
+    PrintVertices(Ofile);
+    PrintEdges(Ofile);
+    PrintFaces(Ofile);
+
+    Ofile.close();
 }
 
 void ConvexHull::PrintPoint( tVertex p )
@@ -912,20 +913,20 @@ void ConvexHull::PrintPoint( tVertex p )
     cout << '\n';
 }
 
-void ConvexHull::PrintVertices( void )
+void ConvexHull::PrintVertices( ofstream& Ofile )
 {
     tVertex  temp;
 
     temp = vertices;
-    cerr << "Vertex List\n";
+    Ofile << "Vertex List\n";
     if (vertices) do
     {
-        cerr << "  addr " << hex << vertices << "\t";
-        cerr << "  vnum " << dec << vertices->vnum;
-        cerr << '(' << vertices->v[X] << ',' << vertices->v[Y] << ',' << vertices->v[Z] << ')';
-        cerr << "  active:" << vertices->onhull;
-        cerr << "  dup:" << hex << vertices->duplicate;
-        cerr << "  mark:" << dec << vertices->mark << '\n';
+        Ofile << "  addr " << hex << vertices << "\t";
+        Ofile << "  vnum " << dec << vertices->vnum;
+        Ofile << '(' << vertices->v[X] << ',' << vertices->v[Y] << ',' << vertices->v[Z] << ')';
+        Ofile << "  active:" << vertices->onhull;
+        Ofile << "  dup:" << hex << vertices->duplicate;
+        Ofile << "  mark:" << dec << vertices->mark << '\n';
         vertices = vertices->next;
     } while ( vertices != temp );
 }

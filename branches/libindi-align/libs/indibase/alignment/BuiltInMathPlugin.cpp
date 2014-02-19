@@ -63,47 +63,61 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
             ln_get_hrz_from_equ(&RaDec, &Position, Entry1.ObservationJulianDate, &ActualSyncPoint1);
             // Now express this coordinate as a normalised direction vector (a.k.a direction cosines)
             TelescopeDirectionVector ActualDirectionCosine1 = TelescopeDirectionVectorFromAltitudeAzimuth(ActualSyncPoint1);
-            // Generate the second dummy sync point
-            ln_hrz_posn DummyAltAz;
-            ln_equ_posn DummyRaDec;
             TelescopeDirectionVector DummyActualDirectionCosine2;
             TelescopeDirectionVector DummyApparentDirectionCosine2;
             TelescopeDirectionVector DummyActualDirectionCosine3;
             TelescopeDirectionVector DummyApparentDirectionCosine3;
-/*            switch (ApproximateMountAlignment)
+#if (1)
+            switch (ApproximateMountAlignment)
             {
                 case ZENITH:
-                    DummyAltAz.alt = 90.0;
-                    DummyAltAz.az = 0.0;
+                    DummyActualDirectionCosine2.x = 0.0;
+                    DummyActualDirectionCosine2.y = 0.0;
+                    DummyActualDirectionCosine2.z = 1.0;
+                    DummyApparentDirectionCosine2 = DummyActualDirectionCosine2;
                     break;
 
                 case NORTH_CELESTIAL_POLE:
+                {
+                    ln_equ_posn DummyRaDec;
+                    ln_hrz_posn DummyAltAz;
                     DummyRaDec.ra = 0.0;
-                    DummyRaDec.dec = 0.0;
+                    DummyRaDec.dec = 90.0;
 #ifdef USE_INITIAL_JULIAN_DATE
                     ln_get_hrz_from_equ(&DummyRaDec, &Position, Entry1.ObservationJulianDate, &DummyAltAz);
 #else
                     ln_get_hrz_from_equ(&DummyRaDec, &Position, ln_get_julian_from_sys(), &DummyAltAz);
 #endif
+                    DummyActualDirectionCosine2 = TelescopeDirectionVectorFromAltitudeAzimuth(ActualSyncPoint1);
+                    DummyApparentDirectionCosine2.x = 0;
+                    DummyApparentDirectionCosine2.y = 0;
+                    DummyApparentDirectionCosine2.z = 1;
                     break;
-
+                }
                 case SOUTH_CELESTIAL_POLE:
+                {
+                    ln_equ_posn DummyRaDec;
+                    ln_hrz_posn DummyAltAz;
                     DummyRaDec.ra = 0.0;
-                    DummyRaDec.dec = 180.0;
+                    DummyRaDec.dec = -90.0;
 #ifdef USE_INITIAL_JULIAN_DATE
                     ln_get_hrz_from_equ(&DummyRaDec, &Position, Entry1.ObservationJulianDate, &DummyAltAz);
 #else
                     ln_get_hrz_from_equ(&DummyRaDec, &Position, ln_get_julian_from_sys(), &DummyAltAz);
 #endif
+                    DummyActualDirectionCosine2 = TelescopeDirectionVectorFromAltitudeAzimuth(ActualSyncPoint1);
+                    DummyApparentDirectionCosine2.x = 0;
+                    DummyApparentDirectionCosine2.y = 0;
+                    DummyApparentDirectionCosine2.z = 1;
                     break;
+                }
             }
-            DummyActualDirectionCosine2 = TelescopeDirectionVectorFromAltitudeAzimuth(DummyAltAz);
-            // Cheat - make actual and apparent the same
-            DummyApparentDirectionCosine2 = DummyActualDirectionCosine2;*/
+#else
             DummyActualDirectionCosine2 = ActualDirectionCosine1;
             DummyActualDirectionCosine2.RotateAroundY(-90.0);
             DummyApparentDirectionCosine2 = Entry1.TelescopeDirection;
             DummyApparentDirectionCosine2.RotateAroundY(-90.0);
+#endif
             DummyActualDirectionCosine3 = ActualDirectionCosine1 * DummyActualDirectionCosine2;
             DummyActualDirectionCosine3.Normalise();
             DummyApparentDirectionCosine3 = Entry1.TelescopeDirection * DummyApparentDirectionCosine2;
@@ -232,44 +246,77 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
             ApparentConvexHull.EdgeOrderOnFaces();
 
             // Make the matrices
-            tFace CurrentFace = ActualConvexHull.faces;
+            ConvexHull::tFace CurrentFace = ActualConvexHull.faces;
+            int ActualFaces = 0;
             if (NULL != CurrentFace)
             {
                 do
                 {
-                    CalculateTAKIMatrices(ActualDirectionCosines[CurrentFace->vertex[0]->vnum],
-                                        ActualDirectionCosines[CurrentFace->vertex[1]->vnum],
-                                        ActualDirectionCosines[CurrentFace->vertex[2]->vnum],
-                                        SyncPoints[CurrentFace->vertex[0]->vnum].TelescopeDirection,
-                                        SyncPoints[CurrentFace->vertex[1]->vnum].TelescopeDirection,
-                                        SyncPoints[CurrentFace->vertex[2]->vnum].TelescopeDirection,
-                                        CurrentFace->pMatrix, NULL);
+                    ActualFaces++;
+#ifdef CONVEX_HULL_DEBUGGING
+                    ASSDEBUGF("Initialise - Processing actual face %d v1 %d v2 %d v3 %d", ActualFaces,
+                                                                        CurrentFace->vertex[0]->vnum,
+                                                                        CurrentFace->vertex[1]->vnum,
+                                                                        CurrentFace->vertex[2]->vnum);
+#endif
+                    if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[0]->vnum))
+                    {
+#ifdef CONVEX_HULL_DEBUGGING
+                        ASSDEBUGF("Initialise - Ignoring actual face %d", ActualFaces);
+#endif
+                    }
+                    else
+                        CalculateTAKIMatrices(ActualDirectionCosines[CurrentFace->vertex[0]->vnum - 1],
+                                            ActualDirectionCosines[CurrentFace->vertex[1]->vnum - 1],
+                                            ActualDirectionCosines[CurrentFace->vertex[2]->vnum - 1],
+                                            SyncPoints[CurrentFace->vertex[0]->vnum - 1].TelescopeDirection,
+                                            SyncPoints[CurrentFace->vertex[1]->vnum - 1].TelescopeDirection,
+                                            SyncPoints[CurrentFace->vertex[2]->vnum - 1].TelescopeDirection,
+                                            CurrentFace->pMatrix, NULL);
                     CurrentFace = CurrentFace->next;
                 }
-                while (CurrentFace != faces);
+                while (CurrentFace != ActualConvexHull.faces);
             }
 
             // One of these days I will optimise this
             CurrentFace = ApparentConvexHull.faces;
+            int ApparentFaces = 0;
             if (NULL != CurrentFace)
             {
                 do
                 {
-                    CalculateTAKIMatrices(SyncPoints[CurrentFace->vertex[0]->vnum].TelescopeDirection,
-                                        SyncPoints[CurrentFace->vertex[1]->vnum].TelescopeDirection,
-                                        SyncPoints[CurrentFace->vertex[2]->vnum].TelescopeDirection,
-                                        ActualDirectionCosines[CurrentFace->vertex[0]->vnum],
-                                        ActualDirectionCosines[CurrentFace->vertex[1]->vnum],
-                                        ActualDirectionCosines[CurrentFace->vertex[2]->vnum],
-                                        CurrentFace->pMatrix, NULL);
+                    ApparentFaces++;
+#ifdef CONVEX_HULL_DEBUGGING
+                    ASSDEBUGF("Initialise - Processing apparent face %d v1 %d v2 %d v3 %d", ApparentFaces,
+                                                                        CurrentFace->vertex[0]->vnum,
+                                                                        CurrentFace->vertex[1]->vnum,
+                                                                        CurrentFace->vertex[2]->vnum);
+#endif
+                    if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[0]->vnum))
+                    {
+#ifdef CONVEX_HULL_DEBUGGING
+                        ASSDEBUGF("Initialise - Ignoring apparent face %d", ApparentFaces);
+#endif
+                    }
+                    else
+                        CalculateTAKIMatrices(SyncPoints[CurrentFace->vertex[0]->vnum].TelescopeDirection,
+                                            SyncPoints[CurrentFace->vertex[1]->vnum].TelescopeDirection,
+                                            SyncPoints[CurrentFace->vertex[2]->vnum].TelescopeDirection,
+                                            ActualDirectionCosines[CurrentFace->vertex[0]->vnum],
+                                            ActualDirectionCosines[CurrentFace->vertex[1]->vnum],
+                                            ActualDirectionCosines[CurrentFace->vertex[2]->vnum],
+                                            CurrentFace->pMatrix, NULL);
                     CurrentFace = CurrentFace->next;
                 }
-                while (CurrentFace != faces);
+                while (CurrentFace != ApparentConvexHull.faces);
             }
 
+            ASSDEBUGF("Initialise - ActualFaces %d ApparentFaces %d", ActualFaces, ApparentFaces);
 #ifdef CONVEX_HULL_DEBUGGING
             ActualConvexHull.PrintObj("ActualHull.obj");
+            ActualConvexHull.PrintOut("ActualHull.log", ActualConvexHull.vertices);
             ApparentConvexHull.PrintObj("ApparentHull.obj");
+            ActualConvexHull.PrintOut("ApparentHull.log", ApparentConvexHull.vertices);
 #endif
             return true;
         }
@@ -361,20 +408,37 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
             TelescopeDirectionVector ScaledActualVector = ActualVector * 2.0;
             // Shoot the scaled vector in the into the list of actual facets
             // and use the conversuion matrix from the one it intersects
-            tFace CurrentFace = ActualConvexHull.faces;
+            ConvexHull::tFace CurrentFace = ActualConvexHull.faces;
+#ifdef CONVEX_HULL_DEBUGGING
+            int ActualFaces = 0;
+#endif
             if (NULL != CurrentFace)
             {
                 do
                 {
-                    if (RayTriangleIntersection(ScaledActualVector,
-                                                ActualDirectionCosines[CurrentFace->vertex[0]->vnum],
-                                                ActualDirectionCosines[CurrentFace->vertex[1]->vnum],
-                                                ActualDirectionCosines[CurrentFace->vertex[2]->vnum]))
-                        break;
+#ifdef CONVEX_HULL_DEBUGGING
+                    ActualFaces++;
+                    ASSDEBUGF("Celestial to telescope - Processing actual face %d v1 %d v2 %d v3 %d", ActualFaces,
+                                                                        CurrentFace->vertex[0]->vnum,
+                                                                        CurrentFace->vertex[1]->vnum,
+                                                                        CurrentFace->vertex[2]->vnum);
+#endif
+                    if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[1]->vnum) || (0 == CurrentFace->vertex[2]->vnum))
+                    {
+#ifdef CONVEX_HULL_DEBUGGING
+                        ASSDEBUGF("Celestial to telescope - Ignoring actual face %d", ActualFaces);
+#endif
+                    }
+                    else
+                        if (RayTriangleIntersection(ScaledActualVector,
+                                                    ActualDirectionCosines[CurrentFace->vertex[0]->vnum - 1],
+                                                    ActualDirectionCosines[CurrentFace->vertex[1]->vnum - 1],
+                                                    ActualDirectionCosines[CurrentFace->vertex[2]->vnum - 1]))
+                            break;
                     CurrentFace = CurrentFace->next;
                 }
-                while (CurrentFace != faces);
-                if (CurrentFace == faces)
+                while (CurrentFace != ActualConvexHull.faces);
+                if (CurrentFace == ActualConvexHull.faces)
                     return false;
             }
             else
@@ -485,20 +549,37 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
             TelescopeDirectionVector ScaledApparentVector = ApparentTelescopeDirectionVector * 2.0;
             // Shoot the scaled vector in the into the list of apparent facets
             // and use the conversuion matrix from the one it intersects
-            tFace CurrentFace = ApparentConvexHull.faces;
+            ConvexHull::tFace CurrentFace = ApparentConvexHull.faces;
+#ifdef CONVEX_HULL_DEBUGGING
+            int ApparentFaces = 0;
+#endif
             if (NULL != CurrentFace)
             {
                 do
                 {
-                    if (RayTriangleIntersection(ScaledApparentVector,
-                                                SyncPoints[CurrentFace->vertex[0]->vnum].TelescopeDirection,
-                                                SyncPoints[CurrentFace->vertex[1]->vnum].TelescopeDirection,
-                                                SyncPoints[CurrentFace->vertex[2]->vnum].TelescopeDirection))
-                        break;
+#ifdef CONVEX_HULL_DEBUGGING
+                    ApparentFaces++;
+                    ASSDEBUGF("TelescopeToCelestial - Processing apparent face %d v1 %d v2 %d v3 %d", ApparentFaces,
+                                                                        CurrentFace->vertex[0]->vnum,
+                                                                        CurrentFace->vertex[1]->vnum,
+                                                                        CurrentFace->vertex[2]->vnum);
+#endif
+                    if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[1]->vnum) || (0 == CurrentFace->vertex[2]->vnum))
+                    {
+#ifdef CONVEX_HULL_DEBUGGING
+                        ASSDEBUGF("Celestial to telescope - Ignoring apparent face %d", ApparentFaces);
+#endif
+                    }
+                    else
+                        if (RayTriangleIntersection(ScaledApparentVector,
+                                                    SyncPoints[CurrentFace->vertex[0]->vnum - 1].TelescopeDirection,
+                                                    SyncPoints[CurrentFace->vertex[1]->vnum - 1].TelescopeDirection,
+                                                    SyncPoints[CurrentFace->vertex[2]->vnum - 1].TelescopeDirection))
+                            break;
                     CurrentFace = CurrentFace->next;
                 }
-                while (CurrentFace != faces);
-                if (CurrentFace == faces)
+                while (CurrentFace != ApparentConvexHull.faces);
+                if (CurrentFace == ApparentConvexHull.faces)
                     return false;
             }
             else
@@ -579,31 +660,35 @@ void  BuiltInMathPlugin::CalculateTAKIMatrices(const TelescopeDirectionVector& A
         ASSDEBUG("CalculateTAKIMatrices - Alpha matrix is singular!");
         IDMessage(NULL, "Alpha matrix is singular and cannot be inverted.");
     }
-
-    MatrixMatrixMultiply(pBetaMatrix, pInvertedAlphaMatrix, pAlphaToBeta);
-
-    Dump3x3("AlphaToBeta", pAlphaToBeta);
-
-    // Use pAlphaMatrix as temporary storage
-    gsl_matrix_memcpy(pAlphaMatrix, pAlphaToBeta);
-
-    // Invert the matrix to get the Apparent to Actual transform
-    // use pBetaMatrix as temporary storage
-    if (!MatrixInvert3x3(pAlphaToBeta, pBetaMatrix))
+    else
     {
-        // pAlphaToBeta is singular and therefore is not a true transform
-        // and cannot be inverted. This probably means it contains at least
-        // one row or column that contains only zeroes
-        gsl_matrix_set_identity(pBetaMatrix);
-        ASSDEBUG("CalculateTAKIMatrices - AlphaToBeta matrix is singular!");
-        IDMessage(NULL, "Calculated Celestial to Telescope transformation matrix is singular (not a true transform).");
-    }
+        MatrixMatrixMultiply(pBetaMatrix, pInvertedAlphaMatrix, pAlphaToBeta);
 
-    if (NULL != pBetaToAlpha)
-    {
-        gsl_matrix_memcpy(pBetaToAlpha, pBetaMatrix);
+        Dump3x3("AlphaToBeta", pAlphaToBeta);
 
-        Dump3x3("BetaToAlpha", pBetaToAlpha);
+        // Use pAlphaMatrix as temporary storage
+        gsl_matrix_memcpy(pAlphaMatrix, pAlphaToBeta);
+
+        // Invert the matrix to get the Apparent to Actual transform
+        // use pBetaMatrix as temporary storage
+        if (!MatrixInvert3x3(pAlphaToBeta, pBetaMatrix))
+        {
+            // pAlphaToBeta is singular and therefore is not a true transform
+            // and cannot be inverted. This probably means it contains at least
+            // one row or column that contains only zeroes
+            gsl_matrix_set_identity(pBetaMatrix);
+            ASSDEBUG("CalculateTAKIMatrices - AlphaToBeta matrix is singular!");
+            IDMessage(NULL, "Calculated Celestial to Telescope transformation matrix is singular (not a true transform).");
+        }
+        else
+        {
+            if (NULL != pBetaToAlpha)
+            {
+                gsl_matrix_memcpy(pBetaToAlpha, pBetaMatrix);
+
+                Dump3x3("BetaToAlpha", pBetaToAlpha);
+            }
+        }
     }
 
     // Clean up
@@ -689,7 +774,9 @@ bool BuiltInMathPlugin::RayTriangleIntersection(TelescopeDirectionVector& Ray,
 
     // if the determinant is negative the triangle is backfacing
     // if the determinant is close to 0, the ray misses the triangle
-    if (Determinant < std::numeric_limits<double>::epsilon())
+    // I do no cull because I am unsure of the way triangles face. This is only because
+    // my obj dump function seems to think some are. However the text dump does not show this!!!!!!!
+    if ((Determinant >  -std::numeric_limits<double>::epsilon()) && (Determinant < std::numeric_limits<double>::epsilon()))
         return false;
 
     // I use zero as ray origin so
