@@ -418,11 +418,8 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
                 {
 #ifdef CONVEX_HULL_DEBUGGING
                     ActualFaces++;
-                    ASSDEBUGF("Celestial to telescope - Processing actual face %d v1 %d v2 %d v3 %d", ActualFaces,
-                                                                        CurrentFace->vertex[0]->vnum,
-                                                                        CurrentFace->vertex[1]->vnum,
-                                                                        CurrentFace->vertex[2]->vnum);
 #endif
+                    // Ignore faces containg vertex 0 (nadir).
                     if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[1]->vnum) || (0 == CurrentFace->vertex[2]->vnum))
                     {
 #ifdef CONVEX_HULL_DEBUGGING
@@ -430,11 +427,19 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
 #endif
                     }
                     else
+                    {
+#ifdef CONVEX_HULL_DEBUGGING
+                        ASSDEBUGF("Celestial to telescope - Processing actual face %d v1 %d v2 %d v3 %d", ActualFaces,
+                                                                            CurrentFace->vertex[0]->vnum,
+                                                                            CurrentFace->vertex[1]->vnum,
+                                                                            CurrentFace->vertex[2]->vnum);
+#endif
                         if (RayTriangleIntersection(ScaledActualVector,
                                                     ActualDirectionCosines[CurrentFace->vertex[0]->vnum - 1],
                                                     ActualDirectionCosines[CurrentFace->vertex[1]->vnum - 1],
                                                     ActualDirectionCosines[CurrentFace->vertex[2]->vnum - 1]))
                             break;
+                    }
                     CurrentFace = CurrentFace->next;
                 }
                 while (CurrentFace != ActualConvexHull.faces);
@@ -559,11 +564,8 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
                 {
 #ifdef CONVEX_HULL_DEBUGGING
                     ApparentFaces++;
-                    ASSDEBUGF("TelescopeToCelestial - Processing apparent face %d v1 %d v2 %d v3 %d", ApparentFaces,
-                                                                        CurrentFace->vertex[0]->vnum,
-                                                                        CurrentFace->vertex[1]->vnum,
-                                                                        CurrentFace->vertex[2]->vnum);
 #endif
+                    // Ignore faces containg vertex 0 (nadir).
                     if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[1]->vnum) || (0 == CurrentFace->vertex[2]->vnum))
                     {
 #ifdef CONVEX_HULL_DEBUGGING
@@ -571,11 +573,19 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
 #endif
                     }
                     else
+                    {
+#ifdef CONVEX_HULL_DEBUGGING
+                        ASSDEBUGF("TelescopeToCelestial - Processing apparent face %d v1 %d v2 %d v3 %d", ApparentFaces,
+                                                                        CurrentFace->vertex[0]->vnum,
+                                                                        CurrentFace->vertex[1]->vnum,
+                                                                        CurrentFace->vertex[2]->vnum);
+#endif
                         if (RayTriangleIntersection(ScaledApparentVector,
                                                     SyncPoints[CurrentFace->vertex[0]->vnum - 1].TelescopeDirection,
                                                     SyncPoints[CurrentFace->vertex[1]->vnum - 1].TelescopeDirection,
                                                     SyncPoints[CurrentFace->vertex[2]->vnum - 1].TelescopeDirection))
                             break;
+                    }
                     CurrentFace = CurrentFace->next;
                 }
                 while (CurrentFace != ApparentConvexHull.faces);
@@ -772,15 +782,13 @@ bool BuiltInMathPlugin::RayTriangleIntersection(TelescopeDirectionVector& Ray,
     double Determinant = Edge1 ^ P; // dot product
     double InverseDeterminant = 1.0 / Determinant;
 
-    // if the determinant is negative the triangle is backfacing
-    // if the determinant is close to 0, the ray misses the triangle
-    // I do no cull because I am unsure of the way triangles face. This is only because
-    // my obj dump function seems to think some are. However the text dump does not show this!!!!!!!
+    // If the determinant is negative the triangle is backfacing
+    // If the determinant is close to 0, the ray misses the triangle
     if ((Determinant >  -std::numeric_limits<double>::epsilon()) && (Determinant < std::numeric_limits<double>::epsilon()))
         return false;
 
     // I use zero as ray origin so
-    TelescopeDirectionVector T = TriangleVertex1;
+    TelescopeDirectionVector T(-TriangleVertex1.x, -TriangleVertex1.y, -TriangleVertex1.z);
 
     // Calculate the u parameter
     double u = (T ^ P) * InverseDeterminant;
