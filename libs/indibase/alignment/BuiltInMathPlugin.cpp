@@ -247,25 +247,30 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
 
             // Make the matrices
             ConvexHull::tFace CurrentFace = ActualConvexHull.faces;
+#ifdef CONVEX_HULL_DEBUGGING
             int ActualFaces = 0;
+#endif
             if (NULL != CurrentFace)
             {
                 do
                 {
-                    ActualFaces++;
 #ifdef CONVEX_HULL_DEBUGGING
-                    ASSDEBUGF("Initialise - Processing actual face %d v1 %d v2 %d v3 %d", ActualFaces,
-                                                                        CurrentFace->vertex[0]->vnum,
-                                                                        CurrentFace->vertex[1]->vnum,
-                                                                        CurrentFace->vertex[2]->vnum);
+                    ActualFaces++;
 #endif
-                    if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[0]->vnum))
+                    if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[1]->vnum) || (0 == CurrentFace->vertex[2]->vnum))
                     {
 #ifdef CONVEX_HULL_DEBUGGING
                         ASSDEBUGF("Initialise - Ignoring actual face %d", ActualFaces);
 #endif
                     }
                     else
+                    {
+#ifdef CONVEX_HULL_DEBUGGING
+                        ASSDEBUGF("Initialise - Processing actual face %d v1 %d v2 %d v3 %d", ActualFaces,
+                                                                        CurrentFace->vertex[0]->vnum,
+                                                                        CurrentFace->vertex[1]->vnum,
+                                                                        CurrentFace->vertex[2]->vnum);
+#endif
                         CalculateTAKIMatrices(ActualDirectionCosines[CurrentFace->vertex[0]->vnum - 1],
                                             ActualDirectionCosines[CurrentFace->vertex[1]->vnum - 1],
                                             ActualDirectionCosines[CurrentFace->vertex[2]->vnum - 1],
@@ -273,6 +278,7 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
                                             SyncPoints[CurrentFace->vertex[1]->vnum - 1].TelescopeDirection,
                                             SyncPoints[CurrentFace->vertex[2]->vnum - 1].TelescopeDirection,
                                             CurrentFace->pMatrix, NULL);
+                    }
                     CurrentFace = CurrentFace->next;
                 }
                 while (CurrentFace != ActualConvexHull.faces);
@@ -280,32 +286,38 @@ bool BuiltInMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
 
             // One of these days I will optimise this
             CurrentFace = ApparentConvexHull.faces;
+#ifdef CONVEX_HULL_DEBUGGING
             int ApparentFaces = 0;
+#endif
             if (NULL != CurrentFace)
             {
                 do
                 {
-                    ApparentFaces++;
 #ifdef CONVEX_HULL_DEBUGGING
-                    ASSDEBUGF("Initialise - Processing apparent face %d v1 %d v2 %d v3 %d", ApparentFaces,
-                                                                        CurrentFace->vertex[0]->vnum,
-                                                                        CurrentFace->vertex[1]->vnum,
-                                                                        CurrentFace->vertex[2]->vnum);
+                    ApparentFaces++;
 #endif
-                    if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[0]->vnum))
+                    if ((0 == CurrentFace->vertex[0]->vnum) || (0 == CurrentFace->vertex[1]->vnum) || (0 == CurrentFace->vertex[2]->vnum))
                     {
 #ifdef CONVEX_HULL_DEBUGGING
                         ASSDEBUGF("Initialise - Ignoring apparent face %d", ApparentFaces);
 #endif
                     }
                     else
-                        CalculateTAKIMatrices(SyncPoints[CurrentFace->vertex[0]->vnum].TelescopeDirection,
-                                            SyncPoints[CurrentFace->vertex[1]->vnum].TelescopeDirection,
-                                            SyncPoints[CurrentFace->vertex[2]->vnum].TelescopeDirection,
-                                            ActualDirectionCosines[CurrentFace->vertex[0]->vnum],
-                                            ActualDirectionCosines[CurrentFace->vertex[1]->vnum],
-                                            ActualDirectionCosines[CurrentFace->vertex[2]->vnum],
+                    {
+#ifdef CONVEX_HULL_DEBUGGING
+                        ASSDEBUGF("Initialise - Processing apparent face %d v1 %d v2 %d v3 %d", ApparentFaces,
+                                                                        CurrentFace->vertex[0]->vnum,
+                                                                        CurrentFace->vertex[1]->vnum,
+                                                                        CurrentFace->vertex[2]->vnum);
+#endif
+                        CalculateTAKIMatrices(SyncPoints[CurrentFace->vertex[0]->vnum - 1].TelescopeDirection,
+                                            SyncPoints[CurrentFace->vertex[1]->vnum - 1].TelescopeDirection,
+                                            SyncPoints[CurrentFace->vertex[2]->vnum - 1].TelescopeDirection,
+                                            ActualDirectionCosines[CurrentFace->vertex[0]->vnum - 1],
+                                            ActualDirectionCosines[CurrentFace->vertex[1]->vnum - 1],
+                                            ActualDirectionCosines[CurrentFace->vertex[2]->vnum - 1],
                                             CurrentFace->pMatrix, NULL);
+                    }
                     CurrentFace = CurrentFace->next;
                 }
                 while (CurrentFace != ApparentConvexHull.faces);
@@ -336,20 +348,22 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
     if ((NULL == pInMemoryDatabase) || !pInMemoryDatabase->GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
         return false;
 
+#ifdef USE_INITIAL_JULIAN_DATE
+    ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
+#else
+    ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys() + JulianOffset, &ActualAltAz);
+#endif
+    ASSDEBUGF("Celestial to telescope - Actual Alt %lf Az %lf", ActualAltAz.alt, ActualAltAz.az);
+
+    TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
+
     InMemoryDatabase::AlignmentDatabaseType& SyncPoints = pInMemoryDatabase->GetAlignmentDatabase();
     switch (SyncPoints.size())
     {
         case 0:
         {
             // 0 sync points
-            ln_hrz_posn ApparentAltAz;
-#ifdef USE_INITIAL_JULIAN_DATE
-            ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
-#else
-            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys() + JulianOffset, &ApparentAltAz);
-#endif
-
-            ApparentTelescopeDirectionVector = TelescopeDirectionVectorFromAltitudeAzimuth(ApparentAltAz);
+            ApparentTelescopeDirectionVector = ActualVector;
 
             switch (ApproximateMountAlignment)
             {
@@ -374,13 +388,6 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
         case 2:
         case 3:
         {
-#ifdef USE_INITIAL_JULIAN_DATE
-            ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
-#else
-            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys() + JulianOffset, &ActualAltAz);
-#endif
-            TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
-            ln_hrz_posn ApparentAltAz;
             gsl_vector *pGSLActualVector = gsl_vector_alloc(3);
             gsl_vector_set(pGSLActualVector, 0, ActualVector.x);
             gsl_vector_set(pGSLActualVector, 1, ActualVector.y);
@@ -398,12 +405,6 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
 
         default:
         {
-#ifdef USE_INITIAL_JULIAN_DATE
-            ln_get_hrz_from_equ(&ActualRaDec, &Position, SyncPoints[0].ObservationJulianDate, &ActualAltAz);
-#else
-            ln_get_hrz_from_equ(&ActualRaDec, &Position, ln_get_julian_from_sys(), &ActualAltAz);
-#endif
-            TelescopeDirectionVector ActualVector = TelescopeDirectionVectorFromAltitudeAzimuth(ActualAltAz);
             // Scale the actual telescope direction vector to make sure it traverses the unit sphere.
             TelescopeDirectionVector ScaledActualVector = ActualVector * 2.0;
             // Shoot the scaled vector in the into the list of actual facets
@@ -450,7 +451,6 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
                 return false;
 
             // OK - got an intersection - CurrentFace is pointing at the face
-            ln_hrz_posn ApparentAltAz;
             gsl_vector *pGSLActualVector = gsl_vector_alloc(3);
             gsl_vector_set(pGSLActualVector, 0, ActualVector.x);
             gsl_vector_set(pGSLActualVector, 1, ActualVector.y);
@@ -466,12 +466,25 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
             break;
         }
     }
+
+    ln_hrz_posn ApparentAltAz;
+    AltitudeAzimuthFromTelescopeDirectionVector(ApparentTelescopeDirectionVector, ApparentAltAz);
+    ASSDEBUGF("Celestial to telescope - Apparent Alt %lf Az %lf", ApparentAltAz.alt, ApparentAltAz.az);
+
     return true;
 }
 
 bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVector& ApparentTelescopeDirectionVector, double& RightAscension, double& Declination)
 {
     ln_lnlat_posn Position;
+
+
+    ln_hrz_posn ApparentAltAz;
+    ln_hrz_posn ActualAltAz;
+    ln_equ_posn ActualRaDec;
+
+    AltitudeAzimuthFromTelescopeDirectionVector(ApparentTelescopeDirectionVector, ApparentAltAz);
+    ASSDEBUGF("Telescope to celestial - Apparent Alt %lf Az %lf", ApparentAltAz.alt, ApparentAltAz.az);
 
     if ((NULL == pInMemoryDatabase) || !pInMemoryDatabase->GetDatabaseReferencePosition(Position)) // Should check that this the same as the current observing position
         return false;
@@ -500,13 +513,11 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
                     RotatedTDV.RotateAroundY(-90.0 - Position.lat);
                     break;
             }
-            ln_hrz_posn ApparentAltAz;
-            ln_equ_posn ActualRaDec;
-            AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, ApparentAltAz);
+            AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, ActualAltAz);
 #ifdef USE_INITIAL_JULIAN_DATE
             ln_get_equ_from_hrz(&ApparentAltAz, &Position, SyncPoints[0].ObservationJulianDate, &ActualRaDec);
 #else
-            ln_get_equ_from_hrz(&ApparentAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
+            ln_get_equ_from_hrz(&ActualAltAz, &Position, ln_get_julian_from_sys(), &ActualRaDec);
 #endif
             // libnova works in decimal degrees so conversion is needed here
             RightAscension = ActualRaDec.ra * 24.0 / 360.0;
@@ -532,9 +543,7 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
             ActualTelescopeDirectionVector.y = gsl_vector_get(pGSLActualVector, 1);
             ActualTelescopeDirectionVector.z = gsl_vector_get(pGSLActualVector, 2);
             ActualTelescopeDirectionVector.Normalise();
-            ln_hrz_posn ActualAltAz;
             AltitudeAzimuthFromTelescopeDirectionVector(ActualTelescopeDirectionVector, ActualAltAz);
-            ln_equ_posn ActualRaDec;
 #ifdef USE_INITIAL_JULIAN_DATE
             ln_get_equ_from_hrz(&ActualAltAz, &Position, SyncPoints[0].ObservationJulianDate, &ActualRaDec);
 #else
@@ -607,9 +616,7 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
             ActualTelescopeDirectionVector.y = gsl_vector_get(pGSLActualVector, 1);
             ActualTelescopeDirectionVector.z = gsl_vector_get(pGSLActualVector, 2);
             ActualTelescopeDirectionVector.Normalise();
-            ln_hrz_posn ActualAltAz;
             AltitudeAzimuthFromTelescopeDirectionVector(ActualTelescopeDirectionVector, ActualAltAz);
-            ln_equ_posn ActualRaDec;
 #ifdef USE_INITIAL_JULIAN_DATE
             ln_get_equ_from_hrz(&ActualAltAz, &Position, SyncPoints[0].ObservationJulianDate, &ActualRaDec);
 #else
@@ -623,6 +630,7 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
             break;
         }
     }
+    ASSDEBUGF("Telescope to Celestial - Actual Alt %lf Az %lf", ActualAltAz.alt, ActualAltAz.az);
     return true;
 }
 
