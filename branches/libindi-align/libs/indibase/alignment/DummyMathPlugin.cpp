@@ -1,3 +1,7 @@
+/// \file DummyMathPlugin.cpp
+/// \author Roger James
+/// \date 13th November 2013
+
 #include "DummyMathPlugin.h"
 
 namespace INDI {

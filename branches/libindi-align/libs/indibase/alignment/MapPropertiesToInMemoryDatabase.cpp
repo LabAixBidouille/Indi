@@ -248,5 +248,12 @@ void MapPropertiesToInMemoryDatabase::UpdateLocation(double latitude, double lon
         SetDatabaseReferencePosition(latitude, longitude);
 }
 
+void MapPropertiesToInMemoryDatabase::UpdateSize()
+{
+    AlignmentPointSetSize.value = GetAlignmentDatabase().size();
+    //  Update client
+    IDSetNumber(&AlignmentPointSetSizeV, NULL);
+}
+
 } // namespace AlignmentSubsystem
 } // namespace INDI
