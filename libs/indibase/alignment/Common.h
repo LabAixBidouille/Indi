@@ -97,6 +97,13 @@ struct TelescopeDirectionVector
         return x * RHS.x + y * RHS.y + z * RHS.z;
     }
 
+    /// \brief Return the length of the vector
+    /// \return Length of the vector
+    inline double Length() const
+    {
+        return sqrt(x * x + y * y + z * z);
+    }
+
     /// \brief Normalise the vector
     inline void Normalise()
     {
@@ -135,6 +142,21 @@ struct AlignmentDatabaseEntry
         {
             PrivateData.reset(new unsigned char[PrivateDataSize]);
             memcpy(PrivateData.get(), Source.PrivateData.get(), PrivateDataSize);
+        }
+    }
+
+    /// Override the assignment operator to provide a const version
+    inline const AlignmentDatabaseEntry& operator = (const AlignmentDatabaseEntry& RHS)
+    {
+        ObservationJulianDate = RHS.ObservationJulianDate;
+        RightAscension = RHS.RightAscension;
+        Declination = RHS.Declination;
+        TelescopeDirection = RHS.TelescopeDirection;
+        PrivateDataSize = RHS.PrivateDataSize;
+        if (0 != PrivateDataSize)
+        {
+            PrivateData.reset(new unsigned char[PrivateDataSize]);
+            memcpy(PrivateData.get(), RHS.PrivateData.get(), PrivateDataSize);
         }
     }
 

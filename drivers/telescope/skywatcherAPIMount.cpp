@@ -733,6 +733,9 @@ bool SkywatcherAPIMount::Sync(double ra, double dec)
 
     GetAlignmentDatabase().push_back(NewEntry);
 
+    // Tell the client about size change
+    UpdateSize();
+
     // Tell the math plugin to reinitialise
     Initialise(this);
 
