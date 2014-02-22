@@ -466,9 +466,12 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
                         NearestMap[(ActualDirectionCosine - ActualVector).Length()] = &(*Itr);
                     }
                     // First compute local horizontal coordinates for the three sync points
-                    const AlignmentDatabaseEntry* pEntry1 = NearestMap[0];
-                    const AlignmentDatabaseEntry* pEntry2 = NearestMap[1];
-                    const AlignmentDatabaseEntry* pEntry3 = NearestMap[2];
+                    std::map<double, const AlignmentDatabaseEntry*>::const_iterator Nearest = NearestMap.begin();
+                    const AlignmentDatabaseEntry* pEntry1 = (*Nearest).second;
+                    Nearest++;
+                    const AlignmentDatabaseEntry* pEntry2 = (*Nearest).second;
+                    Nearest++;
+                    const AlignmentDatabaseEntry* pEntry3 = (*Nearest).second;
                     ln_hrz_posn ActualSyncPoint1;
                     ln_hrz_posn ActualSyncPoint2;
                     ln_hrz_posn ActualSyncPoint3;
@@ -665,9 +668,12 @@ bool BuiltInMathPlugin::TransformTelescopeToCelestial(const TelescopeDirectionVe
                         NearestMap[((*Itr).TelescopeDirection - ApparentTelescopeDirectionVector).Length()] = &(*Itr);
                     }
                     // First compute local horizontal coordinates for the three sync points
-                    const AlignmentDatabaseEntry* pEntry1 = NearestMap[0];
-                    const AlignmentDatabaseEntry* pEntry2 = NearestMap[1];
-                    const AlignmentDatabaseEntry* pEntry3 = NearestMap[2];
+                    std::map<double, const AlignmentDatabaseEntry*>::const_iterator Nearest = NearestMap.begin();
+                    const AlignmentDatabaseEntry* pEntry1 = (*Nearest).second;
+                    Nearest++;
+                    const AlignmentDatabaseEntry* pEntry2 = (*Nearest).second;
+                    Nearest++;
+                    const AlignmentDatabaseEntry* pEntry3 = (*Nearest).second;
                     ln_hrz_posn ActualSyncPoint1;
                     ln_hrz_posn ActualSyncPoint2;
                     ln_hrz_posn ActualSyncPoint3;
