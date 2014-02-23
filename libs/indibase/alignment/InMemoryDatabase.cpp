@@ -19,6 +19,20 @@
 namespace INDI {
 namespace AlignmentSubsystem {
 
+const bool InMemoryDatabase::CheckForDuplicateSyncPoint(const AlignmentDatabaseEntry& CandidateEntry, double Tolerance) const
+{
+    for (AlignmentDatabaseType::const_iterator iTr = MySyncPoints.begin(); iTr != MySyncPoints.end(); iTr++)
+    {
+            if (((std::abs((*iTr).RightAscension - CandidateEntry.RightAscension) < 24.0 * Tolerance / 100.0) &&
+                    (std::abs((*iTr).Declination - CandidateEntry.Declination) < 180.0 * Tolerance / 100.0)) ||
+                    ((std::abs((*iTr).TelescopeDirection.x - CandidateEntry.TelescopeDirection.x) < Tolerance / 100.0) &&
+                    (std::abs((*iTr).TelescopeDirection.y - CandidateEntry.TelescopeDirection.y) < Tolerance / 100.0) &&
+                    (std::abs((*iTr).TelescopeDirection.z - CandidateEntry.TelescopeDirection.z) < Tolerance / 100.0)))
+                return true;
+    }
+    return false;
+}
+
 bool InMemoryDatabase::GetDatabaseReferencePosition(ln_lnlat_posn& Position)
 {
     if (DatabaseReferencePositionIsValid)

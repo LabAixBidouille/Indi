@@ -42,8 +42,8 @@ public:
     virtual bool MoveWE(TelescopeMotionWE dir);
     virtual bool Park();
     virtual bool ReadScopeStatus();
-    virtual bool Sync(double ra, double dec);
     virtual bool saveConfigItems(FILE *fp);
+    virtual bool Sync(double ra, double dec);
     virtual void TimerHit();
     virtual bool updateLocation(double latitude, double longitude, double elevation);
     virtual bool updateProperties();
