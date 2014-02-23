@@ -697,6 +697,13 @@ bool SkywatcherAPIMount::ReadScopeStatus()
     return true;
 }
 
+bool SkywatcherAPIMount::saveConfigItems(FILE *fp)
+{
+    SaveConfigProperties(fp);
+
+    return INDI::Telescope::saveConfigItems(fp);
+}
+
 bool SkywatcherAPIMount::Sync(double ra, double dec)
 {
     DEBUG(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "SkywatcherAPIMount::Sync");
@@ -731,22 +738,20 @@ bool SkywatcherAPIMount::Sync(double ra, double dec)
                     NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination,
                     NewEntry.TelescopeDirection.x, NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
 
-    GetAlignmentDatabase().push_back(NewEntry);
+    if (!CheckForDuplicateSyncPoint(NewEntry))
+    {
 
-    // Tell the client about size change
-    UpdateSize();
+        GetAlignmentDatabase().push_back(NewEntry);
 
-    // Tell the math plugin to reinitialise
-    Initialise(this);
+        // Tell the client about size change
+        UpdateSize();
 
-    return true;
-}
+        // Tell the math plugin to reinitialise
+        Initialise(this);
 
-bool SkywatcherAPIMount::saveConfigItems(FILE *fp)
-{
-    SaveConfigProperties(fp);
-
-    return INDI::Telescope::saveConfigItems(fp);
+        return true;
+    }
+    return false;
 }
 
 void SkywatcherAPIMount::TimerHit()
