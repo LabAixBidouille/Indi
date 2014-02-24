@@ -513,7 +513,7 @@ bool BuiltInMathPlugin::TransformCelestialToTelescope(const double RightAscensio
             gsl_vector_set(pGSLActualVector, 1, ActualVector.y);
             gsl_vector_set(pGSLActualVector, 2, ActualVector.z);
             gsl_vector *pGSLApparentVector = gsl_vector_alloc(3);
-            MatrixVectorMultiply(pComputedTransform, pGSLActualVector, pGSLApparentVector);
+            MatrixVectorMultiply(pTransform, pGSLActualVector, pGSLApparentVector);
             ApparentTelescopeDirectionVector.x = gsl_vector_get(pGSLApparentVector, 0);
             ApparentTelescopeDirectionVector.y = gsl_vector_get(pGSLApparentVector, 1);
             ApparentTelescopeDirectionVector.z = gsl_vector_get(pGSLApparentVector, 2);
