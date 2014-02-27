@@ -30,6 +30,7 @@ endif(SKYWATCHER_API_USE_INITIAL_JULIAN_DATE)
 set (AlignmentDriver_SRCS
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForDrivers.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/AlignmentSubsystemForMathPlugins.h
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/BasicMathPlugin.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/BuiltInMathPlugin.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/ConvexHull.cpp
         ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/DriverCommon.cpp
@@ -101,6 +102,21 @@ add_library(indi_Dummy_MathPlugin SHARED ${DummyMathPlugin_SRCS})
 target_link_libraries(indi_Dummy_MathPlugin indidriver)
 
 install(TARGETS indi_Dummy_MathPlugin LIBRARY DESTINATION ${INDI_MATH_PLUGINS_DIRECTORY})
+
+##################################################
+################ SVD math plugin #################
+##################################################
+set(SVDMathPlugin_SRCS
+        ${CMAKE_SOURCE_DIR}/libs/indibase/alignment/SVDMathPlugin.cpp
+	)
+
+add_library(indi_SVD_MathPlugin SHARED ${SVDMathPlugin_SRCS})
+
+set_property(TARGET indi_SVD_MathPlugin APPEND PROPERTY COMPILE_DEFINITIONS SVD_TRANSFORM_MATRIX)
+
+target_link_libraries(indi_SVD_MathPlugin indidriver)
+
+install(TARGETS indi_SVD_MathPlugin LIBRARY DESTINATION ${INDI_MATH_PLUGINS_DIRECTORY})
 
 ##################################################
 ############ Skywatcher API Mount ################

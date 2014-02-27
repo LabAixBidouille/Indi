@@ -32,7 +32,8 @@ class MathPlugin
 public:
 
     /// \brief Default constructor
-    MathPlugin(MountAlignment_t ApproximateAlignment = ZENITH) : ApproximateMountAlignment(ApproximateAlignment) {}
+    MathPlugin(MountAlignment_t ApproximateAlignment = ZENITH) : ApproximateMountAlignment(ApproximateAlignment),
+                                                                pInMemoryDatabase(NULL) {}
 
     /// \brief Virtual destructor
     virtual ~MathPlugin() {}
