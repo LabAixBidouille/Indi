@@ -1,12 +1,12 @@
-/// \file BuiltInMathPlugin.h
+/// \file SVDMathPlugin.h
 ///
 /// \author Roger James
 /// \date 13th November 2013
 ///
-/// This file provides the built in math plugin functionality
+/// This file provides the Singular Value Decomposition (Markley) math plugin functionality
 
-#ifndef INDI_ALIGNMENTSUBSYSTEM_BUILTINMATHPLUGIN_H
-#define INDI_ALIGNMENTSUBSYSTEM_BUILTINMATHPLUGIN_H
+#ifndef INDI_ALIGNMENTSUBSYSTEM_SVDMATHPLUGIN_H
+#define INDI_ALIGNMENTSUBSYSTEM_SVDMATHPLUGIN_H
 
 #include "BasicMathPlugin.h"
 
@@ -14,10 +14,10 @@ namespace INDI {
 namespace AlignmentSubsystem {
 
 /*!
- * \class BuiltInMathPlugin
- * \brief This class implements the default math plugin.
+ * \class SVDMathPlugin
+ * \brief This class implements the SVD math plugin.
  */
-class BuiltInMathPlugin : public BasicMathPlugin
+class SVDMathPlugin : public BasicMathPlugin
 {
 private:
 
@@ -39,4 +39,4 @@ private:
 } // namespace AlignmentSubsystem
 } // namespace INDI
 
-#endif // INDI_ALIGNMENTSUBSYSTEM_BUILTINMATHPLUGIN_H
+#endif // INDI_ALIGNMENTSUBSYSTEM_SVDMATHPLUGIN_H
