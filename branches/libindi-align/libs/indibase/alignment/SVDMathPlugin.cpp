@@ -78,7 +78,7 @@ void  SVDMathPlugin::CalculateTransformMatrices(const TelescopeDirectionVector& 
     gsl_vector *pWork = gsl_vector_alloc(3);
     GslRetcode = gsl_linalg_SV_decomp(pIntermediateMatrix1, pV, pS, pWork);
     // The intermediate matrix now contains the U matrix
-    // The V matrix is untranposed
+    // The V matrix is untransposed
 
     // 4. Compute the diagonal matrix
     gsl_matrix *pDiagonal = gsl_matrix_calloc(3,3);
