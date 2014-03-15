@@ -139,6 +139,15 @@ void CCDChip::setBin(int hor, int ver)
     IDSetNumber(ImageBinNP, NULL);
 }
 
+
+void CCDChip::setMaxBin(int max_hor, int max_ver)
+{
+    ImageBinN[BIN_W].max = max_hor;
+    ImageBinN[BIN_H].max = max_ver;
+
+    IUUpdateMinMax(ImageBinNP);
+}
+
 void CCDChip::setPixelSize(float x, float y)
 {
     PixelSizex = x;
@@ -256,8 +265,8 @@ INDI::CCD::CCD()
     ExposureTime = 0.0;
     GuiderExposureTime = 0.0;
 
-    RA=0.0;
-    Dec=90.0;
+    RA=-1000;
+    Dec=-1000;
     ActiveDeviceTP = new ITextVectorProperty;
 }
 
@@ -1135,6 +1144,12 @@ void INDI::CCD::addFITSKeywords(fitsfile *fptr, CCDChip *targetChip)
         fits_update_key_s(fptr, TDOUBLE, "DATAMAX", &max_val, "Maximum value", &status);
     }
 
+    if (RA != -1000 && Dec != -1000)
+    {
+        fits_update_key_s(fptr, TDOUBLE, "OBJCTRA", &RA, "Object RA", &status);
+        fits_update_key_s(fptr, TDOUBLE, "OBJCTDEC", &Dec, "Object DEC", &status);
+    }
+
     fits_update_key_s(fptr, TSTRING, "INSTRUME", dev_name, "CCD Name", &status);
     fits_update_key_s(fptr, TSTRING, "DATE-OBS", exp_start, "UTC start date of observation", &status);
 
@@ -1509,6 +1524,12 @@ void INDI::CCD::SetGuiderParams(int x,int y,int bpp,float xf,float yf)
 bool INDI::CCD::saveConfigItems(FILE *fp)
 {
     IUSaveConfigText(fp, ActiveDeviceTP);
+
+    if (capability.canSubFrame)
+        IUSaveConfigNumber(fp, PrimaryCCD.ImageFrameNP);
+
+    if (capability.canBin)
+        IUSaveConfigNumber(fp, PrimaryCCD.ImageBinNP);
 
     return true;
 }
