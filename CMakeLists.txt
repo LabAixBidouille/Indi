@@ -164,10 +164,17 @@ set_target_properties(indimain PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} S
 ########## INDI Default Driver Library ###########
 # To link with main() and indibase classes  ######
 ##################################################
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+add_library(indidriver SHARED ${libindicom_SRCS} ${liblilxml_SRCS} ${indimain_SRCS} ${indidriver_SRCS} ${libwebcam_SRCS})
+target_link_libraries(indidriver ${LIBUSB_1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY} ${JPEG_LIBRARY})
+add_library(indidriverstatic STATIC ${libindicom_SRCS} ${liblilxml_SRCS} ${indimain_SRCS} ${indidriver_SRCS} ${libwebcam_SRCS})
+target_link_libraries(indidriverstatic ${LIBUSB_1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY} ${JPEG_LIBRARY})
+else()
 add_library(indidriver SHARED ${libindicom_SRCS} ${liblilxml_SRCS} ${indimain_SRCS} ${indidriver_SRCS})
 target_link_libraries(indidriver ${LIBUSB_1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
 add_library(indidriverstatic STATIC ${libindicom_SRCS} ${liblilxml_SRCS} ${indimain_SRCS} ${indidriver_SRCS})
 target_link_libraries(indidriverstatic ${LIBUSB_1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
+endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 set_target_properties(indidriver indidriverstatic PROPERTIES VERSION ${CMAKE_INDI_VERSION_STRING} SOVERSION ${INDI_SOVERSION} OUTPUT_NAME indidriver)
 install(TARGETS indidriver LIBRARY DESTINATION ${LIB_DESTINATION})
 install(TARGETS indidriverstatic ARCHIVE DESTINATION ${LIB_DESTINATION})
@@ -726,6 +733,7 @@ ${CMAKE_SOURCE_DIR}/libs/indibase/inditelescope.h ${CMAKE_SOURCE_DIR}/libs/indib
 ${CMAKE_SOURCE_DIR}/libs/indibase/indifilterinterface.h ${CMAKE_SOURCE_DIR}/libs/indibase/indiproperty.h
 ${CMAKE_SOURCE_DIR}/libs/indicom.h ${CMAKE_SOURCE_DIR}/libs/indibase/indiusbdevice.h
 ${CMAKE_SOURCE_DIR}/libs/indibase/indilogger.h ${CMAKE_SOURCE_DIR}/libs/indibase/indicontroller.h
+${CMAKE_SOURCE_DIR}/libs/webcam/ccvt.h ${CMAKE_SOURCE_DIR}/libs/webcam/ccvt_types.h
  DESTINATION ${INCLUDE_INSTALL_DIR}/libindi COMPONENT Devel)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libindi.pc.cmake ${CMAKE_CURRENT_BINARY_DIR}/libindi.pc @ONLY)

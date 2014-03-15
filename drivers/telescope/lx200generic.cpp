@@ -313,6 +313,8 @@ bool LX200Generic::updateProperties()
         defineSwitch(&FocusModeSP);
 
         getBasicData();
+
+        loadConfig(true);
     }
     else
     {
