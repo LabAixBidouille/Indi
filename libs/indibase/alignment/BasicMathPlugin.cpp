@@ -326,8 +326,8 @@ bool BasicMathPlugin::Initialise(InMemoryDatabase* pInMemoryDatabase)
                 while (CurrentFace != ApparentConvexHull.faces);
             }
 
-            ASSDEBUGF("Initialise - ActualFaces %d ApparentFaces %d", ActualFaces, ApparentFaces);
 #ifdef CONVEX_HULL_DEBUGGING
+            ASSDEBUGF("Initialise - ActualFaces %d ApparentFaces %d", ActualFaces, ApparentFaces);
             ActualConvexHull.PrintObj("ActualHull.obj");
             ActualConvexHull.PrintOut("ActualHull.log", ActualConvexHull.vertices);
             ApparentConvexHull.PrintObj("ApparentHull.obj");
