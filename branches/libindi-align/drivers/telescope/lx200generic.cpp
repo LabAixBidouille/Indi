@@ -743,7 +743,7 @@ bool LX200Generic::updateTime(ln_date * utc, double utc_offset)
 
     JD = ln_get_julian_day(utc);
 
-    DEBUGF(INDI::Logger::DBG_DEBUG, "New JD is %f\n", (float) JD);
+    DEBUGF(INDI::Logger::DBG_DEBUG, "New JD is %f", (float) JD);
 
         // Set Local Time
         if (setLocalTime(PortFD, ltm.hours, ltm.minutes, ltm.seconds) < 0)
@@ -1704,10 +1704,9 @@ bool LX200Generic::canSync()
     return true;
 }
 
-// Don't assume generic can, let children decide
 bool LX200Generic::canPark()
 {
-    return false;
+    return true;
 }
 
 bool LX200Generic::ISSnoopDevice(XMLEle *root)
