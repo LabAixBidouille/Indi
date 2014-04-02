@@ -4,7 +4,7 @@ add_executable(indi_gpusb gpdriver.cpp gpusb.cpp)
 target_link_libraries(indi_gpusb indidriver)
 install(TARGETS indi_gpusb RUNTIME DESTINATION bin )
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-install(FILES drivers/auxiliary/99-gpusb.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-gpusb.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
