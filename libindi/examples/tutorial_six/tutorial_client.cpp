@@ -59,13 +59,14 @@
 
 using namespace std;
 
-#define MYCCD "Simple CCD"
+#define MYCCD "CCD Simulator"
 
 /* Our client auto pointer */
 auto_ptr<MyClient> camera_client(0);
 
 int main(int argc, char *argv[])
 {
+  string term;
 
     if (camera_client.get() == 0)
         camera_client.reset(new MyClient());
@@ -76,11 +77,17 @@ int main(int argc, char *argv[])
   camera_client->watchDevice(MYCCD);
 
   camera_client->connectServer();
+// ici il faudrait attendre que la connexion reussisse, ou echoue
+  cout << "Connecting to server\n";
+  cout << "Press any key and Enter\n";
+  cin >> term;
 
   camera_client->setBLOBMode(B_ALSO, MYCCD, NULL);
+  camera_client->takeExposure();
+  cout << "take a exposure.\n";
+  cin >> term;
 
-  cout << "Press any key to terminate the client.\n";
-  string term;
+  cout << "Press any key and ENTER to terminate the client.\n";
   cin >> term;
 
 
@@ -205,7 +212,7 @@ void MyClient::newMessage(INDI::BaseDevice *dp, int messageID)
      if (strcmp(dp->getDeviceName(), MYCCD))
          return;
 
-     IDLog("Recveing message from Server:\n\n########################\n%s\n########################\n\n", dp->messageQueue(messageID));
+     IDLog("Recveing message from Server:\n\n########################\n%s\n########################\n\n", dp->messageQueue(messageID).c_str());
 }
 
 /**************************************************************************************
